@@ -15,7 +15,7 @@ LOG_FILE="$LOG_DIR/hook.log"
 echo "$(date) wallpaper_changed hook triggered. WP=$WP" >> "$LOG_FILE"
 
 # Only process video files to avoid infinite loops
-if [[ "$WP" == *.mp4 ]] || [[ "$WP" == *.webm ]] || [[ "$WP" == *.mkv ]] || [[ "$WP" == *.mov ]] || [[ "$WP" == *.gif ]]; then
+if [[ -n "$WP" && -f "$WP" ]] && { [[ "$WP" == *.mp4 ]] || [[ "$WP" == *.webm ]] || [[ "$WP" == *.mkv ]] || [[ "$WP" == *.mov ]] || [[ "$WP" == *.gif ]]; }; then
     if ! command -v ffmpeg >/dev/null 2>&1; then
         echo "Error: ffmpeg is not installed." >> "$LOG_FILE"
         exit 1
@@ -29,8 +29,10 @@ if [[ "$WP" == *.mp4 ]] || [[ "$WP" == *.webm ]] || [[ "$WP" == *.mkv ]] || [[ "
     THUMB_PATH="$THUMB_DIR/mpvpaper_thumb.jpg"
     
     # Generate thumbnail
-    ffmpeg -y -i "$WP" -ss 00:00:01 -vframes 1 "$THUMB_PATH" 2>/dev/null
-    
-    # Set the thumbnail as wallpaper to extract colors and provide a static background
-    noctalia msg wallpaper-set "$THUMB_PATH" 2>/dev/null
+    if ffmpeg -y -i "$WP" -ss 00:00:01 -vframes 1 "$THUMB_PATH" 2>/dev/null; then
+        # Set the thumbnail as wallpaper to extract colors and provide a static background
+        noctalia msg wallpaper-set "$THUMB_PATH" 2>/dev/null
+    else
+        echo "Error: ffmpeg failed to extract thumbnail from $WP" >> "$LOG_FILE"
+    fi
 fi

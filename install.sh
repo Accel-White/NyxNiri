@@ -42,10 +42,10 @@ get_version() {
     local target_dir="$1"
     local version=""
     if [ -d "$target_dir/.git" ] && command -v git >/dev/null 2>&1; then
-        version=$(cd "$target_dir" && git describe --tags --abbrev=0 2>/dev/null)
+        version=$(cd "$target_dir" && git describe --tags --abbrev=0 2>/dev/null || true)
     fi
     if [ -z "$version" ] && [ -f "$target_dir/CHANGELOG.md" ]; then
-        version=$(grep -m1 '^## \[' "$target_dir/CHANGELOG.md" | sed -E 's/## \[([^\]]+)\].*/\1/')
+        version=$(grep -m1 '^## \[' "$target_dir/CHANGELOG.md" 2>/dev/null | sed -E 's/## \[([^\]]+)\].*/\1/' || true)
     fi
     echo "${version:-v2.x}"
 }
@@ -611,9 +611,32 @@ check_mpvpaper_version() {
 }
 
 # ==============================================================================
+# ==============================================================================
 # 5. Configuration Backup, Snapshot & Rollback
 # ==============================================================================
 BACKUP_BASE_DIR="$HOME/.config/NyxNiri/backups"
+CONFIG_ITEMS=(
+    "fish"
+    "noctalia"
+    "niri"
+    "kitty"
+    "fastfetch"
+    "starship.toml"
+)
+
+copy_config_items() {
+    local src_dir="$1"
+    local dest_dir="$2"
+    local verbose_prefix="${3:-Copied}"
+    mkdir -p "$dest_dir"
+    for item in "${CONFIG_ITEMS[@]}"; do
+        if [ -e "$src_dir/$item" ]; then
+            rm -rf "$dest_dir/$item"
+            cp -rP "$src_dir/$item" "$dest_dir/$item"
+            echo "  $verbose_prefix: ~/.config/$item"
+        fi
+    done
+}
 
 backup_configs() {
     local note="$1"
@@ -627,16 +650,7 @@ backup_configs() {
     local backup_dir="$BACKUP_BASE_DIR/snapshot_$timestamp"
     mkdir -p "$backup_dir"
     
-    local configs=(
-        "fish"
-        "noctalia"
-        "niri"
-        "kitty"
-        "fastfetch"
-        "starship.toml"
-    )
-    
-    for item in "${configs[@]}"; do
+    for item in "${CONFIG_ITEMS[@]}"; do
         if [ -e "$HOME/.config/$item" ]; then
             cp -rP "$HOME/.config/$item" "$backup_dir/"
             echo "  Backed up: ~/.config/$item"
@@ -725,15 +739,7 @@ rollback_configs() {
     local pre_ts=$(date +%Y%m%d_%H%M%S)
     local pre_dir="$HOME/.config/dotfiles_backup_pre_rollback_$pre_ts"
     mkdir -p "$pre_dir"
-    local configs=(
-        "fish"
-        "noctalia"
-        "niri"
-        "kitty"
-        "fastfetch"
-        "starship.toml"
-    )
-    for item in "${configs[@]}"; do
+    for item in "${CONFIG_ITEMS[@]}"; do
         if [ -e "$HOME/.config/$item" ]; then
             cp -rP "$HOME/.config/$item" "$pre_dir/"
         fi
@@ -742,7 +748,7 @@ rollback_configs() {
     msg pre_rollback_backup "$pre_dir"
 
     msg rolling_back "$selected_bname"
-    for item in "${configs[@]}"; do
+    for item in "${CONFIG_ITEMS[@]}"; do
         if [ -e "$selected_backup/$item" ]; then
             rm -rf "$HOME/.config/$item"
             cp -rP "$selected_backup/$item" "$HOME/.config/$item"
@@ -765,22 +771,13 @@ uninstall_nyxniri() {
         read -p "$(msg uninstall_prompt)" mode < /dev/tty
     fi
 
-    local configs=(
-        "fish"
-        "noctalia"
-        "niri"
-        "kitty"
-        "fastfetch"
-        "starship.toml"
-    )
-
     case "$mode" in
         1|safe|--safe)
             # Standard Safe Uninstall: archive current config to tar.gz, remove active configs & CLI
             local ts=$(date +%Y%m%d_%H%M%S)
             local archive_file="$HOME/.config/NyxNiri_final_backup_$ts.tar.gz"
             local temp_stage=$(mktemp -d)
-            for item in "${configs[@]}"; do
+            for item in "${CONFIG_ITEMS[@]}"; do
                 if [ -e "$HOME/.config/$item" ]; then
                     cp -rP "$HOME/.config/$item" "$temp_stage/"
                 fi
@@ -789,8 +786,8 @@ uninstall_nyxniri() {
             rm -rf "$temp_stage"
             msg uninstall_archived "$archive_file"
 
-            for item in "${configs[@]}"; do
-                if [ -e "$HOME/.config/$item" ]; then
+            for item in "${CONFIG_ITEMS[@]}"; do
+                if [ -e "$HOME/.config/$item" ] && [ "$HOME/.config/$item" != "$HOME" ]; then
                     rm -rf "$HOME/.config/$item"
                     echo "  Removed: ~/.config/$item"
                 fi
@@ -805,7 +802,7 @@ uninstall_nyxniri() {
                 local earliest="${backups[0]}"
                 local earliest_name=$(basename "$earliest")
                 echo "Restoring earliest pre-install configuration from: $earliest_name"
-                for item in "${configs[@]}"; do
+                for item in "${CONFIG_ITEMS[@]}"; do
                     if [ -e "$earliest/$item" ]; then
                         rm -rf "$HOME/.config/$item"
                         cp -rP "$earliest/$item" "$HOME/.config/$item"
@@ -820,8 +817,10 @@ uninstall_nyxniri() {
             ;;
         3|purge|--purge)
             # Purge Everything: remove configs, CLI, cache, wallpapers & backups
-            for item in "${configs[@]}"; do
-                rm -rf "$HOME/.config/$item"
+            for item in "${CONFIG_ITEMS[@]}"; do
+                if [ -e "$HOME/.config/$item" ] && [ "$HOME/.config/$item" != "$HOME" ]; then
+                    rm -rf "$HOME/.config/$item"
+                fi
             done
             [ -L "$HOME/.local/bin/nyxniri" ] && rm -f "$HOME/.local/bin/nyxniri"
             [ -d "$HOME/.cache/NyxNiri" ] && rm -rf "$HOME/.cache/NyxNiri"
@@ -848,18 +847,9 @@ install_configs() {
     msg copying_configs
     local repo_config_dir="$REPO_DIR/v2"
     
-    local configs=(
-        "fish"
-        "noctalia"
-        "niri"
-        "kitty"
-        "fastfetch"
-        "starship.toml"
-    )
-    
     mkdir -p "$HOME/.config"
     
-    for item in "${configs[@]}"; do
+    for item in "${CONFIG_ITEMS[@]}"; do
         local src="$repo_config_dir/$item"
         local dest="$HOME/.config/$item"
         
@@ -899,22 +889,32 @@ install_configs() {
         echo "  Deployed: $wp_dest"
     fi
     
-    # Ensure clean-cache is executable
+    # Ensure scripts are executable and initial effects symlink exists
     if [ -f "$HOME/.config/fish/clean-cache" ]; then
         chmod +x "$HOME/.config/fish/clean-cache"
     fi
+    if [ -f "$HOME/.config/niri/toggle-eyecare.sh" ]; then
+        chmod +x "$HOME/.config/niri/toggle-eyecare.sh"
+    fi
+    if [ -f "$HOME/.config/niri/effects_normal.kdl" ] && [ ! -e "$HOME/.config/niri/effects.kdl" ]; then
+        ln -sfn "$HOME/.config/niri/effects_normal.kdl" "$HOME/.config/niri/effects.kdl"
+    fi
 
-    # Post-process to replace hardcoded '/home/ray' path with the actual '$HOME' for portability
+    # Post-process to replace hardcoded template home paths with actual '$HOME' and '$wp_dest' for portability
+    local esc_home esc_wp_dest
+    esc_home=$(printf '%s\n' "$HOME" | sed 's/[|&]/\\&/g')
+    esc_wp_dest=$(printf '%s\n' "$wp_dest" | sed 's/[|&]/\\&/g')
+
     if [ -f "$HOME/.config/noctalia/noctalia-config.toml" ]; then
-        sed -i "s|/home/ray/图片/Wallpapers|$wp_dest|g" "$HOME/.config/noctalia/noctalia-config.toml"
-        sed -i "s|/home/ray/图片/wallpapers|$wp_dest|g" "$HOME/.config/noctalia/noctalia-config.toml"
-        sed -i "s|/home/ray|$HOME|g" "$HOME/.config/noctalia/noctalia-config.toml"
+        sed -i "s|/home/[^/]\+/图片/Wallpapers|${esc_wp_dest}|g" "$HOME/.config/noctalia/noctalia-config.toml"
+        sed -i "s|/home/[^/]\+/图片/wallpapers|${esc_wp_dest}|g" "$HOME/.config/noctalia/noctalia-config.toml"
+        sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/noctalia/noctalia-config.toml"
     fi
     if [ -f "$HOME/.config/niri/config.kdl" ]; then
-        sed -i "s|/home/ray|$HOME|g" "$HOME/.config/niri/config.kdl"
+        sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/niri/config.kdl"
     fi
     if [ -f "$HOME/.config/fish/fish_variables" ]; then
-        sed -i "s|/home/ray|$HOME|g" "$HOME/.config/fish/fish_variables"
+        sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/fish/fish_variables"
     fi
     
     # Enable Noctalia mpvpaper plugin if noctalia CLI is available
@@ -1025,6 +1025,17 @@ run_doctor() {
         fi
     else
         msg doctor_err "Scripts: clean-cache is missing from ~/.config/fish/."
+    fi
+
+    # Check toggle-eyecare.sh in niri config directory
+    local te_path="$HOME/.config/niri/toggle-eyecare.sh"
+    if [ -f "$te_path" ]; then
+        if [ -x "$te_path" ]; then
+            msg doctor_ok "Scripts: toggle-eyecare.sh is executable."
+        else
+            msg doctor_warn "Scripts: toggle-eyecare.sh is not executable. Fixing permissions..."
+            chmod +x "$te_path"
+        fi
     fi
     
     if [[ "$SHELL" == *fish ]]; then

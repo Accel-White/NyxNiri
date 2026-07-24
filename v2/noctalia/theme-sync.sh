@@ -19,24 +19,35 @@ update_ini() {
         echo "[Settings]" > "$file"
     fi
     
-    if grep -q "^${key}=" "$file"; then
-        sed -i "s|^${key}=.*|${key}=${val}|" "$file"
+    # Escape special characters in key and val for sed
+    local esc_key esc_val
+    esc_key=$(printf '%s\n' "$key" | sed 's/[[\.*^$()]/\\&/g')
+    esc_val=$(printf '%s\n' "$val" | sed 's/[|\&]/\\&/g')
+
+    if grep -q "^${esc_key}=" "$file"; then
+        sed -i "s|^${esc_key}=.*|${key}=${esc_val}|" "$file"
     else
         # Append right after the [Settings] section line
         if grep -q "^\[Settings\]" "$file"; then
-            sed -i "/^\[Settings\]/a ${key}=${val}" "$file"
+            sed -i "/^\[Settings\]/a ${key}=${esc_val}" "$file"
         else
             echo "${key}=${val}" >> "$file"
         fi
     fi
 }
 
+set_gsettings() {
+    local scheme="$1"
+    local val="$2"
+    if command -v gsettings >/dev/null 2>&1; then
+        gsettings set org.gnome.desktop.interface "$scheme" "$val" 2>/dev/null || true
+    fi
+}
+
 if [ "$THEME_MODE" = "light" ]; then
     # 1. Update GSettings (affects Firefox, Chromium, VS Code, and libadwaita apps)
-    if command -v gsettings >/dev/null 2>&1; then
-        gsettings set org.gnome.desktop.interface color-scheme 'prefer-light'
-        gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3'
-    fi
+    set_gsettings color-scheme 'prefer-light'
+    set_gsettings gtk-theme 'adw-gtk3'
     
     # 2. Update GTK 3.0 settings.ini
     update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-application-prefer-dark-theme" "false"
@@ -46,10 +57,8 @@ if [ "$THEME_MODE" = "light" ]; then
     update_ini "$HOME/.config/gtk-4.0/settings.ini" "gtk-application-prefer-dark-theme" "false"
 else
     # 1. Update GSettings
-    if command -v gsettings >/dev/null 2>&1; then
-        gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
-        gsettings set org.gnome.desktop.interface gtk-theme 'adw-gtk3-dark'
-    fi
+    set_gsettings color-scheme 'prefer-dark'
+    set_gsettings gtk-theme 'adw-gtk3-dark'
     
     # 2. Update GTK 3.0 settings.ini
     update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-application-prefer-dark-theme" "true"
@@ -58,3 +67,4 @@ else
     # 3. Update GTK 4.0 settings.ini
     update_ini "$HOME/.config/gtk-4.0/settings.ini" "gtk-application-prefer-dark-theme" "true"
 fi
+

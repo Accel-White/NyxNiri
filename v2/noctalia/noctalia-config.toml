@@ -92,10 +92,6 @@ major_interval = 4
 visible = true
 
 
-[nightlight]
-temperature_day = 10000
-temperature_night = 8900
-
 [osd]
 background_opacity = 0.84999998100101948
 offset_y = 20

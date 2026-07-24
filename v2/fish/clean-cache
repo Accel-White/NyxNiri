@@ -257,9 +257,10 @@ if [[ "$response" =~ ^(yes|y)$ ]]; then
             
             # Remove Pacman Orphans
             orphans=$(pacman -Qtdq 2>/dev/null || true)
-            if [[ -n "$orphans" ]]; then
-                log_info "发现系统孤立包，正在卸载: $orphans"
-                sudo pacman -Rns $orphans --noconfirm
+            read -r -a orphan_arr <<< "$orphans"
+            if [[ ${#orphan_arr[@]} -gt 0 && -n "${orphan_arr[0]}" ]]; then
+                log_info "发现系统孤立包，正在卸载: ${orphan_arr[*]}"
+                sudo pacman -Rns "${orphan_arr[@]}" --noconfirm
             fi
             log_success "Pacman 缓存及孤立包清理完成"
         fi

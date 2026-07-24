@@ -1,5 +1,7 @@
 // 引入由 nwg-displays 生成的显示器配置
 include "monitor.kdl"
+// 动态引入视觉特效样式 (普通模式 vs 护眼模式)
+include "effects.kdl"
 
 gestures {
     hot-corners {
@@ -62,7 +64,7 @@ layout {
     }
 }
 
-// 全局窗口规则
+// 全局窗口规则 (几何结构)
 window-rule {
     // 圆角
     geometry-corner-radius 12
@@ -70,30 +72,6 @@ window-rule {
     clip-to-geometry true
     // 禁止边框画到背景里
     draw-border-with-background false
-    opacity 0.9
-    background-effect {
-        blur true
-        xray false
-    }
-}
-
-/-window-rule {
-    // exclude app-id="app.zen_browser.zen" // 排除 Zen 浏览器，Zen 聚焦时单独设置透明度
-    // 全局透明度
-    opacity 0.9
-}
-
-window-rule {
-    match is-focused=false
-    opacity 0.85
-}
-
-blur {
-    // off // 禁用效果
-    passes 3
-    offset 2.3
-    noise 0.001
-    saturation 2
 }
 
 layer-rule {
@@ -334,14 +312,15 @@ binds {
 
     Mod+Shift+R          { spawn "niri" "msg" "action" "load-config-file"; }
 
-    Mod+R                { spawn "noctalia" "msg" "panel-toggle" "launcher"; }
-    Mod+X                { spawn "noctalia" "msg" "panel-toggle" "session"; }
-    Mod+I                { spawn "noctalia" "msg" "settings-toggle"; }
-    Mod+V                { spawn "noctalia" "msg" "panel-toggle" "clipboard"; }
-    Mod+W                { spawn "noctalia" "msg" "panel-toggle" "wallpaper"; }
-    Mod+Shift+W          { spawn "noctalia" "msg" "panel-toggle" "noctalia/mpvpaper:picker"; }
-    Mod+Return           { spawn "kitty"; }
-    Mod+E                { spawn "nautilus"; }
+    Mod+R       { spawn "noctalia" "msg" "panel-toggle" "launcher"; }
+    Mod+X       { spawn "noctalia" "msg" "panel-toggle" "session"; }
+    Mod+I       { spawn "noctalia" "msg" "settings-toggle"; }
+    Mod+V       { spawn "noctalia" "msg" "panel-toggle" "clipboard"; }
+    Mod+W       { spawn "noctalia" "msg" "panel-toggle" "wallpaper"; }
+    Mod+Shift+W { spawn "noctalia" "msg" "panel-toggle" "noctalia/mpvpaper:picker"; }
+    Mod+N       { spawn "~/.config/niri/toggle-eyecare.sh"; }
+    Mod+Return  { spawn "kitty"; }
+    Mod+E       { spawn "nautilus"; }
 
     Mod+Z                { focus-column-left; }
     Mod+C                { focus-column-right; }

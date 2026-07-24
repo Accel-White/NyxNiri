@@ -1,5 +1,27 @@
 # Changelog
 
+## [v2.1.4] - 2026-07-24
+
+### Added
+
+- **Niri 护眼模式 (Mod+N)**: 新增 `v2/niri/effects_normal.kdl` 与 `v2/niri/effects_eyecare.kdl` 视觉样式模板；按 `Mod+N` 开启护眼模式时自动将色温调暖，禁用毛玻璃 Blur 效果并将窗口透明度拉满至 100% 纯不透明（消除眩光与背景杂乱透出）
+- **零常驻后台脚本**: 新增 `v2/niri/toggle-eyecare.sh` 极简单次触发脚本（运行时间 < 2ms 即刻退出，零内存常驻），无缝联动 Noctalia 色温与 Niri 特效重载
+- **System Doctor 诊断**: 扩展脚本健康检查，新增对 `toggle-eyecare.sh` 快捷脚本的可执行权限自动检测与自愈修复
+
+### Changed / Refactored
+
+- **install.sh**: 抽象提炼全局 `CONFIG_ITEMS` 配置项数组与 `copy_config_items` 辅助函数，清除了快照、部署、回滚与卸载逻辑中的多处代码冗余
+- **install.sh**: 优化后处理 `sed` 替换逻辑，使用通配正则确保无论模板源路径如何变化均能无缝映射至当前用户的 `$HOME` 与壁纸路径 `$wp_dest`
+- **README.md**: 优化中英文双语排版，补充护眼模式 (Focus Mode) 快捷键与特性说明，并将演示视频全篇更新至最新链接 (`BV1Dig16rEZ7`)
+
+### Fixed / Hardened
+
+- **install.sh**: 为 `get_version` 等命令及管道查询添加 Safe Wrappers，消除无匹配项时 `set -e` 严格模式导致的脚本意外退出
+- **theme-sync.sh**: 增加 INI 配置 key/val 的 `sed` 正则符号转义保护，并封装 `set_gsettings` 屏蔽非 GNOME 环境下的 stderr 告警
+- **wallpaper-hook.sh**: 增加视频壁纸文件存在性与非空校验，防止无效路径引发 `ffmpeg` 报错
+- **mpvpaper-sync.sh**: 增加 `jq` JSON 解析容错保护与 `SIGINT`/`SIGTERM` 信号清理陷阱
+- **clean-cache**: 采用 Bash 数组安全的展开解析 Pacman 孤立包，防止孤立包列表为空或为空白字符时误传参数
+
 ## [v2.1.3] - 2026-07-23
 
 ### Added

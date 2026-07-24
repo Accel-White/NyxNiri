@@ -11,13 +11,16 @@ done
 
 ASSIGNMENTS_FILE="$HOME/.local/state/noctalia/mpvpaper/assignments.json"
 
+# Signal trap for clean termination
+trap 'exit 0' INT TERM EXIT
+
 process_assignments() {
     # Extract the first video path using jq
     if [ ! -f "$ASSIGNMENTS_FILE" ]; then
         return
     fi
     
-    VIDEO_PATH=$(jq -r 'to_entries | .[0].value // empty' "$ASSIGNMENTS_FILE")
+    VIDEO_PATH=$(jq -r 'to_entries | .[0].value // empty' "$ASSIGNMENTS_FILE" 2>/dev/null || true)
     
     if [[ -n "$VIDEO_PATH" && -f "$VIDEO_PATH" ]]; then
         # Check if it's a video
@@ -39,9 +42,9 @@ process_assignments() {
             fi
             
             # Set it as the native Noctalia wallpaper
-            CURRENT_WP=$(noctalia msg wallpaper-get 2>/dev/null)
+            CURRENT_WP=$(noctalia msg wallpaper-get 2>/dev/null || true)
             if [ "$CURRENT_WP" != "$THUMB_PATH" ]; then
-                noctalia msg wallpaper-set "$THUMB_PATH"
+                noctalia msg wallpaper-set "$THUMB_PATH" 2>/dev/null || true
             fi
         fi
     fi
@@ -54,6 +57,6 @@ touch "$ASSIGNMENTS_FILE"
 process_assignments
 
 # Watch directory instead of single file for atomic write safety
-while inotifywait -q -e close_write,moved_to "$(dirname "$ASSIGNMENTS_FILE")"; do
+while inotifywait -q -e close_write,moved_to "$(dirname "$ASSIGNMENTS_FILE")" 2>/dev/null; do
     process_assignments
 done
