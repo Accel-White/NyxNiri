@@ -382,6 +382,7 @@ update_repo_and_script() {
 # ==============================================================================
 DEPS=(
     "niri"
+    "mango"
     "noctalia"
     "fish"
     "starship"
@@ -404,6 +405,7 @@ DEPS=(
 AUR_DEPS=(
     "noctalia"
     "mpvpaper"
+    "mangowm-git"
 )
 
 DEP_STATUS=()
@@ -619,6 +621,7 @@ CONFIG_ITEMS=(
     "fish"
     "noctalia"
     "niri"
+    "mango"
     "kitty"
     "fastfetch"
     "starship.toml"
@@ -899,6 +902,9 @@ install_configs() {
     if [ -f "$HOME/.config/niri/effects_normal.kdl" ] && [ ! -e "$HOME/.config/niri/effects.kdl" ]; then
         ln -sfn "$HOME/.config/niri/effects_normal.kdl" "$HOME/.config/niri/effects.kdl"
     fi
+    if [ -f "$HOME/.config/mango/toggle-eyecare.sh" ]; then
+        chmod +x "$HOME/.config/mango/toggle-eyecare.sh"
+    fi
 
     # Post-process to replace hardcoded template home paths with actual '$HOME' and '$wp_dest' for portability
     local esc_home esc_wp_dest
@@ -912,6 +918,9 @@ install_configs() {
     fi
     if [ -f "$HOME/.config/niri/config.kdl" ]; then
         sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/niri/config.kdl"
+    fi
+    if [ -f "$HOME/.config/mango/config.conf" ]; then
+        sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/mango/config.conf"
     fi
     if [ -f "$HOME/.config/fish/fish_variables" ]; then
         sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/fish/fish_variables"
@@ -967,14 +976,22 @@ run_doctor() {
     
     if [ "$XDG_CURRENT_DESKTOP" = "niri" ]; then
         msg doctor_ok "Compositor: Niri is currently running."
+    elif [ "$XDG_CURRENT_DESKTOP" = "mango" ]; then
+        msg doctor_ok "Compositor: MangoWM is currently running."
     else
-        msg doctor_warn "Compositor: Current desktop environment is '$XDG_CURRENT_DESKTOP' (Niri is not running)."
+        msg doctor_warn "Compositor: Current desktop environment is '$XDG_CURRENT_DESKTOP' (Niri/MangoWM is not running)."
     fi
     
     if [ -f "/usr/share/wayland-sessions/niri.desktop" ]; then
         msg doctor_ok "Session: Niri Wayland session desktop file is registered."
     else
-        msg doctor_warn "Session: /usr/share/wayland-sessions/niri.desktop is missing. (Niri might not show up on your Display Manager login screen)"
+        msg doctor_warn "Session: /usr/share/wayland-sessions/niri.desktop is missing."
+    fi
+    
+    if [ -f "/usr/share/wayland-sessions/mango.desktop" ]; then
+        msg doctor_ok "Session: MangoWM Wayland session desktop file is registered."
+    else
+        msg doctor_warn "Session: /usr/share/wayland-sessions/mango.desktop is missing."
     fi
     
     if noctalia msg status >/dev/null 2>&1; then
@@ -991,7 +1008,7 @@ run_doctor() {
     fi
     
     local missing_critical=0
-    for cmd in niri noctalia fish starship; do
+    for cmd in niri mangowm noctalia fish starship; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
             msg doctor_err "Dependency: '$cmd' is missing from PATH."
             missing_critical=$((missing_critical + 1))
@@ -999,7 +1016,7 @@ run_doctor() {
     done
     
     if [ "$missing_critical" -eq 0 ]; then
-        msg doctor_ok "Core Dependencies: All core tools (niri, noctalia, fish, starship) are installed."
+        msg doctor_ok "Core Dependencies: All core tools (niri, mangowm, noctalia, fish, starship) are installed."
     fi
     
     for script in "theme-sync.sh" "wallpaper-hook.sh" "mpvpaper-sync.sh"; do
@@ -1031,10 +1048,21 @@ run_doctor() {
     local te_path="$HOME/.config/niri/toggle-eyecare.sh"
     if [ -f "$te_path" ]; then
         if [ -x "$te_path" ]; then
-            msg doctor_ok "Scripts: toggle-eyecare.sh is executable."
+            msg doctor_ok "Scripts: niri/toggle-eyecare.sh is executable."
         else
-            msg doctor_warn "Scripts: toggle-eyecare.sh is not executable. Fixing permissions..."
+            msg doctor_warn "Scripts: niri/toggle-eyecare.sh is not executable. Fixing permissions..."
             chmod +x "$te_path"
+        fi
+    fi
+    
+    # Check toggle-eyecare.sh in mango config directory
+    local te_mango_path="$HOME/.config/mango/toggle-eyecare.sh"
+    if [ -f "$te_mango_path" ]; then
+        if [ -x "$te_mango_path" ]; then
+            msg doctor_ok "Scripts: mango/toggle-eyecare.sh is executable."
+        else
+            msg doctor_warn "Scripts: mango/toggle-eyecare.sh is not executable. Fixing permissions..."
+            chmod +x "$te_mango_path"
         fi
     fi
     
@@ -1099,18 +1127,23 @@ generate_bug_report() {
         lspci -k 2>/dev/null | grep -A 2 -E "VGA|3D" || echo "lspci not available"
         echo '```'
         echo ""
-        echo "## 3. Connected Displays (Niri)"
+        echo "## 3. Connected Displays (Niri/MangoWM)"
         echo '```text'
         if command -v niri >/dev/null 2>&1; then
             niri msg outputs 2>/dev/null || echo "niri msg outputs failed (is Niri running?)"
         else
             echo "niri is not installed"
         fi
+        if command -v mmsg >/dev/null 2>&1; then
+            mmsg get all-monitors 2>/dev/null || echo "mmsg get all-monitors failed (is MangoWM running?)"
+        else
+            echo "mmsg is not installed"
+        fi
         echo '```'
         echo ""
         echo "## 4. Installed Tool Versions"
         echo '```text'
-        for cmd in niri noctalia fish starship kitty mpvpaper swaylock wpctl ddcutil brightnessctl; do
+        for cmd in niri mangowm noctalia fish starship kitty mpvpaper swaylock wpctl ddcutil brightnessctl; do
             if command -v "$cmd" >/dev/null 2>&1; then
                 local ver=""
                 if [ "$cmd" = "wpctl" ]; then
