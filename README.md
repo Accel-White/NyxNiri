@@ -5,7 +5,7 @@
 <div align="center">
 <a id="english"></a>
 
-# NyxNiri
+# 𝑁𝑦𝑥𝑁𝑖𝑟𝑖
 
 A Material You desktop configuration based on Niri and Noctalia V5 for Arch /
 CachyOS.
