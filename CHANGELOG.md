@@ -1,11 +1,28 @@
 # Changelog
 
+## [v2.1.5] - 2026-07-25
+
+### Added
+
+- **wlsunset 强劲色温引擎**: 在 `v2/niri/toggle-eyecare.sh` 中全盘接入原生 `wlsunset` 色温渲染引擎，实现物理级色温控制（5500K 微暖自然护眼）。
+- **Noctalia v5 原生 OSD 联动**: 接入 Noctalia v5 内置原生的 Nightlight OSD 悬浮胶囊卡片，随快捷键触发行云流水显示“夜间模式：开启/关闭”并全效支持系统 i18n 国际化语言。
+
+### Changed / Refactored
+
+- **Noctalia 配置解耦**: 在 `v2/noctalia/noctalia-config.toml` 中显式设置 `[nightlight] enabled = false`，完全释放 Wayland Gamma 协议控制锁，消除系统内不同 Gamma 渲染器之间的死锁摩擦。
+- **install.sh 截图路径优化**: 在 `install.sh` 配置部署环节新增自动动态替换 `niri/config.kdl` 中 `screenshot-path` 用户家目录逻辑。
+
+### Fixed / Hardened
+
+- **防显卡撕裂与无闪烁平滑过渡**: 为 `wlsunset` 引入 `-d 0.3` 渐变模式，并结合 50ms 显卡管线错峰重载（Pipeline Frame Separation），彻底解决了 `Mod+N` 触发时 Niri 窗口 Shader 与 GPU 色温控制硬碰撞导致的二次闪烁与视觉撕裂问题。
+- **自愈式按键响应**: 解决夜间定时计划导致色温不响应的硬伤，确保不论昼夜或 UI 手动开关状态，按 `Mod+N` 均能 100% 稳定实现 UI 纯色/毛玻璃与色温双重同步对齐。
+
 ## [v2.1.4] - 2026-07-24
 
 ### Added
 
 - **Niri 护眼模式 (Mod+N)**: 新增 `v2/niri/effects_normal.kdl` 与 `v2/niri/effects_eyecare.kdl` 视觉样式模板；按 `Mod+N` 开启护眼模式时自动将色温调暖，禁用毛玻璃 Blur 效果并将窗口透明度拉满至 100% 纯不透明（消除眩光与背景杂乱透出）
-- **零常驻后台脚本**: 新增 `v2/niri/toggle-eyecare.sh` 极简单次触发脚本（运行时间 < 2ms 即刻退出，零内存常驻），无缝联动 Noctalia 色温与 Niri 特效重载
+- **零常驻后台脚本**: 新增 `v2/niri/toggle-eyecare.sh` 极简单次触发脚本（运行时间 < 2ms 即刻退出，零内存常驻），引入昼夜上下文感知与确定性状态对齐（Self-Healing Sync），无缝联动 Noctalia 色温与 Niri 特效重载，彻底消除夜间快捷键反向错位问题
 - **System Doctor 诊断**: 扩展脚本健康检查，新增对 `toggle-eyecare.sh` 快捷脚本的可执行权限自动检测与自愈修复
 
 ### Changed / Refactored

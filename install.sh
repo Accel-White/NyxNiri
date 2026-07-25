@@ -912,6 +912,14 @@ install_configs() {
     fi
     if [ -f "$HOME/.config/niri/config.kdl" ]; then
         sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/niri/config.kdl"
+        local rel_pics_dir esc_rel_pics_dir
+        if [[ "$pics_dir" == "$HOME"* ]]; then
+            rel_pics_dir="~${pics_dir#$HOME}"
+        else
+            rel_pics_dir="$pics_dir"
+        fi
+        esc_rel_pics_dir=$(printf '%s\n' "$rel_pics_dir" | sed 's/[|&]/\\&/g')
+        sed -i -E "s|^[[:space:]]*(//)?[[:space:]]*screenshot-path .*|screenshot-path \"${esc_rel_pics_dir}/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png\"|g" "$HOME/.config/niri/config.kdl"
     fi
     if [ -f "$HOME/.config/fish/fish_variables" ]; then
         sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/fish/fish_variables"

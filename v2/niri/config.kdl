@@ -11,7 +11,7 @@ gestures {
 
 input {
     keyboard {
-        xkb 
+        xkb
 
         numlock
     }
@@ -22,7 +22,7 @@ input {
     mouse {
         accel-speed -0.72
     }
-    trackpoint 
+    trackpoint
 }
 
 layout {
@@ -180,7 +180,7 @@ window-rule {
 
 window-rule {
     match app-id=r"^org\.wezfurlong\.wezterm$"
-    default-column-width 
+    default-column-width
 }
 
 window-rule {
@@ -286,14 +286,14 @@ recent-windows {
 //     scale 1
 //     position x=0 y=1655
 // }
-// 
+//
 // output "DP-1" {
 //     mode "1920x1080@143.999"
 //     scale 1
 //     transform "90"
 //     position x=463 y=0
 // }
-// 
+//
 // output "DP-3" {
 //     mode "2560x1440@179.999"
 //     scale 1
@@ -420,7 +420,7 @@ window-rule {
     match app-id=r"^steam_app_.*"   // 匹配所有 Steam 游戏（原生或 Proton）
     match app-id=r"^gamescope$"     // 匹配 Gamescope 微型合成器
     match app-id=r"^wine$"          // 匹配普通的 Wine 运行环境
-    
+
     // 2. 也可以直接通过窗口标题精准匹配（支持正则忽略大小写）
     // 比如通过第三方启动器运行的《原神》、《绝区零》等，可以直接抓取标题
     match title=r"(?i)genshin impact|zenless zone zero|victoria 3|Minecraft|Endfield"
@@ -444,11 +444,11 @@ window-rule {
 
     open-floating true
     opacity 1.0
-    
-    // 让窗口自己决定初始大小，从而解锁拉伸限制
-    default-column-width 
 
-    default-window-height 
+    // 让窗口自己决定初始大小，从而解锁拉伸限制
+    default-column-width
+
+    default-window-height
 
 
     // 依然可以保持右下角定位
