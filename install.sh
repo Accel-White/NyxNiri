@@ -171,7 +171,7 @@ msg() {
             ask_install_now) echo -e "是否现在检查并进入依赖安装菜单？[Y/n]: " ;;
             ask_backup_again) echo -e "检测到今天已备份过配置，是否重新备份？[y/N]: " ;;
             ask_backup_before_deploy) echo -e "是否在部署前备份当前配置？[Y/n]: " ;;
-            ask_keep_monitor) echo -e "检测到已存在显示器配置文件 ~/.config/niri/monitor.kdl，是否保留当前显示器配置？[Y/n]: " ;;
+            ask_keep_monitor) echo -e "\n\e[1;36m💡 检测到已存在显示配置 ~/.config/niri/monitor.kdl (该文件通常包含针对您个人硬件的屏幕分辨率/布局设置)。\e[0m\n是否保留您当前的显示器配置？[Y/n]: " ;;
         esac
     else
         case "$key" in
@@ -261,7 +261,7 @@ msg() {
             ask_install_now) echo -e "Would you like to check and install missing dependencies now? [Y/n]: " ;;
             ask_backup_again) echo -e "A backup has already been made today. Do you want to back up again? [y/N]: " ;;
             ask_backup_before_deploy) echo -e "Do you want to back up current configs before deploying? [Y/n]: " ;;
-            ask_keep_monitor) echo -e "Existing monitor config ~/.config/niri/monitor.kdl detected. Preserve current monitor settings? [Y/n]: " ;;
+            ask_keep_monitor) echo -e "\n\e[1;36m💡 Existing monitor config ~/.config/niri/monitor.kdl detected (contains resolution/layout settings specific to your personal hardware).\e[0m\nPreserve your current monitor settings? [Y/n]: " ;;
         esac
     fi
 }
