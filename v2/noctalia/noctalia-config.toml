@@ -92,10 +92,13 @@ major_interval = 4
 visible = true
 
 
+[location]
+custom_schedule = false
+
 [nightlight]
 enabled = false
 temperature_day = 6500
-temperature_night = 6000
+temperature_night = 5500
 
 [osd]
 background_opacity = 0.84999998100101948
@@ -109,7 +112,6 @@ media = false
 [shell]
 font_family = "Noto Sans CJK SC"
 settings_show_advanced = true
-ui_scale = 1.2000000104308128
 
 [shell.greeter_sync]
 auto_sync = true
@@ -167,7 +169,7 @@ variant = "default"
 [theme]
 builtin = "Ayu"
 community_palette = "One Dark Two"
-mode = "dark"
+mode = "auto"
 source = "wallpaper"
 wallpaper_scheme = "m3-content"
 

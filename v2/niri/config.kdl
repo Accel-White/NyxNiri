@@ -80,11 +80,6 @@ layer-rule {
 }
 
 layer-rule {
-    match namespace="^quickshell$"
-    place-within-backdrop true
-}
-
-layer-rule {
     match namespace="^mpvpaper$"
     place-within-backdrop true
 }
@@ -121,10 +116,10 @@ environment {
     QT_QPA_PLATFORMTHEME "gtk3"
     QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
 
-    // NVIDIA environment variables for proper EGL/OpenGL rendering on Wayland
-    GBM_BACKEND "nvidia-drm"
-    __GLX_VENDOR_LIBRARY_NAME "nvidia"
-    LIBVA_DRIVER_NAME "nvidia"
+    // NVIDIA environment variables (uncommented automatically by install.sh if NVIDIA GPU is detected)
+    // GBM_BACKEND "nvidia-drm"
+    // __GLX_VENDOR_LIBRARY_NAME "nvidia"
+    // LIBVA_DRIVER_NAME "nvidia"
 }
 
 spawn-at-startup "noctalia"
@@ -210,11 +205,6 @@ window-rule {
 window-rule {
     match app-id=r"firefox$" title="^Picture-in-Picture$"
     match app-id="zoom"
-    open-floating true
-}
-
-window-rule {
-    match app-id=r"org.quickshell$"
     open-floating true
 }
 
