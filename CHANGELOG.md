@@ -1,5 +1,20 @@
 # Changelog
 
+## [v2.1.7] - 2026-07-26 (进行中)
+
+### Fixed / Hardened
+
+- **护眼模式 (Mod+N) 部署后状态颠倒错位修复**: `toggle-eyecare.sh` 不再依赖会被"部署配置"清空重置的 `.eyecare_state` 状态文件，改为直接以 `wlsunset` 进程是否存活作为唯一事实来源判断当前护眼状态，彻底解决部署后色温与窗口透明度/Blur 状态脱同步、切换键表现"颠倒"的问题；新增 `--sync` 校准模式并接入 `config.kdl` 的 `spawn-at-startup`，niri 重启后可自愈对齐。
+- **install.sh 部署原子化**: 新增 `atomic_replace_dir()`，部署/回滚前先复制到临时目录、确认成功后才 `rm+mv` 换上去，避免中断（Ctrl+C / 断电 / 磁盘满）导致配置目录只删不建、直接丢失；顺手删除了从未被调用的死代码 `copy_config_items()`。
+- **install.sh 清理陷阱死代码修复**: 原 `TEMP_WORKDIR` 声明后从未被实际赋值，中断清理 trap 形同虚设；改为 `CLEANUP_TEMP_PATHS` 注册表，所有临时文件/目录均能在退出时被正确回收。
+- **install.sh 备份列表空格拆分 bug**: `get_all_backups` 原先靠 `echo "${arr[@]}"` 与 `read -a` 字符串往返传递，路径含空格时会被错误拆分，可能导致回滚指向错误快照；改为直接填充全局数组。
+- **install.sh 自更新安全性**: 统一改用脚本自解析的 `REAL_SCRIPT_PATH` 而非裸 `$BASH_SOURCE` 定位并覆盖自身；下载的新版本脚本先落地临时文件、`bash -n` 语法校验通过后才原子替换真身，避免网络中断导致执行到半截的脚本被直接运行；`git reset --hard` 前检测工作区是否存在未提交改动并交互确认，不再静默丢弃本地修改；连接 GitHub 失败切换国内镜像时，交互场景下会先征求用户确认。
+
+### Added
+
+- **`clean-cache` 智能化改造**: 用体积阈值（默认 50MB）动态扫描 `~/.cache` 取代逐个硬编码的 App 缓存白名单，新装软件无需改脚本即可被自动覆盖清理；新增 `-y/--yes/--auto` 非交互自动化模式，便于接入 cron/systemd timer；补充清理内核升级残留的孤立内核模块目录（`/usr/lib/modules/<旧版本>`）与 `systemd-coredump` 系统崩溃转储。
+- **Fish 包搜索体验重做**: `se`/`un` 改为基于 `paru -Slq`/`pacman -Qq` 全量包名列表 + `fzf` 原生模糊匹配的交互式搜索安装/卸载，替代原先只能精确匹配包名、且完全不搜 AUR 的 `shelly query` 别名。
+
 ## [v2.1.6] - 2026-07-26
 
 ### Fixed / Hardened

@@ -8,12 +8,20 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+# Registry of temp paths created during this run; cleanup() sweeps all of them
+# on exit/interrupt instead of relying on a single tracked path.
+declare -a CLEANUP_TEMP_PATHS=()
+register_temp_path() {
+    CLEANUP_TEMP_PATHS+=("$1")
+}
+
 # Cleanup trap handler for unexpected signals or interruptions
 cleanup() {
     local exit_code=$?
-    if [ -n "$TEMP_WORKDIR" ] && [ -d "$TEMP_WORKDIR" ]; then
-        rm -rf "$TEMP_WORKDIR"
-    fi
+    local p
+    for p in "${CLEANUP_TEMP_PATHS[@]:-}"; do
+        [ -n "$p" ] && rm -rf "$p"
+    done
     if [ $exit_code -ne 0 ] && [ $exit_code -ne 130 ]; then
         echo -e "\n\e[1;31m[-] Action interrupted or terminated unexpectedly. (Exit Code: $exit_code)\e[0m"
     fi
@@ -27,7 +35,6 @@ LANG_MODE="en"
 PROJECT_NAME="NyxNiri"
 REPO_URL="https://github.com/ech678/NyxNiri.git"
 CACHE_DIR="$HOME/.cache/NyxNiri"
-TEMP_WORKDIR=""
 
 # XDG Compliance State & Log Engine
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/NyxNiri"
@@ -180,6 +187,12 @@ msg() {
             checking_updates) echo -e "\n\e[1;34m🔍 正在检查配置仓库及脚本更新...\e[0m" ;;
             updating_done) echo -e "\e[1;32m✅ 更新与重载成功！正在重新启动脚本...\e[0m" ;;
             updating_failed) echo -e "\e[1;31m[-] 更新失败，请检查您的网络连接或 Git 仓库状态。\e[0m" ;;
+            mirror_fallback_confirm) echo -e "\e[1;33m⚠️  连接 github.com 失败，是否切换到国内镜像 (bgithub.xyz) 继续克隆? [Y/n] \e[0m" ;;
+            mirror_declined) echo -e "\e[1;31m[-] 已取消克隆（拒绝使用非官方镜像）。\e[0m" ;;
+            dirty_tree_warn) echo -e "\e[1;33m⚠️  检测到 $1 中存在未提交的本地改动，继续更新将丢弃这些改动。\e[0m" ;;
+            dirty_tree_confirm) echo -e "是否继续并丢弃本地改动? [y/N] " ;;
+            update_cancelled_dirty) echo -e "\e[1;34m已取消更新，本地改动已保留。\e[0m" ;;
+            syntax_check_failed) echo -e "\e[1;31m❌ 下载的新版本脚本语法校验失败，可能下载不完整，已中止自更新。\e[0m\n请手动检查: $1" ;;
             
             # AUR & mpvpaper
             aur_skip) echo -e "\e[1;33m⚠️  AUR 包 ($1) 需要 AUR helper (paru/yay)，跳过安装。\e[0m" ;;
@@ -270,6 +283,12 @@ msg() {
             checking_updates) echo -e "\n\e[1;34m🔍 Checking for repository and script updates...\e[0m" ;;
             updating_done) echo -e "\e[1;32m✅ Update and reload successful! Restarting script...\e[0m" ;;
             updating_failed) echo -e "\e[1;31m[-] Update failed. Please check your network connection or git status.\e[0m" ;;
+            mirror_fallback_confirm) echo -e "\e[1;33m⚠️  Connection to github.com failed. Switch to the domestic mirror (bgithub.xyz) and continue cloning? [Y/n] \e[0m" ;;
+            mirror_declined) echo -e "\e[1;31m[-] Clone cancelled (declined the unofficial mirror).\e[0m" ;;
+            dirty_tree_warn) echo -e "\e[1;33m⚠️  Uncommitted local changes detected in $1; continuing will discard them.\e[0m" ;;
+            dirty_tree_confirm) echo -e "Continue and discard local changes? [y/N] " ;;
+            update_cancelled_dirty) echo -e "\e[1;34mUpdate cancelled; local changes preserved.\e[0m" ;;
+            syntax_check_failed) echo -e "\e[1;31m❌ Syntax check failed on the downloaded script; the download may be incomplete. Self-update aborted.\e[0m\nPlease check manually: $1" ;;
             
             # AUR & mpvpaper
             aur_skip) echo -e "\e[1;33m⚠️  AUR packages ($1) require an AUR helper (paru/yay). Skipping.\e[0m" ;;
@@ -337,15 +356,26 @@ ensure_repo() {
         fi
         if [ ! -d "$CACHE_DIR" ]; then
             msg cloning_repo
-            
+
             # Test connection to github.com
             local active_repo_url="$REPO_URL"
             echo "Testing connection to github.com..."
             if ! curl -I -s --connect-timeout 3 https://github.com >/dev/null 2>&1; then
-                echo "⚠️ Connection to github.com failed. Switching to domestic mirror (bgithub)..."
+                # Interactive sessions get a chance to opt out of the unofficial
+                # mirror; a non-interactive curl|bash first run can't pause for
+                # input, so it keeps the automatic fallback but logs it either way.
+                if [ -t 0 ]; then
+                    read -p "$(msg mirror_fallback_confirm)" mirror_choice < /dev/tty
+                    if [[ "$mirror_choice" =~ ^[Nn]$ ]]; then
+                        log_msg WARN "User declined bgithub.xyz mirror fallback; aborting clone."
+                        msg mirror_declined
+                        exit 1
+                    fi
+                fi
                 active_repo_url="https://bgithub.xyz/ech678/NyxNiri.git"
             fi
-            
+            log_msg INFO "Cloning repository from: $active_repo_url"
+
             git clone "$active_repo_url" "$CACHE_DIR"
         fi
     fi
@@ -366,6 +396,28 @@ show_release_notes() {
     fi
 }
 
+# Fast-forward pull; only falls back to a hard reset after warning about (and,
+# in interactive sessions, confirming) discarding any local changes in $1.
+safe_pull_or_reset() {
+    local dir="$1"
+    (cd "$dir" && git pull --ff-only) 2>/dev/null && return 0
+
+    local dirty
+    dirty=$(cd "$dir" && git status --porcelain 2>/dev/null)
+    if [ -n "$dirty" ]; then
+        log_msg WARN "Uncommitted changes in $dir before hard reset"
+        msg dirty_tree_warn "$dir"
+        if [ -t 0 ]; then
+            read -p "$(msg dirty_tree_confirm)" confirm_reset < /dev/tty
+            if [[ ! "$confirm_reset" =~ ^[Yy]$ ]]; then
+                msg update_cancelled_dirty
+                return 1
+            fi
+        fi
+    fi
+    (cd "$dir" && git fetch && git reset --hard origin/main)
+}
+
 update_repo_and_script() {
     if ! command -v git >/dev/null 2>&1; then
         msg git_required
@@ -375,25 +427,36 @@ update_repo_and_script() {
     msg checking_updates
     if [ "$RUN_MODE" = "repo" ]; then
         # Inside repository
-        if (cd "$REPO_DIR" && git pull --ff-only 2>/dev/null || (cd "$REPO_DIR" && git fetch && git reset --hard origin/main)); then
+        if safe_pull_or_reset "$REPO_DIR"; then
             show_release_notes "$REPO_DIR/CHANGELOG.md"
             msg updating_done
             read -p "$(msg press_any_key)" -n 1 < /dev/tty || sleep 1.5
-            exec bash "$BASH_SOURCE" "$@"
+            exec bash "$REAL_SCRIPT_PATH" "$@"
         else
             msg updating_failed
         fi
     else
         # Standalone mode: Update cache first, then update self
-        if (cd "$CACHE_DIR" && (git pull --ff-only 2>/dev/null || (git fetch && git reset --hard origin/main))); then
+        if safe_pull_or_reset "$CACHE_DIR"; then
             show_release_notes "$CACHE_DIR/CHANGELOG.md"
-            if cp "$CACHE_DIR/install.sh" "$BASH_SOURCE"; then
-                chmod +x "$BASH_SOURCE"
-                msg updating_done
-                read -p "$(msg press_any_key)" -n 1 < /dev/tty || sleep 1.5
-                exec bash "$BASH_SOURCE" "$@"
+            local staged_script="${REAL_SCRIPT_PATH}.new.$$"
+            if cp "$CACHE_DIR/install.sh" "$staged_script"; then
+                register_temp_path "$staged_script"
+                # Verify the downloaded script is at least syntactically intact
+                # before it ever overwrites the live script or gets exec'd.
+                if bash -n "$staged_script"; then
+                    mv "$staged_script" "$REAL_SCRIPT_PATH"
+                    chmod +x "$REAL_SCRIPT_PATH"
+                    msg updating_done
+                    read -p "$(msg press_any_key)" -n 1 < /dev/tty || sleep 1.5
+                    exec bash "$REAL_SCRIPT_PATH" "$@"
+                else
+                    rm -f "$staged_script"
+                    msg syntax_check_failed "$CACHE_DIR/install.sh"
+                    return 1
+                fi
             else
-                echo -e "\e[1;33m⚠️  Warning: Failed to copy updated script to $BASH_SOURCE (permission issue?).\e[0m"
+                echo -e "\e[1;33m⚠️  Warning: Failed to copy updated script to $REAL_SCRIPT_PATH (permission issue?).\e[0m"
                 echo "Please update manually from: $CACHE_DIR/install.sh"
             fi
         else
@@ -649,18 +712,18 @@ CONFIG_ITEMS=(
     "starship.toml"
 )
 
-copy_config_items() {
-    local src_dir="$1"
-    local dest_dir="$2"
-    local verbose_prefix="${3:-Copied}"
-    mkdir -p "$dest_dir"
-    for item in "${CONFIG_ITEMS[@]}"; do
-        if [ -e "$src_dir/$item" ]; then
-            rm -rf "$dest_dir/$item"
-            cp -rP "$src_dir/$item" "$dest_dir/$item"
-            echo "  $verbose_prefix: ~/.config/$item"
-        fi
-    done
+# Replace dest with a copy of src without ever leaving dest half-deleted:
+# copy to a sibling temp dir first (dest untouched if this fails), then swap
+# in with rm+mv instead of a long-running rm+cp that a Ctrl+C/crash could
+# interrupt mid-copy.
+atomic_replace_dir() {
+    local src="$1" dest="$2"
+    local tmp_new="${dest}.new.$$"
+    rm -rf "$tmp_new" 2>/dev/null
+    register_temp_path "$tmp_new"
+    cp -a "$src" "$tmp_new" || { rm -rf "$tmp_new"; return 1; }
+    rm -rf "$dest"
+    mv "$tmp_new" "$dest"
 }
 
 backup_configs() {
@@ -689,27 +752,31 @@ backup_configs() {
     msg backup_done "$backup_dir"
 }
 
+# Populates the global ALL_BACKUPS array directly instead of round-tripping
+# through `echo "${arr[@]}" | read -a`, which word-splits on spaces in any
+# backup path (e.g. a $HOME containing a space) and can corrupt the list.
+declare -a ALL_BACKUPS=()
 get_all_backups() {
-    local list=()
+    ALL_BACKUPS=()
     # Check new dedicated backup dir
     if [ -d "$BACKUP_BASE_DIR" ]; then
         for d in "$BACKUP_BASE_DIR"/*; do
             if [ -d "$d" ]; then
-                list+=("$d")
+                ALL_BACKUPS+=("$d")
             fi
         done
     fi
     # Check legacy backup dirs for backward compatibility
     for d in "$HOME/.config"/dotfiles_backup_*; do
         if [ -d "$d" ]; then
-            list+=("$d")
+            ALL_BACKUPS+=("$d")
         fi
     done
-    echo "${list[@]}"
 }
 
 list_backups() {
-    read -r -a backups <<< "$(get_all_backups)"
+    get_all_backups
+    local backups=("${ALL_BACKUPS[@]}")
     if [ -z "${backups[0]}" ] || [ ! -d "${backups[0]}" ]; then
         msg no_backups_found
         return 1
@@ -733,7 +800,8 @@ list_backups() {
 
 rollback_configs() {
     local target_idx="$1"
-    read -r -a backups <<< "$(get_all_backups)"
+    get_all_backups
+    local backups=("${ALL_BACKUPS[@]}")
     if [ -z "${backups[0]}" ] || [ ! -d "${backups[0]}" ]; then
         msg no_backups_found
         return 1
@@ -802,6 +870,7 @@ uninstall_nyxniri() {
             local ts=$(date +%Y%m%d_%H%M%S)
             local archive_file="$HOME/.config/NyxNiri_final_backup_$ts.tar.gz"
             local temp_stage=$(mktemp -d)
+            register_temp_path "$temp_stage"
             for item in "${CONFIG_ITEMS[@]}"; do
                 if [ -e "$HOME/.config/$item" ]; then
                     cp -rP "$HOME/.config/$item" "$temp_stage/"
@@ -822,15 +891,15 @@ uninstall_nyxniri() {
             ;;
         2|restore|--restore)
             # Restore to earliest original backup if exists
-            read -r -a backups <<< "$(get_all_backups)"
+            get_all_backups
+            local backups=("${ALL_BACKUPS[@]}")
             if [ -n "${backups[0]}" ] && [ -d "${backups[0]}" ]; then
                 local earliest="${backups[0]}"
                 local earliest_name=$(basename "$earliest")
                 echo "Restoring earliest pre-install configuration from: $earliest_name"
                 for item in "${CONFIG_ITEMS[@]}"; do
                     if [ -e "$earliest/$item" ]; then
-                        rm -rf "$HOME/.config/$item"
-                        cp -rP "$earliest/$item" "$HOME/.config/$item"
+                        atomic_replace_dir "$earliest/$item" "$HOME/.config/$item"
                         echo "  Restored: ~/.config/$item"
                     fi
                 done
@@ -884,13 +953,13 @@ install_configs() {
                 read -p "$(msg ask_keep_monitor)" mon_choice < /dev/tty
                 if [[ "$mon_choice" =~ ^[Yy]$ || -z "$mon_choice" ]]; then
                     temp_monitor=$(mktemp)
+                    register_temp_path "$temp_monitor"
                     cp "$dest/monitor.kdl" "$temp_monitor"
                 fi
             fi
-            
-            rm -rf "$dest"
-            cp -a "$src" "$dest"
-            
+
+            atomic_replace_dir "$src" "$dest"
+
             if [ -n "$temp_monitor" ] && [ -f "$temp_monitor" ]; then
                 cp "$temp_monitor" "$dest/monitor.kdl"
                 rm -f "$temp_monitor"

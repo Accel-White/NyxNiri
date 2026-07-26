@@ -123,6 +123,7 @@ environment {
 }
 
 spawn-at-startup "noctalia"
+spawn-at-startup "~/.config/niri/toggle-eyecare.sh" "--sync"
 
 hotkey-overlay {
     skip-at-startup

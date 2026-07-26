@@ -8,6 +8,9 @@
 #   - Robust safety guards on all directories to prevent accidental empty/root deletions
 #   - Pure Bash integer math formatting (no external dependencies like 'bc')
 #   - Graceful fallback for various package managers (shelly, pacman, yay, paru, flatpak, apt, brew)
+#   - Dynamic ~/.cache scan by size threshold (no hardcoded per-app whitelist to maintain)
+#   - Non-interactive automation mode (-y/--yes/--auto) for cron/systemd timer usage
+#   - Extra system junk cleanup: stale kernel module dirs, systemd-coredump dumps
 # ==============================================================================
 
 # Ensure output uses UTF-8 and standard formatting
@@ -16,6 +19,24 @@ export LANG=en_US.UTF-8
 # Configuration Constants
 CACHE_RETENTION_DAYS=14
 JOURNAL_RETENTION_DAYS=2
+CACHE_SIZE_THRESHOLD_MB=50
+CACHE_SIZE_THRESHOLD_BYTES=$((CACHE_SIZE_THRESHOLD_MB * 1024 * 1024))
+
+# Command-line arguments
+AUTO_MODE=false
+for arg in "$@"; do
+    case "$arg" in
+        -y|--yes|--auto)
+            AUTO_MODE=true
+            ;;
+        -h|--help)
+            echo "用法: clean-cache [-y|--yes|--auto] [-h|--help]"
+            echo "  -y, --yes, --auto   跳过系统级清理确认，适合 cron/systemd timer 自动运行"
+            echo "  -h, --help          显示本帮助信息"
+            exit 0
+            ;;
+    esac
+done
 
 
 # Color codes for pretty output (only if terminal supports colors)
@@ -128,7 +149,7 @@ echo "   ██║     ██║     █████╗  ███████�
 echo "   ██║     ██║     ██╔══╝  ██╔══██║██║╚██╗██║"
 echo "   ╚██████╗███████╗███████╗██║  ██║██║ ╚████║"
 echo "    ╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝"
-echo -e "         一键系统缓存清理工具 V1.2 (鲁棒版) ${NC}"
+echo -e "         一键系统缓存清理工具 V1.3 (智能版) ${NC}"
 echo "=============================================="
 
 # 1. Capture Initial Disk Space
@@ -138,23 +159,17 @@ log_info "当前可用空间: $(format_size "$INITIAL_SPACE")"
 # 2. User Space Cache Directory Clean
 log_header "清理用户缓存目录 (~/.cache)"
 
-# Specific user caches that grow very large
-clean_dir_contents "$HOME/.cache/zen" "Zen 浏览器缓存"
-clean_dir_contents "$HOME/.cache/spotify" "Spotify 缓存"
-clean_dir_contents "$HOME/.cache/google-chrome" "Google Chrome 缓存"
-clean_dir_contents "$HOME/.cache/chromium" "Chromium 浏览器缓存"
-clean_dir_contents "$HOME/.cache/mozilla" "Firefox/Mozilla 缓存"
-clean_dir_contents "$HOME/.cache/nvidia" "NVIDIA 显卡着色器缓存"
-clean_dir_contents "$HOME/.cache/thumbnails" "系统缩略图缓存"
-clean_dir_contents "$HOME/.cache/fontconfig" "字体配置缓存"
-clean_dir_contents "$HOME/.cache/tracker3" "Tracker3 索引缓存"
-clean_dir_contents "$HOME/.cache/JetBrains" "JetBrains IDE 临时缓存"
-clean_dir_contents "$HOME/.cache/pip" "Python Pip 缓存"
-
-# Package manager user-space build & clone folders
-clean_dir_contents "$HOME/.cache/yay" "Yay AUR 构建与下载缓存"
-clean_dir_contents "$HOME/.cache/paru" "Paru AUR 构建与下载缓存"
-clean_dir_contents "$HOME/.cache/Shelly" "Shelly 用户本地缓存"
+# Dynamic discovery: scan every top-level dir under ~/.cache and clean anything
+# over the size threshold. This auto-covers new apps (browsers, IDEs, AUR helpers,
+# Shelly, etc.) without needing a hardcoded per-app whitelist to maintain.
+log_info "扫描 ~/.cache 中体积超过 ${CACHE_SIZE_THRESHOLD_MB}MB 的目录..."
+for entry in "$HOME/.cache"/*; do
+    [[ -d "$entry" ]] || continue
+    size=$(du -sb "$entry" 2>/dev/null | awk '{print $1}')
+    if [[ -n "$size" && "$size" -ge "$CACHE_SIZE_THRESHOLD_BYTES" ]]; then
+        clean_dir_contents "$entry" "$(basename "$entry")"
+    fi
+done
 
 # Safe generic ~/.cache cleanup: Remove files older than configured days inside ~/.cache
 # but exclude active app folders to avoid breaking running configurations
@@ -224,9 +239,14 @@ clean_dir_contents "$HOME/.local/share/Trash" "系统回收站"
 # 5. System-Level Cache (Requires root/sudo)
 log_header "系统级缓存清理 (需要 sudo 权限)"
 
-# Ask the user if they want to perform root level cleaning
-read -r -p "是否进行系统级清理 (包含系统日志、系统包缓存、内存缓存等)? [y/N] " response
-response=${response,,} # to lowercase
+# Ask the user if they want to perform root level cleaning (skipped in --auto mode)
+if $AUTO_MODE; then
+    log_info "自动化模式 (--auto)，跳过确认，直接执行系统级清理..."
+    response="y"
+else
+    read -r -p "是否进行系统级清理 (包含系统日志、系统包缓存、内存缓存等)? [y/N] " response
+    response=${response,,} # to lowercase
+fi
 
 if [[ "$response" =~ ^(yes|y)$ ]]; then
     # Prompt for sudo early to avoid multiple prompts
@@ -263,6 +283,30 @@ if [[ "$response" =~ ^(yes|y)$ ]]; then
                 sudo pacman -Rns "${orphan_arr[@]}" --noconfirm
             fi
             log_success "Pacman 缓存及孤立包清理完成"
+
+            # Stale kernel module directories left behind after a kernel upgrade.
+            # A dir under /usr/lib/modules is safe to remove only if it's no longer
+            # owned by any installed package AND isn't the currently running kernel.
+            if [[ -d /usr/lib/modules ]]; then
+                log_info "检查 /usr/lib/modules 中的旧内核残留..."
+                running_kernel=$(uname -r)
+                found_stale_kernel=false
+                for moddir in /usr/lib/modules/*/; do
+                    [[ -d "$moddir" ]] || continue
+                    ver=$(basename "$moddir")
+                    [[ "$ver" == "$running_kernel" ]] && continue
+                    if ! pacman -Qo "$moddir" &>/dev/null; then
+                        log_info "发现孤立内核模块目录: ${ver}"
+                        sudo rm -rf "$moddir"
+                        found_stale_kernel=true
+                    fi
+                done
+                if $found_stale_kernel; then
+                    log_success "旧内核模块残留清理完成"
+                else
+                    log_info "未发现旧内核模块残留"
+                fi
+            fi
         fi
 
         # 5.3 Yay & Paru (AUR package manager cleanup)
@@ -313,6 +357,18 @@ if [[ "$response" =~ ^(yes|y)$ ]]; then
             log_info "清理 Systemd 日志缓存 (仅保留最近 ${JOURNAL_RETENTION_DAYS} 天的日志)..."
             sudo journalctl --vacuum-time=${JOURNAL_RETENTION_DAYS}d
             log_success "Systemd 日志清理完成"
+        fi
+
+        # 5.7.1 Systemd-coredump (crash dump files, root-owned so needs sudo)
+        if [[ -d /var/lib/systemd/coredump ]]; then
+            coredump_size=$(du -sb /var/lib/systemd/coredump 2>/dev/null | awk '{print $1}')
+            if [[ -n "$coredump_size" && "$coredump_size" -gt 0 ]]; then
+                log_info "清理系统核心转储文件 ($(format_size "$coredump_size"))..."
+                sudo find /var/lib/systemd/coredump -mindepth 1 -delete
+                log_success "核心转储清理完成"
+            else
+                log_info "核心转储目录已经是空的"
+            fi
         fi
 
 

@@ -91,9 +91,22 @@ if status is-interactive
     alias up='shelly upgrade-all'                 # 一键更新官方包、AUR、Flatpak、AppImage
     alias update='shelly upgrade-all'             # 同上，完整拼写
     alias in='shelly install'                     # 安装软件包 (支持官方源/AUR/Flatpak)
-    alias un='shelly remove'                      # 卸载软件包
-    alias se='shelly query'                       # 搜索/查询软件包
     alias clean='~/.config/fish/clean-cache'      # 运行一键缓存清理脚本
+
+    # se：模糊搜索软件包 (官方源 + AUR) 并用 fzf 交互安装
+    # paru -Slq 列出全部包名，模糊匹配交给 fzf 自己做，比 `shelly query` 的精确匹配好用得多
+    function se --description "模糊搜索并安装软件包 (官方源 + AUR)"
+        set -l pkgs (paru -Slq | fzf --multi --prompt='📦 安装 > ' \
+            --preview 'paru -Si {1}' --preview-window 'right:60%:wrap')
+        test -n "$pkgs"; and paru -S $pkgs
+    end
+
+    # un：模糊搜索已安装的包并用 fzf 交互卸载
+    function un --description "模糊搜索并卸载已安装软件包"
+        set -l pkgs (pacman -Qq | fzf --multi --prompt='🗑  卸载 > ' \
+            --preview 'pacman -Qi {1}' --preview-window 'right:60%:wrap')
+        test -n "$pkgs"; and paru -Rns $pkgs
+    end
     
     # 自定义指令与别名总览说明 (Custom Commands & Aliases Help)
     function custom_help
@@ -115,13 +128,14 @@ if status is-interactive
         echo "  --- 包管理 (Package Management - Shelly) ---"
         echo "  up / update    -> shelly upgrade-all"
         echo "                    (一键更新官方包、AUR、Flatpak、AppImage)"
+        echo "  se             -> 模糊搜索软件包 (官方源 + AUR)，fzf 交互选择安装"
+        echo "                    Enter/Tab 多选，Esc 取消，右侧预览包详情"
         echo "  in <包名>      -> shelly install <包名>"
         echo "                    (安装软件包，支持官方/AUR/Flatpak)"
-        echo "  un <包名>      -> shelly remove <包名>"
-        echo "                    (卸载并清理软件包)"
-        echo "  se <关键字>    -> shelly query <关键字>"
+        echo "  un             -> 模糊搜索已安装的包，fzf 交互选择卸载"
         echo "  clean          -> ~/.config/fish/clean-cache"
-        echo "                    (一键清理系统与用户缓存，包含多维度清理)"
+        echo "                    (一键清理系统与用户缓存，动态扫描大缓存目录)"
+        echo "  clean --auto   -> 跳过确认直接执行，适合接入 cron/systemd timer"
         echo ""
         echo "  --- 智能自动补全与模糊搜索 (Autocomplete & Fuzzy Search) ---"
         echo "  Tab            -> 优先采纳灰色历史建议，无建议时触发 Tab 列表补全"
