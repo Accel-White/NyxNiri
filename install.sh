@@ -29,6 +29,31 @@ REPO_URL="https://github.com/ech678/NyxNiri.git"
 CACHE_DIR="$HOME/.cache/NyxNiri"
 TEMP_WORKDIR=""
 
+# XDG Compliance State & Log Engine
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/NyxNiri"
+mkdir -p "$LOG_DIR" 2>/dev/null || true
+INSTALL_LOG="$LOG_DIR/install.log"
+
+init_logger() {
+    if [ -f "$INSTALL_LOG" ]; then
+        local tmp_log
+        tmp_log=$(tail -n 800 "$INSTALL_LOG" 2>/dev/null || true)
+        echo "$tmp_log" > "$INSTALL_LOG"
+    fi
+    echo "==================================================" >> "$INSTALL_LOG"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] NyxNiri Session Started ($CURRENT_VERSION)" >> "$INSTALL_LOG"
+    echo "==================================================" >> "$INSTALL_LOG"
+}
+
+log_msg() {
+    local level="${1:-INFO}"
+    shift
+    local raw_msg="$*"
+    local clean_msg
+    clean_msg=$(echo "$raw_msg" | sed 's/\x1b\[[0-9;]*m//g')
+    echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] $clean_msg" >> "$INSTALL_LOG" 2>/dev/null || true
+}
+
 if [ -n "${BASH_SOURCE[0]}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
     REAL_SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")"
     SCRIPT_DIR="$(cd "$(dirname "$REAL_SCRIPT_PATH")" 2>/dev/null && pwd)"
@@ -171,7 +196,7 @@ msg() {
             ask_install_now) echo -e "是否现在检查并进入依赖安装菜单？[Y/n]: " ;;
             ask_backup_again) echo -e "检测到今天已备份过配置，是否重新备份？[y/N]: " ;;
             ask_backup_before_deploy) echo -e "是否在部署前备份当前配置？[Y/n]: " ;;
-            ask_keep_monitor) echo -e "检测到已存在显示器配置文件 ~/.config/niri/monitor.kdl，是否保留当前显示器配置？[Y/n]: " ;;
+            ask_keep_monitor) echo -e "\n\e[1;36m💡 检测到已存在显示配置 ~/.config/niri/monitor.kdl (该文件通常包含针对您个人硬件的屏幕分辨率/布局设置)。\e[0m\n是否保留您当前的显示器配置？[Y/n]: " ;;
         esac
     else
         case "$key" in
@@ -261,7 +286,7 @@ msg() {
             ask_install_now) echo -e "Would you like to check and install missing dependencies now? [Y/n]: " ;;
             ask_backup_again) echo -e "A backup has already been made today. Do you want to back up again? [y/N]: " ;;
             ask_backup_before_deploy) echo -e "Do you want to back up current configs before deploying? [Y/n]: " ;;
-            ask_keep_monitor) echo -e "Existing monitor config ~/.config/niri/monitor.kdl detected. Preserve current monitor settings? [Y/n]: " ;;
+            ask_keep_monitor) echo -e "\n\e[1;36m💡 Existing monitor config ~/.config/niri/monitor.kdl detected (contains resolution/layout settings specific to your personal hardware).\e[0m\nPreserve your current monitor settings? [Y/n]: " ;;
         esac
     fi
 }
@@ -918,12 +943,34 @@ install_configs() {
     fi
     if [ -f "$HOME/.config/niri/config.kdl" ]; then
         sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/niri/config.kdl"
+        local rel_pics_dir esc_rel_pics_dir
+        if [[ "$pics_dir" == "$HOME"* ]]; then
+            rel_pics_dir="~${pics_dir#$HOME}"
+        else
+            rel_pics_dir="$pics_dir"
+        fi
+        esc_rel_pics_dir=$(printf '%s\n' "$rel_pics_dir" | sed 's/[|&]/\\&/g')
+        sed -i -E "s|^[[:space:]]*(//)?[[:space:]]*screenshot-path .*|screenshot-path \"${esc_rel_pics_dir}/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png\"|g" "$HOME/.config/niri/config.kdl"
     fi
     if [ -f "$HOME/.config/mango/config.conf" ]; then
         sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/mango/config.conf"
     fi
     if [ -f "$HOME/.config/fish/fish_variables" ]; then
         sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/fish/fish_variables"
+    fi
+
+    # GPU Hardware Detection: Automatically uncomment NVIDIA environment variables if NVIDIA GPU is present
+    if [ -f "$HOME/.config/niri/config.kdl" ]; then
+        if command -v lspci >/dev/null 2>&1 && lspci | grep -i -q "NVIDIA"; then
+            echo "⚙️  NVIDIA GPU detected. Enabling NVIDIA Wayland environment variables in config.kdl..."
+            log_msg "INFO" "NVIDIA GPU detected via lspci. Enabled NVIDIA Wayland envs in config.kdl"
+            sed -i 's|^[[:space:]]*//[[:space:]]*\(GBM_BACKEND "nvidia-drm"\)|\1|g' "$HOME/.config/niri/config.kdl"
+            sed -i 's|^[[:space:]]*//[[:space:]]*\(__GLX_VENDOR_LIBRARY_NAME "nvidia"\)|\1|g' "$HOME/.config/niri/config.kdl"
+            sed -i 's|^[[:space:]]*//[[:space:]]*\(LIBVA_DRIVER_NAME "nvidia"\)|\1|g' "$HOME/.config/niri/config.kdl"
+        else
+            echo "⚙️  Non-NVIDIA GPU / Virtual Machine detected. Keeping NVIDIA envs disabled to prevent black screens."
+            log_msg "INFO" "Non-NVIDIA / Virtual Machine GPU detected. NVIDIA envs kept disabled."
+        fi
     fi
     
     # Enable Noctalia mpvpaper plugin if noctalia CLI is available
@@ -937,16 +984,16 @@ install_configs() {
         echo "⚙️  Installing/Updating Fisher plugins..."
         fish -c "
             if not functions -q fisher
-                echo 'Fisher not found, installing fisher...'
-                curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher
+                echo 'Fisher not found, attempting to install fisher...'
+                curl -sL --connect-timeout 5 https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher || echo '⚠️  Network timeout or raw.githubusercontent.com unreachable. Skipping Fisher auto-install.'
             end
-            if test -f ~/.config/fish/fish_plugins
+            if test -f ~/.config/fish/fish_plugins && functions -q fisher
                 echo 'Installing plugins listed in fish_plugins...'
-                fisher update
+                fisher update || echo '⚠️  Fisher update skipped due to network connectivity issue.'
             end
         "
     fi
-    
+
     msg copy_done
     
     # 3. Prompt for dependencies if missing
@@ -1054,6 +1101,12 @@ run_doctor() {
             chmod +x "$te_path"
         fi
     fi
+
+    if command -v wlsunset >/dev/null 2>&1; then
+        msg doctor_ok "EyeCare Component: wlsunset is available for smooth warmth transition."
+    else
+        msg doctor_warn "EyeCare Component: wlsunset is missing (Night mode temperature ramp will be unavailable)."
+    fi
     
     # Check toggle-eyecare.sh in mango config directory
     local te_mango_path="$HOME/.config/mango/toggle-eyecare.sh"
@@ -1095,6 +1148,11 @@ run_doctor() {
         msg doctor_ok "Desktop Portal: xdg-desktop-portal is active."
     else
         msg doctor_warn "Desktop Portal: xdg-desktop-portal is not active."
+    fi
+
+    # Virtual Machine Check
+    if command -v lspci >/dev/null 2>&1 && lspci | grep -i -q "VMware\|VirtualBox\|QEMU\|Virtio"; then
+        msg doctor_warn "Virtual Machine detected (VMware/VirtualBox/QEMU). Ensure 'Accelerate 3D Graphics' is enabled in VM settings to avoid black screen in Niri Wayland!"
     fi
     
     msg all_done
@@ -1184,6 +1242,15 @@ generate_bug_report() {
         echo '```text'
         journalctl --user -n 30 --no-pager 2>/dev/null || echo "journalctl log access unavailable"
         echo '```'
+        echo ""
+        echo "## 8. NyxNiri Installer Log (Last 30 Lines)"
+        echo '```text'
+        if [ -f "$INSTALL_LOG" ]; then
+            tail -n 30 "$INSTALL_LOG"
+        else
+            echo "No install.log found at $INSTALL_LOG"
+        fi
+        echo '```'
     } > "$report_file"
     
     msg report_done "$report_file"
@@ -1256,6 +1323,16 @@ main_menu() {
 }
 
 main() {
+    if [ "$(id -u)" -eq 0 ]; then
+        echo -e "\n\e[1;31m[-] 错误: 请勿使用 root (或 sudo) 权限运行此脚本！\e[0m"
+        echo -e "    NyxNiri Dotfiles 必须安装部署在普通用户账户下。"
+        echo -e "    Error: Do NOT run this installer as root or with sudo!"
+        echo -e "    Please re-run as normal user: ./install.sh\n"
+        exit 1
+    fi
+
+    init_logger
+    log_msg "INFO" "NyxNiri CLI launched in $RUN_MODE mode ($MODE_LABEL)"
     ensure_nyxniri_symlink
     
     if [ $# -gt 0 ]; then

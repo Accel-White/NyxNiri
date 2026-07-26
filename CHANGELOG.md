@@ -1,11 +1,50 @@
 # Changelog
 
+## [v2.1.6] - 2026-07-26
+
+### Fixed / Hardened
+
+- **NVIDIA 显卡 & 虚拟机黑屏致命修复**: 默认注释 `v2/niri/config.kdl` 中的 NVIDIA 专属环境变量（`GBM_BACKEND "nvidia-drm"` 等），彻底解决 Intel/AMD 显卡以及 VMware/VirtualBox/QEMU 虚拟机设备在启动 Niri Wayland 会话时渲染引擎崩溃黑屏且无法响应的硬伤。
+- **GPU 硬件自动探测与开箱即用**: 在 `install.sh` 部署环节增加 `lspci` GPU 自动识别逻辑，仅在检测到设备确实包含 NVIDIA 独显时自动解注释 `config.kdl` 中的 NVIDIA 变量，实现全平台设备开箱即用。
+- **root / sudo 账号误运行防护**: 在 `install.sh` 入口增加 `[ "$(id -u)" -eq 0 ]` 断言保护，严格阻止以 root 权限部署 dotfiles，防止配置文件写错至 `/root` 目录或发生 `root:root` 文件所有权错乱。
+- **Fisher 在线获取网络超时防护**: 为 `install.sh` 中的 Fisher 插件获取补全 `--connect-timeout 5` 与错误捕获，避免无网络或 GitHub 连接中断时 `set -e` 导致脚本部署中途中断。
+- **强自愈式锁释放 (Self-Healing Lock Release)**: 优化 `v2/niri/toggle-eyecare.sh` 前置清理逻辑，按 `Mod+N` 时会在 1 毫秒内强制解包 Noctalia 的 Wayland Gamma 协议锁，解决手动干预导致的色温状态混乱。
+
+### Added
+
+- **XDG 规范日志引擎 (install.log)**: 在 `install.sh` 中构建符合 `XDG_STATE_HOME` 规范的日志引擎（保存于 `~/.local/state/NyxNiri/install.log`），支持 ANSI 颜色转义符自动剥离、时间戳单行记录与自动截断滚动（限制 800 行 / <50KB），绝不污染用户 `$HOME` 家目录。
+- **Bug Report 可观测性集成**: 在 `nyxniri bug-report` 导出的报告末尾自动附带 `install.log` 最新运行日志切片，大幅提升疑难杂症的诊断效率。
+- **System Doctor 诊断强化**: 新增对 `wlsunset` 护眼模式平滑渐变组件的检查，以及虚拟机环境（VMware/VirtualBox/QEMU）下 “3D 硬件加速” 开启状态的诊断提醒。
+- **审查方案与规范文档**: 在项目根目录新建《NyxNiri Dotfiles 审查方案与实战指南》（`审查方案.md`），总结防误判原则 (False-Positive Prevention Protocol)、5 步标准审查流程与经验心得，并配置 `.gitignore`。
+
+### Changed / Refactored
+
+- **Quickshell / iNiR 历史死代码清理**: 清理 `v2/fish/conf.d/inir-env.fish` 中的过时虚拟环境变量、`v2/fish/config.fish` 中的旧版终端颜色序列打印，以及 `v2/niri/config.kdl` 中残留的 `quickshell` 图层与窗口规则。
+- **Kitty 主题配置去重**: 移除 `v2/kitty/kitty.conf` 顶部重复导入的 `include themes/matugen.conf` 引入项。
+
+## [v2.1.5] - 2026-07-25
+
+### Added
+
+- **wlsunset 强劲色温引擎**: 在 `v2/niri/toggle-eyecare.sh` 中全盘接入原生 `wlsunset` 色温渲染引擎，实现物理级色温控制（5500K 微暖自然护眼）。
+- **Noctalia v5 原生 OSD 联动**: 接入 Noctalia v5 内置原生的 Nightlight OSD 悬浮胶囊卡片，随快捷键触发行云流水显示“夜间模式：开启/关闭”并全效支持系统 i18n 国际化语言。
+
+### Changed / Refactored
+
+- **Noctalia 配置解耦**: 在 `v2/noctalia/noctalia-config.toml` 中显式设置 `[nightlight] enabled = false`，完全释放 Wayland Gamma 协议控制锁，消除系统内不同 Gamma 渲染器之间的死锁摩擦。
+- **install.sh 截图路径优化**: 在 `install.sh` 配置部署环节新增自动动态替换 `niri/config.kdl` 中 `screenshot-path` 用户家目录逻辑。
+
+### Fixed / Hardened
+
+- **防显卡撕裂与无闪烁平滑过渡**: 为 `wlsunset` 引入 `-d 0.3` 渐变模式，并结合 50ms 显卡管线错峰重载（Pipeline Frame Separation），彻底解决了 `Mod+N` 触发时 Niri 窗口 Shader 与 GPU 色温控制硬碰撞导致的二次闪烁与视觉撕裂问题。
+- **自愈式按键响应**: 解决夜间定时计划导致色温不响应的硬伤，确保不论昼夜或 UI 手动开关状态，按 `Mod+N` 均能 100% 稳定实现 UI 纯色/毛玻璃与色温双重同步对齐。
+
 ## [v2.1.4] - 2026-07-24
 
 ### Added
 
 - **Niri 护眼模式 (Mod+N)**: 新增 `v2/niri/effects_normal.kdl` 与 `v2/niri/effects_eyecare.kdl` 视觉样式模板；按 `Mod+N` 开启护眼模式时自动将色温调暖，禁用毛玻璃 Blur 效果并将窗口透明度拉满至 100% 纯不透明（消除眩光与背景杂乱透出）
-- **零常驻后台脚本**: 新增 `v2/niri/toggle-eyecare.sh` 极简单次触发脚本（运行时间 < 2ms 即刻退出，零内存常驻），无缝联动 Noctalia 色温与 Niri 特效重载
+- **零常驻后台脚本**: 新增 `v2/niri/toggle-eyecare.sh` 极简单次触发脚本（运行时间 < 2ms 即刻退出，零内存常驻），引入昼夜上下文感知与确定性状态对齐（Self-Healing Sync），无缝联动 Noctalia 色温与 Niri 特效重载，彻底消除夜间快捷键反向错位问题
 - **System Doctor 诊断**: 扩展脚本健康检查，新增对 `toggle-eyecare.sh` 快捷脚本的可执行权限自动检测与自愈修复
 
 ### Changed / Refactored
