@@ -1,6 +1,6 @@
 # Changelog
 
-## [v2.1.7] - 2026-07-26 (进行中)
+## [v2.1.7] - 2026-07-27
 
 ### Fixed / Hardened
 
@@ -9,11 +9,20 @@
 - **install.sh 清理陷阱死代码修复**: 原 `TEMP_WORKDIR` 声明后从未被实际赋值，中断清理 trap 形同虚设；改为 `CLEANUP_TEMP_PATHS` 注册表，所有临时文件/目录均能在退出时被正确回收。
 - **install.sh 备份列表空格拆分 bug**: `get_all_backups` 原先靠 `echo "${arr[@]}"` 与 `read -a` 字符串往返传递，路径含空格时会被错误拆分，可能导致回滚指向错误快照；改为直接填充全局数组。
 - **install.sh 自更新安全性**: 统一改用脚本自解析的 `REAL_SCRIPT_PATH` 而非裸 `$BASH_SOURCE` 定位并覆盖自身；下载的新版本脚本先落地临时文件、`bash -n` 语法校验通过后才原子替换真身，避免网络中断导致执行到半截的脚本被直接运行；`git reset --hard` 前检测工作区是否存在未提交改动并交互确认，不再静默丢弃本地修改；连接 GitHub 失败切换国内镜像时，交互场景下会先征求用户确认。
+- **Qt 应用 Wayland/X11 容错回退优化**: 将 `v2/niri/config.kdl` 中的环境变量 `QT_QPA_PLATFORM` 改进为 `"wayland;xcb"`。使 Qt5/Qt6 应用优先运行于 Wayland 原生模式，当缺失 Wayland 插件或初始化失败时能自动回退至 Xwayland (`xcb`) 运行，避免应用直接崩溃。
 
 ### Added
 
 - **`clean-cache` 智能化改造**: 用体积阈值（默认 50MB）动态扫描 `~/.cache` 取代逐个硬编码的 App 缓存白名单，新装软件无需改脚本即可被自动覆盖清理；新增 `-y/--yes/--auto` 非交互自动化模式，便于接入 cron/systemd timer；补充清理内核升级残留的孤立内核模块目录（`/usr/lib/modules/<旧版本>`）与 `systemd-coredump` 系统崩溃转储。
 - **Fish 包搜索体验重做**: `se`/`un` 改为基于 `paru -Slq`/`pacman -Qq` 全量包名列表 + `fzf` 原生模糊匹配的交互式搜索安装/卸载，替代原先只能精确匹配包名、且完全不搜 AUR 的 `shelly query` 别名。
+- **Noctalia v5 原生空闲超时管理**: 在 `v2/noctalia/noctalia-config.toml` 中配置原生 `[idle]` 策略（300s 自动锁屏、360s 自动关闭显示器熄屏、900s 自动睡眠挂起），实现开箱即用的自动化电源管理。
+
+### Changed / Refactored
+
+- **Niri 快捷键模块化解耦**: 将 `v2/niri/config.kdl` 中庞大的键盘快捷键配置剥离解耦至同目录独立的 `v2/niri/binds.kdl` 文件中，并通过 `include "binds.kdl"` 引入；为所有快捷键与按键分组补充了详细的中英文对照注释，大幅提升配置的可读性与易维护性。
+- **Niri 智能边界动作 (`*-or-*`) 升级**: 在 `v2/niri/binds.kdl` 中将方向键全面升级为 Niri 原生 `*-or-*` 智能穿透动作（`focus-column-or-monitor-*`、`focus-window-or-workspace-*`、`move-column-left-or-to-monitor-*`、`move-window-down-or-to-workspace-*`），实现方向键在列内、跨屏幕与跨工作区之间的平滑自然穿透；新增 `Mod+U` 对称工作区导航。
+- **Noctalia v5 原生锁屏与依赖清理**: 将 `v2/niri/binds.kdl` 中的锁屏快捷键 `Mod+L` 切换为 Noctalia v5 原生锁屏指令（`noctalia msg session lock`），清理 `install.sh` 中遗留的外部 `swaylock` 依赖与冗余诊断检查。
+- **README 快捷键文档同步**: 同步更新 `README.md` 中英文版快捷键对照表，清晰展现智能焦点与智能搬运快捷键。
 
 ## [v2.1.6] - 2026-07-26
 

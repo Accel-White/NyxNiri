@@ -91,9 +91,12 @@ NyxNiri
 | `Super` + `F`           | Maximize current column |
 | `Super` + `Shift` + `F` | Fullscreen              |
 | `Super` + `Tab`         | Workspace overview      |
-| `Super` + `H` / `Z`     | Focus left              |
+| `Super` + `Z`           | Focus left              |
 | `Super` + `C`           | Focus right             |
 | `Super` + `J` / `K`     | Focus up/down           |
+| `Super` + `Arrows`      | Smart focus (Column/Monitor/Workspace) |
+| `Super` + `Ctrl` + `Arrows` | Smart move window (Column/Monitor/Workspace) |
+| `Super` + `-` / `=`     | Decrease/Increase column width |
 
 **System & Components**
 
@@ -259,9 +262,12 @@ NyxNiri
 | `Super` + `F`           | 最大化当前列  |
 | `Super` + `Shift` + `F` | 全屏          |
 | `Super` + `Tab`         | 工作区总览    |
-| `Super` + `H` / `Z`     | 聚焦左侧      |
+| `Super` + `Z`           | 聚焦左侧      |
 | `Super` + `C`           | 聚焦右侧      |
 | `Super` + `J` / `K`     | 聚焦上/下     |
+| `Super` + `方向键`      | 智能焦点 (自动跨列/跨屏/跨区) |
+| `Super` + `Ctrl` + `方向键` | 智能搬运 (自动跨屏/跨区) |
+| `Super` + `-` / `=`     | 收缩/拉伸列宽 |
 
 **系统与组件**
 

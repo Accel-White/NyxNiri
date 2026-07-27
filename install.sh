@@ -483,7 +483,6 @@ DEPS=(
     "fzf"
     "fd"
     "bat"
-    "swaylock"
     "ttf-jetbrains-mono-nerd"
     "noto-fonts-cjk"
 )
@@ -1166,13 +1165,6 @@ run_doctor() {
         msg doctor_warn "Shell: Current shell is '$SHELL', not Fish. (Change: chsh -s \$(which fish))"
     fi
 
-    # Keybinding Dependencies Check
-    if command -v swaylock >/dev/null 2>&1; then
-        msg doctor_ok "Screen Locker: swaylock is available."
-    else
-        msg doctor_warn "Screen Locker: swaylock is missing. (Mod+L screen lock will not work)"
-    fi
-
     if command -v wpctl >/dev/null 2>&1; then
         msg doctor_ok "Audio Control: wpctl (WirePlumber) is available."
     else
@@ -1237,7 +1229,7 @@ generate_bug_report() {
         echo ""
         echo "## 4. Installed Tool Versions"
         echo '```text'
-        for cmd in niri noctalia fish starship kitty mpvpaper swaylock wpctl ddcutil brightnessctl; do
+        for cmd in niri noctalia fish starship kitty mpvpaper wpctl ddcutil brightnessctl; do
             if command -v "$cmd" >/dev/null 2>&1; then
                 local ver=""
                 if [ "$cmd" = "wpctl" ]; then
