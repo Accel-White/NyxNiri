@@ -7,7 +7,7 @@
 
 # 𝑁𝑦𝑥𝑁𝑖𝑟𝑖
 
-A Material You desktop configuration based on Niri and Noctalia V5 for Arch /
+A Material You desktop configuration based on MangoWM and Noctalia V5 for Arch /
 CachyOS.
 
 <p align="center">
@@ -15,7 +15,7 @@ CachyOS.
   <img src="https://img.shields.io/github/stars/ech678/NyxNiri?style=flat-square&color=F5C2E7&label=stars" alt="Stars" />
   <img src="https://img.shields.io/badge/CLI-nyxniri-A6E3A1?style=flat-square&logo=gnu-bash&logoColor=black" alt="CLI" />
   <img src="https://img.shields.io/badge/OS-Arch%20%7C%20CachyOS-1793D1?style=flat-square&logo=arch-linux&logoColor=white" alt="OS" />
-  <img src="https://img.shields.io/badge/WM-Niri-89B4FA?style=flat-square&logo=wayland&logoColor=white" alt="WM" />
+  <img src="https://img.shields.io/badge/WM-MangoWM-89B4FA?style=flat-square&logo=wayland&logoColor=white" alt="WM" />
   <img src="https://img.shields.io/badge/Shell-Fish%20%2B%20Starship-F9E2AF?style=flat-square&logo=fish&logoColor=black" alt="Shell" />
   <img src="https://img.shields.io/badge/UI-Noctalia%20V5-F5C2E7?style=flat-square&logo=material-design&logoColor=black" alt="UI" />
 </p>
@@ -29,7 +29,7 @@ CachyOS.
 ## Overview
 
 NyxNiri is a desktop configuration bundle for Arch Linux and CachyOS. It is
-built around the Niri scroll-tiling window manager and the Noctalia V5 shell,
+built around the MangoWM scroll-tiling window manager and the Noctalia V5 shell,
 providing dynamic theming, basic system synchronization, and terminal
 enhancements.
 
@@ -49,7 +49,7 @@ enhancements.
 
 | Component      | Choice                           |
 | -------------- | -------------------------------- |
-| Window Manager | Niri                             |
+| Window Manager | MangoWM                          |
 | Desktop Shell  | Noctalia V5                      |
 | Wallpaper      | mpvpaper                         |
 | Terminal       | Kitty                            |
@@ -63,7 +63,7 @@ NyxNiri
 ├── install.sh                  # Installation script (backup, dependency check)
 ├── Wallpapers/                 # Wallpaper library
 └── v2/                         # Noctalia V5 configurations
-    ├── niri/                   # Window manager config
+    ├── mango/                  # Window manager config
     ├── noctalia/               # Widgets and theme sync
     ├── kitty/                  # Terminal config
     ├── fish/                   # Shell aliases and functions
@@ -112,7 +112,7 @@ NyxNiri
 | `Super` + `N`           | Toggle Focus Mode       |
 | `Super` + `L`           | Lock screen             |
 | `Super` + `Shift` + `S` | Screenshot              |
-| `Super` + `Shift` + `R` | Reload Niri             |
+| `Super` + `Shift` + `R` | Reload MangoWM          |
 
 ## Installation
 
@@ -159,7 +159,7 @@ An interactive terminal cheatsheet powered by `fzf` for quick navigation of shor
 | Command         | Description                                                    |
 | --------------- | -------------------------------------------------------------- |
 | `nyxhelp`       | Open the interactive dual-panel cheatsheet menu.               |
-| `nyxhelp keys`  | Display Niri keybindings section.                             |
+| `nyxhelp keys`  | Display MangoWM keybindings section.                           |
 | `nyxhelp proxy` | Display proxy controls (`proxy_on`, `proxy_off`, `proxy_status`). |
 | `nyxhelp pkg`   | Display package management shortcuts (`up`, `in`, `se`, `un`, `clean`). |
 | `nyxhelp --all` | Print the full cheatsheet guide.                               |
@@ -198,12 +198,8 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 
 **References**
 
-- [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) - Blur settings
-  reference
 - [h465855hgg/noctalia-lyrics](https://github.com/h465855hgg/noctalia-lyrics) -
   Desktop lyrics widget
-- [Ocfeather/chrome-niri-opacity](https://github.com/Ocfeather/chrome-niri-opacity) -
-  Browser opacity script
 
 ---
 
@@ -213,7 +209,7 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 
 ## 项目概述
 
-NyxNiri 是一套针对 Arch Linux 和 CachyOS 的桌面配置集。核心基于 Niri
+NyxNiri 是一套针对 Arch Linux 和 CachyOS 的桌面配置集。核心基于 MangoWM
 滚动平铺窗口管理器与 Noctalia
 V5，主要提供动态主题同步、基础系统联动以及终端环境的预设配置。
 
@@ -232,7 +228,7 @@ V5，主要提供动态主题同步、基础系统联动以及终端环境的预
 
 | 组件       | 选择                             |
 | ---------- | -------------------------------- |
-| 窗口管理器 | Niri                             |
+| 窗口管理器 | MangoWM                          |
 | 桌面组件   | Noctalia V5                      |
 | 壁纸引擎   | mpvpaper                         |
 | 终端       | Kitty                            |
@@ -246,7 +242,7 @@ NyxNiri
 ├── install.sh                  # 安装脚本（包含依赖检测与配置备份）
 ├── Wallpapers/                 # 壁纸库
 └── v2/                         # Noctalia V5 配置
-    ├── niri/                   # 窗口管理器配置
+    ├── mango/                  # 窗口管理器配置
     ├── noctalia/               # 桌面组件与主题同步
     ├── kitty/                  # 终端配置
     ├── fish/                   # Shell 别名与函数
@@ -293,9 +289,9 @@ NyxNiri
 | `Super` + `W`           | 静态壁纸选择 |
 | `Super` + `Shift` + `W` | 动态壁纸选择 |
 | `Super` + `N`           | 护眼模式     |
-| `Super` + `L`           | 锁屏         |
+| `Super` + `L`           | 锁屏 (swaylock) |
 | `Super` + `Shift` + `S` | 截图         |
-| `Super` + `Shift` + `R` | 重载 Niri    |
+| `Super` + `Shift` + `R` | 重载 MangoWM |
 
 ## 安装部署
 
@@ -342,7 +338,7 @@ curl -sL https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/ma
 | 指令            | 作用                                                           |
 | --------------- | -------------------------------------------------------------- |
 | `nyxhelp`       | 打开双栏 TUI 交互式速查菜单                                    |
-| `nyxhelp keys`  | 快速展示 Niri 桌面核心快捷键                                   |
+| `nyxhelp keys`  | 快速展示 MangoWM 桌面核心快捷键                                 |
 | `nyxhelp proxy` | 展示网络代理控制指令（支持 `proxy_on 10808` 动态端口）          |
 | `nyxhelp pkg`   | 展示包管理与缓存清理指令 (`up`, `in`, `se`, `un`, `clean`)     |
 | `nyxhelp --all` | 静态打印完整速查手册                                           |
@@ -379,11 +375,8 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 
 **参考项目**
 
-- [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) - 模糊效果设置参考
 - [h465855hgg/noctalia-lyrics](https://github.com/h465855hgg/noctalia-lyrics) -
   桌面歌词组件
-- [Ocfeather/chrome-niri-opacity](https://github.com/Ocfeather/chrome-niri-opacity) -
-  浏览器透明度脚本
 
 <div align="right">
   <a href="#english">Back to Top / 返回顶部</a>

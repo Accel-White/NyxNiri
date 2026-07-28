@@ -112,7 +112,7 @@ function nyxhelp --description "NyxNiri Cheatsheet速查手册"
             set_color -o yellow; echo -n "     clean [--auto]          "; set_color green; echo "-> 扫描并清理大缓存与日志垃圾"; set_color normal
             return
         case keys bind keybindings
-            set_color -o magenta; echo "  [ Niri 桌面核心快捷键 ]"; set_color normal
+            set_color -o magenta; echo "  [ MangoWM 桌面核心快捷键 ]"; set_color normal
             set_color -o blue; echo -n "     Mod + Return            "; set_color green; echo "-> 启动 Kitty 终端"; set_color normal
             set_color -o blue; echo -n "     Mod + R / Mod + E       "; set_color green; echo "-> 启动 Noctalia Launcher / Nautilus"; set_color normal
             set_color -o blue; echo -n "     Mod + Q                 "; set_color green; echo "-> 关闭当前窗口"; set_color normal
@@ -121,10 +121,9 @@ function nyxhelp --description "NyxNiri Cheatsheet速查手册"
             set_color -o blue; echo -n "     Mod + T                 "; set_color green; echo "-> 切换窗口 浮动 / 平铺"; set_color normal
             set_color -o blue; echo -n "     Mod + F / Shift+F       "; set_color green; echo "-> 最大化列宽 / 全屏窗口"; set_color normal
             set_color -o blue; echo -n "     Mod + N                 "; set_color green; echo "-> 切换护眼暖色温模式"; set_color normal
-            set_color -o blue; echo -n "     Mod + L                 "; set_color green; echo "-> 锁定屏幕 (Noctalia Lock)"; set_color normal
+            set_color -o blue; echo -n "     Mod + L                 "; set_color green; echo "-> 锁屏 (swaylock)"; set_color normal
             set_color -o blue; echo -n "     Mod + Shift + S / Print "; set_color green; echo "-> 交互式区域截图"; set_color normal
-            set_color -o blue; echo -n "     Mod + Shift + R         "; set_color green; echo "-> 重载 Niri 桌面配置"; set_color normal
-            set_color -o blue; echo -n "     Mod + Slash (/)        "; set_color green; echo "-> 显示 Niri 原生按键覆盖层"; set_color normal
+            set_color -o blue; echo -n "     Mod + Shift + R         "; set_color green; echo "-> 重载 MangoWM 桌面配置"; set_color normal
             return
         case shell
             set_color -o magenta; echo "  [ 终端补全与 fzf ]"; set_color normal
@@ -150,7 +149,7 @@ function nyxhelp --description "NyxNiri Cheatsheet速查手册"
             "1. cli    NyxNiri CLI & 配置快照" \
             "2. proxy  网络代理控制 (Proxy)" \
             "3. pkg    包管理与缓存清理 (Shelly)" \
-            "4. keys   Niri 桌面核心快捷键" \
+            "4. keys   MangoWM 桌面核心快捷键" \
             "5. shell  终端自动补全与 fzf 导航" \
             "6. all    显示全量手册 (Full Cheatsheet)"
 

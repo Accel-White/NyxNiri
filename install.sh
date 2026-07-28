@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-# NyxNiri — Noctalia V5 & Niri Dotfiles Installer & Toolbox
+# NyxNiri — Noctalia V5 & MangoWM Dotfiles Installer & Toolbox
 # Bilingual (English/中文), menu-driven operations, config backup, doctor & update.
 # ==============================================================================
 
@@ -107,7 +107,7 @@ show_logo() {
     echo " ██║ ╚████║   ██║   ██╔╝ ██╗    ██║ ╚████║██║██║  ██║██║"
     echo " ╚═╝  ╚═══╝   ╚═╝   ╚═╝  ╚═╝    ╚═╝  ╚═══╝╚═╝╚═╝  ╚═╝╚═╝"
     echo -e "\e[0m"
-    echo -e "       \e[1;36mNoctalia V5 & Niri Desktop Environment Setup $CURRENT_VERSION\e[0m"
+    echo -e "       \e[1;36mNoctalia V5 & MangoWM Desktop Environment Setup $CURRENT_VERSION\e[0m"
     echo -e "       \e[1;30m----------------------------------------------------\e[0m"
     echo -e "       \e[1;33mMode: $MODE_LABEL ($REPO_DIR)\e[0m\n"
 }
@@ -179,7 +179,7 @@ msg() {
             doctor_warn) echo -e "\e[1;33m[ 警告 ]\e[0m $1" ;;
             doctor_err) echo -e "\e[1;31m[ 错误 ]\e[0m $1" ;;
             all_done) echo -e "\n\e[1;32m🎉 所有的部署和诊断检查已全部完成！\e[0m" ;;
-            reboot_hint) echo -e "\e[1;36m提示: 建议重启 Noctalia 或重新加载 Niri 使得所有新配置完全生效。\e[0m" ;;
+            reboot_hint) echo -e "\e[1;36m提示: 建议重启 Noctalia 或重新加载 MangoWM 使得所有新配置完全生效。\e[0m" ;;
             
             # Standalone & Update Strings
             git_required) echo -e "\e[1;31m[-] 错误: 需要安装 git 才能下载或更新配置仓库。\e[0m" ;;
@@ -209,7 +209,7 @@ msg() {
             ask_install_now) echo -e "是否现在检查并进入依赖安装菜单？[Y/n]: " ;;
             ask_backup_again) echo -e "检测到今天已备份过配置，是否重新备份？[y/N]: " ;;
             ask_backup_before_deploy) echo -e "是否在部署前备份当前配置？[Y/n]: " ;;
-            ask_keep_monitor) echo -e "\n\e[1;36m💡 检测到已存在显示配置 ~/.config/niri/monitor.kdl (该文件通常包含针对您个人硬件的屏幕分辨率/布局设置)。\e[0m\n是否保留您当前的显示器配置？[Y/n]: " ;;
+            ask_keep_monitor) echo -e "\n\e[1;36m💡 检测到已存在显示配置 ~/.config/mango/config.conf (该文件通常包含针对您个人硬件的屏幕分辨率/布局设置)。\e[0m\n是否保留您当前的显示器配置？[Y/n]: " ;;
         esac
     else
         case "$key" in
@@ -275,7 +275,7 @@ msg() {
             doctor_warn) echo -e "\e[1;33m[ WARN ]\e[0m $1" ;;
             doctor_err) echo -e "\e[1;31m[ ERROR]\e[0m $1" ;;
             all_done) echo -e "\n\e[1;32m🎉 All deployment and diagnostics completed successfully!\e[0m" ;;
-            reboot_hint) echo -e "\e[1;36mHint: It is recommended to restart Noctalia or reload Niri for all settings to take effect.\e[0m" ;;
+            reboot_hint) echo -e "\e[1;36mHint: It is recommended to restart Noctalia or reload MangoWM for all settings to take effect.\e[0m" ;;
             
             # Standalone & Update Strings
             git_required) echo -e "\e[1;31m[-] Error: git is required to download or update the repository.\e[0m" ;;
@@ -305,7 +305,7 @@ msg() {
             ask_install_now) echo -e "Would you like to check and install missing dependencies now? [Y/n]: " ;;
             ask_backup_again) echo -e "A backup has already been made today. Do you want to back up again? [y/N]: " ;;
             ask_backup_before_deploy) echo -e "Do you want to back up current configs before deploying? [Y/n]: " ;;
-            ask_keep_monitor) echo -e "\n\e[1;36m💡 Existing monitor config ~/.config/niri/monitor.kdl detected (contains resolution/layout settings specific to your personal hardware).\e[0m\nPreserve your current monitor settings? [Y/n]: " ;;
+            ask_keep_monitor) echo -e "\n\e[1;36m💡 Existing config ~/.config/mango/config.conf detected (contains resolution/layout settings specific to your personal hardware).\e[0m\nPreserve your current monitor settings? [Y/n]: " ;;
         esac
     fi
 }
@@ -469,7 +469,6 @@ update_repo_and_script() {
 # 4. Dependency Management
 # ==============================================================================
 DEPS=(
-    "niri"
     "mango"
     "noctalia"
     "fish"
@@ -707,7 +706,6 @@ BACKUP_BASE_DIR="$HOME/.config/NyxNiri/backups"
 CONFIG_ITEMS=(
     "fish"
     "noctalia"
-    "niri"
     "mango"
     "kitty"
     "fastfetch"
@@ -950,23 +948,7 @@ install_configs() {
         local dest="$HOME/.config/$item"
         
         if [ -e "$src" ]; then
-            local temp_monitor=""
-            if [ "$item" = "niri" ] && [ -f "$dest/monitor.kdl" ]; then
-                read -p "$(msg ask_keep_monitor)" mon_choice < /dev/tty
-                if [[ "$mon_choice" =~ ^[Yy]$ || -z "$mon_choice" ]]; then
-                    temp_monitor=$(mktemp)
-                    register_temp_path "$temp_monitor"
-                    cp "$dest/monitor.kdl" "$temp_monitor"
-                fi
-            fi
-
             atomic_replace_dir "$src" "$dest"
-
-            if [ -n "$temp_monitor" ] && [ -f "$temp_monitor" ]; then
-                cp "$temp_monitor" "$dest/monitor.kdl"
-                rm -f "$temp_monitor"
-                echo "  Preserved existing: ~/.config/niri/monitor.kdl"
-            fi
             
             echo "  Deployed: ~/.config/$item"
         fi
@@ -989,12 +971,6 @@ install_configs() {
     if [ -f "$HOME/.config/fish/clean-cache" ]; then
         chmod +x "$HOME/.config/fish/clean-cache"
     fi
-    if [ -f "$HOME/.config/niri/toggle-eyecare.sh" ]; then
-        chmod +x "$HOME/.config/niri/toggle-eyecare.sh"
-    fi
-    if [ -f "$HOME/.config/niri/effects_normal.kdl" ] && [ ! -e "$HOME/.config/niri/effects.kdl" ]; then
-        ln -sfn "$HOME/.config/niri/effects_normal.kdl" "$HOME/.config/niri/effects.kdl"
-    fi
     if [ -f "$HOME/.config/mango/toggle-eyecare.sh" ]; then
         chmod +x "$HOME/.config/mango/toggle-eyecare.sh"
     fi
@@ -1009,17 +985,6 @@ install_configs() {
         sed -i "s|/home/[^/]\+/图片/wallpapers|${esc_wp_dest}|g" "$HOME/.config/noctalia/noctalia-config.toml"
         sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/noctalia/noctalia-config.toml"
     fi
-    if [ -f "$HOME/.config/niri/config.kdl" ]; then
-        sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/niri/config.kdl"
-        local rel_pics_dir esc_rel_pics_dir
-        if [[ "$pics_dir" == "$HOME"* ]]; then
-            rel_pics_dir="~${pics_dir#$HOME}"
-        else
-            rel_pics_dir="$pics_dir"
-        fi
-        esc_rel_pics_dir=$(printf '%s\n' "$rel_pics_dir" | sed 's/[|&]/\\&/g')
-        sed -i -E "s|^[[:space:]]*(//)?[[:space:]]*screenshot-path .*|screenshot-path \"${esc_rel_pics_dir}/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png\"|g" "$HOME/.config/niri/config.kdl"
-    fi
     if [ -f "$HOME/.config/mango/config.conf" ]; then
         sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/mango/config.conf"
     fi
@@ -1027,20 +992,6 @@ install_configs() {
         sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/fish/fish_variables"
     fi
 
-    # GPU Hardware Detection: Automatically uncomment NVIDIA environment variables if NVIDIA GPU is present
-    if [ -f "$HOME/.config/niri/config.kdl" ]; then
-        if command -v lspci >/dev/null 2>&1 && lspci | grep -i -q "NVIDIA"; then
-            echo "⚙️  NVIDIA GPU detected. Enabling NVIDIA Wayland environment variables in config.kdl..."
-            log_msg "INFO" "NVIDIA GPU detected via lspci. Enabled NVIDIA Wayland envs in config.kdl"
-            sed -i 's|^[[:space:]]*//[[:space:]]*\(GBM_BACKEND "nvidia-drm"\)|\1|g' "$HOME/.config/niri/config.kdl"
-            sed -i 's|^[[:space:]]*//[[:space:]]*\(__GLX_VENDOR_LIBRARY_NAME "nvidia"\)|\1|g' "$HOME/.config/niri/config.kdl"
-            sed -i 's|^[[:space:]]*//[[:space:]]*\(LIBVA_DRIVER_NAME "nvidia"\)|\1|g' "$HOME/.config/niri/config.kdl"
-        else
-            echo "⚙️  Non-NVIDIA GPU / Virtual Machine detected. Keeping NVIDIA envs disabled to prevent black screens."
-            log_msg "INFO" "Non-NVIDIA / Virtual Machine GPU detected. NVIDIA envs kept disabled."
-        fi
-    fi
-    
     # Enable Noctalia mpvpaper plugin if noctalia CLI is available
     if command -v noctalia >/dev/null 2>&1; then
         echo "⚙️  Enabling Noctalia mpvpaper plugin..."
@@ -1089,18 +1040,10 @@ run_doctor() {
     msg running_doctor
     sleep 1
     
-    if [ "$XDG_CURRENT_DESKTOP" = "niri" ]; then
-        msg doctor_ok "Compositor: Niri is currently running."
-    elif [ "$XDG_CURRENT_DESKTOP" = "mango" ]; then
+    if [ "$XDG_CURRENT_DESKTOP" = "mango" ]; then
         msg doctor_ok "Compositor: MangoWM is currently running."
     else
-        msg doctor_warn "Compositor: Current desktop environment is '$XDG_CURRENT_DESKTOP' (Niri/MangoWM is not running)."
-    fi
-    
-    if [ -f "/usr/share/wayland-sessions/niri.desktop" ]; then
-        msg doctor_ok "Session: Niri Wayland session desktop file is registered."
-    else
-        msg doctor_warn "Session: /usr/share/wayland-sessions/niri.desktop is missing."
+        msg doctor_warn "Compositor: Current desktop environment is '$XDG_CURRENT_DESKTOP' (MangoWM is not running)."
     fi
     
     if [ -f "/usr/share/wayland-sessions/mango.desktop" ]; then
@@ -1112,7 +1055,7 @@ run_doctor() {
     if noctalia msg status >/dev/null 2>&1; then
         msg doctor_ok "Noctalia Daemon: Running and responsive."
     else
-        msg doctor_err "Noctalia Daemon: Not running. (Launch: niri msg action spawn -- noctalia)"
+        msg doctor_err "Noctalia Daemon: Not running. (Launch: mmsg dispatch spawn noctalia)"
     fi
     
     local doc_pics_dir=$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")
@@ -1123,7 +1066,7 @@ run_doctor() {
     fi
     
     local missing_critical=0
-    for cmd in niri mangowm noctalia fish starship; do
+    for cmd in mangowm noctalia fish starship; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
             msg doctor_err "Dependency: '$cmd' is missing from PATH."
             missing_critical=$((missing_critical + 1))
@@ -1131,7 +1074,7 @@ run_doctor() {
     done
     
     if [ "$missing_critical" -eq 0 ]; then
-        msg doctor_ok "Core Dependencies: All core tools (niri, mangowm, noctalia, fish, starship) are installed."
+        msg doctor_ok "Core Dependencies: All core tools (mangowm, noctalia, fish, starship) are installed."
     fi
     
     for script in "theme-sync.sh" "wallpaper-hook.sh" "mpvpaper-sync.sh"; do
@@ -1157,17 +1100,6 @@ run_doctor() {
         fi
     else
         msg doctor_err "Scripts: clean-cache is missing from ~/.config/fish/."
-    fi
-
-    # Check toggle-eyecare.sh in niri config directory
-    local te_path="$HOME/.config/niri/toggle-eyecare.sh"
-    if [ -f "$te_path" ]; then
-        if [ -x "$te_path" ]; then
-            msg doctor_ok "Scripts: niri/toggle-eyecare.sh is executable."
-        else
-            msg doctor_warn "Scripts: niri/toggle-eyecare.sh is not executable. Fixing permissions..."
-            chmod +x "$te_path"
-        fi
     fi
 
     if command -v wlsunset >/dev/null 2>&1; then
@@ -1213,7 +1145,7 @@ run_doctor() {
 
     # Virtual Machine Check
     if command -v lspci >/dev/null 2>&1 && lspci | grep -i -q "VMware\|VirtualBox\|QEMU\|Virtio"; then
-        msg doctor_warn "Virtual Machine detected (VMware/VirtualBox/QEMU). Ensure 'Accelerate 3D Graphics' is enabled in VM settings to avoid black screen in Niri Wayland!"
+        msg doctor_warn "Virtual Machine detected (VMware/VirtualBox/QEMU). Ensure 'Accelerate 3D Graphics' is enabled in VM settings to avoid black screen in MangoWM Wayland!"
     fi
     
     msg all_done
@@ -1246,13 +1178,8 @@ generate_bug_report() {
         lspci -k 2>/dev/null | grep -A 2 -E "VGA|3D" || echo "lspci not available"
         echo '```'
         echo ""
-        echo "## 3. Connected Displays (Niri/MangoWM)"
+        echo "## 3. Connected Displays (MangoWM)"
         echo '```text'
-        if command -v niri >/dev/null 2>&1; then
-            niri msg outputs 2>/dev/null || echo "niri msg outputs failed (is Niri running?)"
-        else
-            echo "niri is not installed"
-        fi
         if command -v mmsg >/dev/null 2>&1; then
             mmsg get all-monitors 2>/dev/null || echo "mmsg get all-monitors failed (is MangoWM running?)"
         else
@@ -1262,7 +1189,7 @@ generate_bug_report() {
         echo ""
         echo "## 4. Installed Tool Versions"
         echo '```text'
-        for cmd in niri mangowm noctalia fish starship kitty mpvpaper swaylock wpctl ddcutil brightnessctl; do
+        for cmd in mangowm noctalia fish starship kitty mpvpaper swaylock wpctl ddcutil brightnessctl; do
             if command -v "$cmd" >/dev/null 2>&1; then
                 local ver=""
                 if [ "$cmd" = "wpctl" ]; then
