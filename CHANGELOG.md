@@ -1,5 +1,18 @@
 # Changelog
 
+## [v2.1.9] - 2026-07-28
+
+### Added
+
+- **智能动态配置自动发现 (Dynamic Config Auto-Discovery)**: 彻底废除硬编码的配置项目录数组，实现 `discover_config_items()` 扫描引擎，自动探索并纳管 `$REPO_DIR/v2/` 下的所有组件；新增 Zed 编辑器配置至 `v2/zed`，实现零代码改动全自动纳管部署、快照备份与回滚。
+- **配置覆盖升级 (Optional Overwrite Upgrade)**: 运行 `nyxniri update` 或选择菜单选项 6 时，支持在 git pull 更新仓库与脚本后选择 `1) 极速直接覆盖`、`2) 安全备份覆盖`、`3) 选择性/逐组件覆盖` 与 `4) 跳过`；部署备份提示调整为 `[y/N]` 默认回车跳过备份，同时完好隔离保护个人硬件配置 `monitor.kdl`。
+
+### Changed / Refactored
+
+- **单一事实来源 (Single Source of Truth, SSOT) 鲁棒性重构**: 在 `install.sh` 顶部全局统一定义配置模版名称常量 `CONFIG_DIR_NAME="v2"`，全脚本清除所有硬编码 `/v2` 路径；未来若重命名模版文件夹只需修改头部这 1 行代码。
+- **纯粹多语言隔离 (Pure I18n Language Separation)**: 彻底清理中文模式下所有混杂的英文翻译括号与斜杠后缀（如 `/ Deployment & Setup`），选择简体中文即呈现 100% 纯正地道的中文界面。
+- **零 Emoji 极简 Modern CLI 界面**: 在完全保留原版 6 行 ASCII 大 Banner (`NYX NIRI`) 的前提下，彻底清除所有 Emoji 视觉噪音，采用经典的 Arch / Modern CLI 指示符 (`::`, `[+]`, `[-]`, `[OK]`, `[WARN]`)；将主菜单划分为四大生命周期逻辑分组。
+
 ## [v2.1.8] - 2026-07-28
 
 ### Added
