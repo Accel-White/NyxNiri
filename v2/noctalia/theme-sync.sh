@@ -44,27 +44,24 @@ set_gsettings() {
     fi
 }
 
+scheme_val="prefer-dark"
+gtk_theme="adw-gtk3-dark"
+dark_pref="true"
+
 if [ "$THEME_MODE" = "light" ]; then
-    # 1. Update GSettings (affects Firefox, Chromium, VS Code, and libadwaita apps)
-    set_gsettings color-scheme 'prefer-light'
-    set_gsettings gtk-theme 'adw-gtk3'
-    
-    # 2. Update GTK 3.0 settings.ini
-    update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-application-prefer-dark-theme" "false"
-    update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-theme-name" "adw-gtk3"
-    
-    # 3. Update GTK 4.0 settings.ini
-    update_ini "$HOME/.config/gtk-4.0/settings.ini" "gtk-application-prefer-dark-theme" "false"
-else
-    # 1. Update GSettings
-    set_gsettings color-scheme 'prefer-dark'
-    set_gsettings gtk-theme 'adw-gtk3-dark'
-    
-    # 2. Update GTK 3.0 settings.ini
-    update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-application-prefer-dark-theme" "true"
-    update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-theme-name" "adw-gtk3-dark"
-    
-    # 3. Update GTK 4.0 settings.ini
-    update_ini "$HOME/.config/gtk-4.0/settings.ini" "gtk-application-prefer-dark-theme" "true"
+    scheme_val="prefer-light"
+    gtk_theme="adw-gtk3"
+    dark_pref="false"
 fi
+
+# 1. Update GSettings (affects Firefox, Chromium, VS Code, and libadwaita apps)
+set_gsettings color-scheme "$scheme_val"
+set_gsettings gtk-theme "$gtk_theme"
+
+# 2. Update GTK 3.0 settings.ini
+update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-application-prefer-dark-theme" "$dark_pref"
+update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-theme-name" "$gtk_theme"
+
+# 3. Update GTK 4.0 settings.ini
+update_ini "$HOME/.config/gtk-4.0/settings.ini" "gtk-application-prefer-dark-theme" "$dark_pref"
 

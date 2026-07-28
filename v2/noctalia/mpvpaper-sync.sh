@@ -15,6 +15,7 @@ ASSIGNMENTS_FILE="$HOME/.local/state/noctalia/mpvpaper/assignments.json"
 trap 'exit 0' INT TERM EXIT
 
 process_assignments() {
+    local VIDEO_PATH THUMB_NAME THUMB_PATH CURRENT_WP
     # Extract the first video path using jq
     if [ ! -f "$ASSIGNMENTS_FILE" ]; then
         return
@@ -24,7 +25,7 @@ process_assignments() {
     
     if [[ -n "$VIDEO_PATH" && -f "$VIDEO_PATH" ]]; then
         # Check if it's a video
-        if [[ "$VIDEO_PATH" == *.mp4 ]] || [[ "$VIDEO_PATH" == *.webm ]] || [[ "$VIDEO_PATH" == *.mkv ]] || [[ "$VIDEO_PATH" == *.mov ]] || [[ "$VIDEO_PATH" == *.gif ]]; then
+        if [[ "$VIDEO_PATH" =~ \.(mp4|webm|mkv|mov|gif)$ ]]; then
             # Generate a hash-based filename for the thumbnail to avoid re-generating for the same video
             THUMB_NAME=$(echo -n "$VIDEO_PATH" | md5sum | awk '{print $1}')
             THUMB_PATH="$HOME/.cache/noctalia/mpvpaper/${THUMB_NAME}.jpg"

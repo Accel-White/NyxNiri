@@ -1,5 +1,23 @@
 # Changelog
 
+## [v2.1.8] - 2026-07-28
+
+### Added
+
+- **`nyxhelp` 炫酷 TUI 交互式速查终端**: 全新推出唯一命令 `nyxhelp`，依托 `fzf` 构建双栏 TUI 交互界面，实时检索与预览 NyxNiri CLI、代理控制、包管理、Niri 核心快捷键及终端自动补全指南；完全清理旧版 `custom_help`、`pkg_help` 等分散别名。
+- **代理控制增强 (`proxy_on`)**: `proxy_on` 全面支持动态覆盖自定义端口与 IP 地址（如 `proxy_on 10808` 或 `proxy_on 192.168.1.5:7890`）；同时导出大写与小写代理环境变量（`HTTP_PROXY` / `http_proxy` 等），增强 CLI 工具兼容性。
+
+### Fixed / Hardened
+
+- **`fzf` 预览窗渲染报错修复**: 解决在子 Shell 场景下运行 `nyxhelp` 导致 `fzf` 预览窗口抛出 `未知的命令` 异常的问题；将 `nyxhelp` 进行全局内聚封装，实现低至 <1ms 的高亮预览。
+- **终端审美排版调优**: 优化速查终端排版，全面替换繁杂花哨的 Emoji，采用端庄优雅的字符框段（如 `[ NyxNiri CLI & 配置快照 ]`）与 Fish `set_color` 原生色彩引擎，提升极简专业审美。
+
+### Changed / Refactored
+
+- **Noctalia 自动化脚本 DRY 重构**: 重构 `theme-sync.sh` 精简 23 行重复的分支写入逻辑；在 `wallpaper-hook.sh` 和 `mpvpaper-sync.sh` 中使用 Bash 正则表达式优化视频文件后缀校验，并在 `mpvpaper-sync.sh` 中补充局部变量作用域声明，防止变量污染。
+- **死代码与废弃配置大清理**: 移除过时 Matugen 主题文件 `v2/kitty/themes/matugen.conf`、空置脚本 `v2/fish/conf.d/inir-env.fish`、Starship 残留 `[palettes.ii]` 色板以及 Niri 配置中的旧版图层规则注释。
+- **PATH 路径脚本规范化**: 将 `v2/fish/conf.d/inir-path.fish` 重命名为 `v2/fish/conf.d/nyxniri-path.fish`，统一项目前缀并简化 PATH 路径挂载逻辑。
+
 ## [v2.1.7] - 2026-07-27
 
 ### Fixed / Hardened
