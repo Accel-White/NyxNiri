@@ -1,5 +1,47 @@
 # Changelog
 
+## [v2.1.8] - 2026-07-28
+
+### Added
+
+- **`nyxhelp` 炫酷 TUI 交互式速查终端**: 全新推出唯一命令 `nyxhelp`，依托 `fzf` 构建双栏 TUI 交互界面，实时检索与预览 NyxNiri CLI、代理控制、包管理、Niri 核心快捷键及终端自动补全指南；完全清理旧版 `custom_help`、`pkg_help` 等分散别名。
+- **代理控制增强 (`proxy_on`)**: `proxy_on` 全面支持动态覆盖自定义端口与 IP 地址（如 `proxy_on 10808` 或 `proxy_on 192.168.1.5:7890`）；同时导出大写与小写代理环境变量（`HTTP_PROXY` / `http_proxy` 等），增强 CLI 工具兼容性。
+
+### Fixed / Hardened
+
+- **`fzf` 预览窗渲染报错修复**: 解决在子 Shell 场景下运行 `nyxhelp` 导致 `fzf` 预览窗口抛出 `未知的命令` 异常的问题；将 `nyxhelp` 进行全局内聚封装，实现低至 <1ms 的高亮预览。
+- **终端审美排版调优**: 优化速查终端排版，全面替换繁杂花哨的 Emoji，采用端庄优雅的字符框段（如 `[ NyxNiri CLI & 配置快照 ]`）与 Fish `set_color` 原生色彩引擎，提升极简专业审美。
+
+### Changed / Refactored
+
+- **Noctalia 自动化脚本 DRY 重构**: 重构 `theme-sync.sh` 精简 23 行重复的分支写入逻辑；在 `wallpaper-hook.sh` 和 `mpvpaper-sync.sh` 中使用 Bash 正则表达式优化视频文件后缀校验，并在 `mpvpaper-sync.sh` 中补充局部变量作用域声明，防止变量污染。
+- **死代码与废弃配置大清理**: 移除过时 Matugen 主题文件 `v2/kitty/themes/matugen.conf`、空置脚本 `v2/fish/conf.d/inir-env.fish`、Starship 残留 `[palettes.ii]` 色板以及 Niri 配置中的旧版图层规则注释。
+- **PATH 路径脚本规范化**: 将 `v2/fish/conf.d/inir-path.fish` 重命名为 `v2/fish/conf.d/nyxniri-path.fish`，统一项目前缀并简化 PATH 路径挂载逻辑。
+
+## [v2.1.7] - 2026-07-27
+
+### Fixed / Hardened
+
+- **护眼模式 (Mod+N) 部署后状态颠倒错位修复**: `toggle-eyecare.sh` 不再依赖会被"部署配置"清空重置的 `.eyecare_state` 状态文件，改为直接以 `wlsunset` 进程是否存活作为唯一事实来源判断当前护眼状态，彻底解决部署后色温与窗口透明度/Blur 状态脱同步、切换键表现"颠倒"的问题；新增 `--sync` 校准模式并接入 `config.kdl` 的 `spawn-at-startup`，niri 重启后可自愈对齐。
+- **install.sh 部署原子化**: 新增 `atomic_replace_dir()`，部署/回滚前先复制到临时目录、确认成功后才 `rm+mv` 换上去，避免中断（Ctrl+C / 断电 / 磁盘满）导致配置目录只删不建、直接丢失；顺手删除了从未被调用的死代码 `copy_config_items()`。
+- **install.sh 清理陷阱死代码修复**: 原 `TEMP_WORKDIR` 声明后从未被实际赋值，中断清理 trap 形同虚设；改为 `CLEANUP_TEMP_PATHS` 注册表，所有临时文件/目录均能在退出时被正确回收。
+- **install.sh 备份列表空格拆分 bug**: `get_all_backups` 原先靠 `echo "${arr[@]}"` 与 `read -a` 字符串往返传递，路径含空格时会被错误拆分，可能导致回滚指向错误快照；改为直接填充全局数组。
+- **install.sh 自更新安全性**: 统一改用脚本自解析的 `REAL_SCRIPT_PATH` 而非裸 `$BASH_SOURCE` 定位并覆盖自身；下载的新版本脚本先落地临时文件、`bash -n` 语法校验通过后才原子替换真身，避免网络中断导致执行到半截的脚本被直接运行；`git reset --hard` 前检测工作区是否存在未提交改动并交互确认，不再静默丢弃本地修改；连接 GitHub 失败切换国内镜像时，交互场景下会先征求用户确认。
+- **Qt 应用 Wayland/X11 容错回退优化**: 将 `v2/niri/config.kdl` 中的环境变量 `QT_QPA_PLATFORM` 改进为 `"wayland;xcb"`。使 Qt5/Qt6 应用优先运行于 Wayland 原生模式，当缺失 Wayland 插件或初始化失败时能自动回退至 Xwayland (`xcb`) 运行，避免应用直接崩溃。
+
+### Added
+
+- **`clean-cache` 智能化改造**: 用体积阈值（默认 50MB）动态扫描 `~/.cache` 取代逐个硬编码的 App 缓存白名单，新装软件无需改脚本即可被自动覆盖清理；新增 `-y/--yes/--auto` 非交互自动化模式，便于接入 cron/systemd timer；补充清理内核升级残留的孤立内核模块目录（`/usr/lib/modules/<旧版本>`）与 `systemd-coredump` 系统崩溃转储。
+- **Fish 包搜索体验重做**: `se`/`un` 改为基于 `paru -Slq`/`pacman -Qq` 全量包名列表 + `fzf` 原生模糊匹配的交互式搜索安装/卸载，替代原先只能精确匹配包名、且完全不搜 AUR 的 `shelly query` 别名。
+- **Noctalia v5 原生空闲超时管理**: 在 `v2/noctalia/noctalia-config.toml` 中配置原生 `[idle]` 策略（300s 自动锁屏、360s 自动关闭显示器熄屏、900s 自动睡眠挂起），实现开箱即用的自动化电源管理。
+
+### Changed / Refactored
+
+- **Niri 快捷键模块化解耦**: 将 `v2/niri/config.kdl` 中庞大的键盘快捷键配置剥离解耦至同目录独立的 `v2/niri/binds.kdl` 文件中，并通过 `include "binds.kdl"` 引入；为所有快捷键与按键分组补充了详细的中英文对照注释，大幅提升配置的可读性与易维护性。
+- **Niri 智能边界动作 (`*-or-*`) 升级**: 在 `v2/niri/binds.kdl` 中将方向键全面升级为 Niri 原生 `*-or-*` 智能穿透动作（`focus-column-or-monitor-*`、`focus-window-or-workspace-*`、`move-column-left-or-to-monitor-*`、`move-window-down-or-to-workspace-*`），实现方向键在列内、跨屏幕与跨工作区之间的平滑自然穿透；新增 `Mod+U` 对称工作区导航。
+- **Noctalia v5 原生锁屏与依赖清理**: 将 `v2/niri/binds.kdl` 中的锁屏快捷键 `Mod+L` 切换为 Noctalia v5 原生锁屏指令（`noctalia msg session lock`），清理 `install.sh` 中遗留的外部 `swaylock` 依赖与冗余诊断检查。
+- **README 快捷键文档同步**: 同步更新 `README.md` 中英文版快捷键对照表，清晰展现智能焦点与智能搬运快捷键。
+
 ## [v2.1.6] - 2026-07-26
 
 ### Fixed / Hardened

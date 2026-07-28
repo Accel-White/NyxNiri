@@ -1,1 +1,0 @@
-# NyxNiri environment variables

@@ -91,9 +91,12 @@ NyxNiri
 | `Super` + `F`           | Maximize current column |
 | `Super` + `Shift` + `F` | Fullscreen              |
 | `Super` + `Tab`         | Workspace overview      |
-| `Super` + `H` / `Z`     | Focus left              |
+| `Super` + `Z`           | Focus left              |
 | `Super` + `C`           | Focus right             |
 | `Super` + `J` / `K`     | Focus up/down           |
+| `Super` + `Arrows`      | Smart focus (Column/Monitor/Workspace) |
+| `Super` + `Ctrl` + `Arrows` | Smart move window (Column/Monitor/Workspace) |
+| `Super` + `-` / `=`     | Decrease/Increase column width |
 
 **System & Components**
 
@@ -148,6 +151,18 @@ A lightweight utility to manage configurations and diagnose issues.
 | `nyxniri uninstall`        | Remove NyxNiri and restore previous configs.                 |
 | `nyxniri purge`            | Delete all NyxNiri configs, caches, and wallpapers.          |
 | `nyxniri doctor`           | Check dependencies and system health.                        |
+
+## Cheatsheet TUI (`nyxhelp`)
+
+An interactive terminal cheatsheet powered by `fzf` for quick navigation of shortcuts and commands.
+
+| Command         | Description                                                    |
+| --------------- | -------------------------------------------------------------- |
+| `nyxhelp`       | Open the interactive dual-panel cheatsheet menu.               |
+| `nyxhelp keys`  | Display Niri keybindings section.                             |
+| `nyxhelp proxy` | Display proxy controls (`proxy_on`, `proxy_off`, `proxy_status`). |
+| `nyxhelp pkg`   | Display package management shortcuts (`up`, `in`, `se`, `un`, `clean`). |
+| `nyxhelp --all` | Print the full cheatsheet guide.                               |
 
 ## Troubleshooting
 
@@ -259,9 +274,12 @@ NyxNiri
 | `Super` + `F`           | 最大化当前列  |
 | `Super` + `Shift` + `F` | 全屏          |
 | `Super` + `Tab`         | 工作区总览    |
-| `Super` + `H` / `Z`     | 聚焦左侧      |
+| `Super` + `Z`           | 聚焦左侧      |
 | `Super` + `C`           | 聚焦右侧      |
 | `Super` + `J` / `K`     | 聚焦上/下     |
+| `Super` + `方向键`      | 智能焦点 (自动跨列/跨屏/跨区) |
+| `Super` + `Ctrl` + `方向键` | 智能搬运 (自动跨屏/跨区) |
+| `Super` + `-` / `=`     | 收缩/拉伸列宽 |
 
 **系统与组件**
 
@@ -316,6 +334,18 @@ curl -sL https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/ma
 | `nyxniri uninstall`       | 卸载并复原配置                         |
 | `nyxniri purge`           | 清除所有相关配置、缓存与壁纸           |
 | `nyxniri doctor`          | 检查依赖与系统状态                     |
+
+## 终端速查手册 (`nyxhelp`)
+
+依托 `fzf` 构建的双栏 TUI 交互式快捷指令与快捷键速查终端。
+
+| 指令            | 作用                                                           |
+| --------------- | -------------------------------------------------------------- |
+| `nyxhelp`       | 打开双栏 TUI 交互式速查菜单                                    |
+| `nyxhelp keys`  | 快速展示 Niri 桌面核心快捷键                                   |
+| `nyxhelp proxy` | 展示网络代理控制指令（支持 `proxy_on 10808` 动态端口）          |
+| `nyxhelp pkg`   | 展示包管理与缓存清理指令 (`up`, `in`, `se`, `un`, `clean`)     |
+| `nyxhelp --all` | 静态打印完整速查手册                                           |
 
 ## 故障排除
 
