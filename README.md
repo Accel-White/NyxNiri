@@ -5,7 +5,7 @@
 <div align="center">
 <a id="english"></a>
 
-# 𝑁𝑦𝑥𝑁𝑖𝑟𝑖
+# 𝑁𝑦𝑥����𝑜
 
 A Material You desktop configuration based on MangoWM and Noctalia V5 for Arch /
 CachyOS.
@@ -13,7 +13,7 @@ CachyOS.
 <p align="center">
   <img src="https://img.shields.io/badge/License-GPLv3-89B4FA?style=flat-square&logo=gnu" alt="License" />
   <img src="https://img.shields.io/github/stars/ech678/NyxNiri?style=flat-square&color=F5C2E7&label=stars" alt="Stars" />
-  <img src="https://img.shields.io/badge/CLI-nyxniri-A6E3A1?style=flat-square&logo=gnu-bash&logoColor=black" alt="CLI" />
+  <img src="https://img.shields.io/badge/CLI-nyxmango-A6E3A1?style=flat-square&logo=gnu-bash&logoColor=black" alt="CLI" />
   <img src="https://img.shields.io/badge/OS-Arch%20%7C%20CachyOS-1793D1?style=flat-square&logo=arch-linux&logoColor=white" alt="OS" />
   <img src="https://img.shields.io/badge/WM-MangoWM-89B4FA?style=flat-square&logo=wayland&logoColor=white" alt="WM" />
   <img src="https://img.shields.io/badge/Shell-Fish%20%2B%20Starship-F9E2AF?style=flat-square&logo=fish&logoColor=black" alt="Shell" />
@@ -28,7 +28,7 @@ CachyOS.
 
 ## Overview
 
-NyxNiri is a desktop configuration bundle for Arch Linux and CachyOS. It is
+NyxMango is a desktop configuration bundle for Arch Linux and CachyOS. It is
 built around the MangoWM scroll-tiling window manager and the Noctalia V5 shell,
 providing dynamic theming, basic system synchronization, and terminal
 enhancements.
@@ -59,7 +59,7 @@ enhancements.
 ## Directory Structure
 
 ```text
-NyxNiri
+NyxMango
 ├── install.sh                  # Installation script (backup, dependency check)
 ├── Wallpapers/                 # Wallpaper library
 └── v2/                         # Noctalia V5 configurations
@@ -73,7 +73,7 @@ NyxNiri
 
 > [!NOTE]
 > The installation process automatically backs up existing configurations to
-> `~/.config/NyxNiri/backups/`.
+> `~/.config/NyxMango/backups/`.
 
 > [!WARNING]
 > The legacy Dank Material Shell (DMS) configuration has been moved to the
@@ -125,8 +125,8 @@ curl -sL https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 **Git Clone (Recommended)**
 
 ```bash
-git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
-cd ~/NyxNiri && ./install.sh
+git clone https://github.com/ech678/NyxNiri.git ~/NyxMango
+cd ~/NyxMango && ./install.sh
 ```
 
 <details>
@@ -138,19 +138,19 @@ curl -sL https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/ma
 
 </details>
 
-## CLI Tool (`nyxniri`)
+## CLI Tool (`nyxmango`)
 
 A lightweight utility to manage configurations and diagnose issues.
 
 | Command                    | Description                                                  |
 | -------------------------- | ------------------------------------------------------------ |
-| `nyxniri`                  | Open the interactive TUI menu.                               |
-| `nyxniri snapshot [note]`  | Save the current configuration state.                        |
-| `nyxniri rollback [index]` | Revert to a previous snapshot (auto-backs up current state). |
-| `nyxniri list`             | Show available snapshots.                                    |
-| `nyxniri uninstall`        | Remove NyxNiri and restore previous configs.                 |
-| `nyxniri purge`            | Delete all NyxNiri configs, caches, and wallpapers.          |
-| `nyxniri doctor`           | Check dependencies and system health.                        |
+| `nyxmango`                  | Open the interactive TUI menu.                               |
+| `nyxmango snapshot [note]`  | Save the current configuration state.                        |
+| `nyxmango rollback [index]` | Revert to a previous snapshot (auto-backs up current state). |
+| `nyxmango list`             | Show available snapshots.                                    |
+| `nyxmango uninstall`        | Remove NyxMango and restore previous configs.                 |
+| `nyxmango purge`            | Delete all NyxMango configs, caches, and wallpapers.          |
+| `nyxmango doctor`           | Check dependencies and system health.                        |
 
 ## Cheatsheet TUI (`nyxhelp`)
 
@@ -209,7 +209,7 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 
 ## 项目概述
 
-NyxNiri 是一套针对 Arch Linux 和 CachyOS 的桌面配置集。核心基于 MangoWM
+NyxMango 是一套针对 Arch Linux 和 CachyOS 的桌面配置集。核心基于 MangoWM
 滚动平铺窗口管理器与 Noctalia
 V5，主要提供动态主题同步、基础系统联动以及终端环境的预设配置。
 
@@ -238,7 +238,7 @@ V5，主要提供动态主题同步、基础系统联动以及终端环境的预
 ## 目录结构
 
 ```text
-NyxNiri
+NyxMango
 ├── install.sh                  # 安装脚本（包含依赖检测与配置备份）
 ├── Wallpapers/                 # 壁纸库
 └── v2/                         # Noctalia V5 配置
@@ -252,7 +252,7 @@ NyxNiri
 
 > [!NOTE]
 > 安装过程会自动将现有配置备份至
-> `~/.config/NyxNiri/backups/`，不会直接覆盖关键文件。
+> `~/.config/NyxMango/backups/`，不会直接覆盖关键文件。
 
 > [!WARNING]
 > 旧版 Dank Material Shell (DMS) 配置已移至 `archive/v1-dms` 分支。`main`
@@ -304,8 +304,8 @@ curl -sL https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 **Git 克隆（推荐）**
 
 ```bash
-git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
-cd ~/NyxNiri && ./install.sh
+git clone https://github.com/ech678/NyxNiri.git ~/NyxMango
+cd ~/NyxMango && ./install.sh
 ```
 
 <details>
@@ -317,19 +317,19 @@ curl -sL https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/ma
 
 </details>
 
-## CLI 工具 (`nyxniri`)
+## CLI 工具 (`nyxmango`)
 
 用于管理配置快照和系统诊断。
 
 | 指令                      | 作用                                   |
 | ------------------------- | -------------------------------------- |
-| `nyxniri`                 | 打开交互式菜单                         |
-| `nyxniri snapshot [备注]` | 保存当前配置状态                       |
-| `nyxniri rollback [序号]` | 恢复历史快照（恢复前自动备份当前状态） |
-| `nyxniri list`            | 查看可用快照                           |
-| `nyxniri uninstall`       | 卸载并复原配置                         |
-| `nyxniri purge`           | 清除所有相关配置、缓存与壁纸           |
-| `nyxniri doctor`          | 检查依赖与系统状态                     |
+| `nyxmango`                 | 打开交互式菜单                         |
+| `nyxmango snapshot [备注]` | 保存当前配置状态                       |
+| `nyxmango rollback [序号]` | 恢复历史快照（恢复前自动备份当前状态） |
+| `nyxmango list`            | 查看可用快照                           |
+| `nyxmango uninstall`       | 卸载并复原配置                         |
+| `nyxmango purge`           | 清除所有相关配置、缓存与壁纸           |
+| `nyxmango doctor`          | 检查依赖与系统状态                     |
 
 ## 终端速查手册 (`nyxhelp`)
 
