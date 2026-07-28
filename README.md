@@ -5,7 +5,7 @@
 <div align="center">
 <a id="english"></a>
 
-# 𝑁𝑦𝑥����𝑜
+# NyxMango
 
 A Material You desktop configuration based on MangoWM and Noctalia V5 for Arch /
 CachyOS.
