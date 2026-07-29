@@ -234,6 +234,7 @@ msg() {
             ask_backup_again) echo -e ":: 检测到今天已备份过配置，是否重新备份？[y/N]: " ;;
             ask_backup_before_deploy) echo -e ":: 是否在部署前备份当前配置？[y/N] (默认直接部署不备份): " ;;
             ask_keep_monitor) echo -e "\n\e[1;36m:: 检测到已存在显示配置 ~/.config/niri/monitor.kdl (包含针对您个人硬件的配置)。\e[0m\n:: 是否保留您当前的显示器配置？[Y/n]: " ;;
+            ask_keep_wallpapers) echo -e "\n\e[1;36m:: 检测到已存在壁纸目录。\e[0m\n:: 是否保留您当前的壁纸？（选择"否"将替换为 NyxNiri 默认壁纸）[Y/n]: " ;; 
         esac
     else
         case "$key" in
@@ -345,6 +346,7 @@ msg() {
             ask_backup_again) echo -e ":: A backup has already been made today. Do you want to back up again? [y/N]: " ;;
             ask_backup_before_deploy) echo -e ":: Do you want to back up current configs before deploying? [y/N] (Default direct deploy without backup): " ;;
             ask_keep_monitor) echo -e "\n\e[1;36m:: Existing monitor config ~/.config/niri/monitor.kdl detected (contains resolution/layout settings specific to your personal hardware).\e[0m\n:: Preserve your current monitor settings? [Y/n]: " ;;
+            ask_keep_wallpapers) echo -e "\n\e[1;36m:: Existing wallpaper directory detected.\e[0m\n:: Keep your current wallpapers? (Choosing \"No\" will replace with NyxNiri defaults) [Y/n]: " ;; 
         esac
     fi
 }
@@ -469,6 +471,7 @@ update_repo_and_script() {
         # Inside repository
         if safe_pull_or_reset "$REPO_DIR"; then
             show_release_notes "$REPO_DIR/CHANGELOG.md"
+            discover_config_items
             offer_overwrite_upgrade "$flag"
             msg updating_done
             read -p "$(msg press_any_key)" -n 1 < /dev/tty || sleep 1.5
@@ -488,6 +491,7 @@ update_repo_and_script() {
                 if bash -n "$staged_script"; then
                     mv "$staged_script" "$REAL_SCRIPT_PATH"
                     chmod +x "$REAL_SCRIPT_PATH"
+                    discover_config_items
                     offer_overwrite_upgrade "$flag"
                     msg updating_done
                     read -p "$(msg press_any_key)" -n 1 < /dev/tty || sleep 1.5
@@ -759,7 +763,7 @@ discover_config_items() {
         done
     fi
     if [ ${#CONFIG_ITEMS[@]} -eq 0 ]; then
-        CONFIG_ITEMS=("fish" "noctalia" "niri" "kitty" "fastfetch" "starship.toml")
+        CONFIG_ITEMS=("fish" "noctalia" "niri" "kitty" "fastfetch" "starship.toml" "zed")
     fi
 }
 
@@ -1029,16 +1033,7 @@ deploy_selected_configs() {
     
     local pics_dir=$(xdg-user-dir PICTURES 2>/dev/null)
     [ -z "$pics_dir" ] && pics_dir="$HOME/Pictures"
-    local wp_src="$REPO_DIR/Wallpapers"
     local wp_dest="$pics_dir/Wallpapers"
-    if [ -d "$wp_src" ]; then
-        if [ -e "$wp_dest" ] || [ -L "$wp_dest" ]; then
-            rm -rf "$wp_dest"
-        fi
-        mkdir -p "$pics_dir"
-        cp -a "$wp_src" "$wp_dest"
-        echo "  Deployed: $wp_dest"
-    fi
     
     # Ensure scripts are executable and initial effects symlink exists
     if [ -f "$HOME/.config/fish/clean-cache" ]; then
@@ -1121,6 +1116,34 @@ deploy_selected_configs() {
     msg copy_done
 }
 
+deploy_wallpapers() {
+    local pics_dir=$(xdg-user-dir PICTURES 2>/dev/null)
+    [ -z "$pics_dir" ] && pics_dir="$HOME/Pictures"
+    local wp_src="$REPO_DIR/Wallpapers"
+    local wp_dest="$pics_dir/Wallpapers"
+
+    if [ ! -d "$wp_src" ]; then
+        return 0
+    fi
+
+    if [ -e "$wp_dest" ] || [ -L "$wp_dest" ]; then
+        if [ -t 0 ]; then
+            read -p "$(msg ask_keep_wallpapers)" wp_choice < /dev/tty
+        else
+            wp_choice="y"
+        fi
+        if [[ "$wp_choice" =~ ^[Yy]$ || -z "$wp_choice" ]]; then
+            echo "  Preserved: $wp_dest"
+            return 0
+        fi
+    fi
+
+    mkdir -p "$pics_dir"
+    rm -rf "$wp_dest"
+    cp -a "$wp_src" "$wp_dest"
+    echo "  Deployed: $wp_dest"
+}
+
 run_selective_upgrade_menu() {
     local select_status=()
     for i in "${!CONFIG_ITEMS[@]}"; do
@@ -1179,6 +1202,7 @@ offer_overwrite_upgrade() {
     local flag="$1"
     if [ "$flag" = "--force" ] || [ "$flag" = "--deploy" ]; then
         deploy_selected_configs "nobackup"
+        deploy_wallpapers
         return 0
     elif [ "$flag" = "--no-deploy" ]; then
         return 0
@@ -1187,6 +1211,7 @@ offer_overwrite_upgrade() {
     if [ ! -t 0 ]; then
         # Non-interactive session: default to direct overwrite
         deploy_selected_configs "nobackup"
+        deploy_wallpapers
         return 0
     fi
 
@@ -1202,10 +1227,12 @@ offer_overwrite_upgrade() {
     case "$mode_choice" in
         1)
             deploy_selected_configs "nobackup"
+            deploy_wallpapers
             msg overwrite_done
             ;;
         2)
             deploy_selected_configs "backup"
+            deploy_wallpapers
             msg overwrite_done
             ;;
         3)
@@ -1216,6 +1243,7 @@ offer_overwrite_upgrade() {
             ;;
         *)
             deploy_selected_configs "nobackup"
+            deploy_wallpapers
             msg overwrite_done
             ;;
     esac
@@ -1232,6 +1260,7 @@ install_configs() {
     fi
 
     deploy_selected_configs "$do_backup"
+    deploy_wallpapers
 
     if [ "$mode" = "full" ]; then
         check_all_deps

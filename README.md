@@ -68,6 +68,7 @@ NyxNiri
     ├── kitty/                  # Terminal config
     ├── fish/                   # Shell aliases and functions
     ├── fastfetch/              # System info display
+    ├── zed/                    # Zed editor config
     └── starship.toml           # Prompt theme
 ```
 
@@ -95,8 +96,13 @@ NyxNiri
 | `Super` + `C`           | Focus right             |
 | `Super` + `J` / `K`     | Focus up/down           |
 | `Super` + `Arrows`      | Smart focus (Column/Monitor/Workspace) |
-| `Super` + `Ctrl` + `Arrows` | Smart move window (Column/Monitor/Workspace) |
+| `Super` + `Ctrl` + `Arrows` | Smart move (Column/Monitor/Workspace) |
+| `Super` + `D` / `U`     | Workspace down/up        |
+| `Super` + `Space`      | Switch preset column widths |
 | `Super` + `-` / `=`     | Decrease/Increase column width |
+
+> For the complete interactive keybinding reference, run `nyxhelp keys` or
+> press `Super+/` in Niri.
 
 **System & Components**
 
@@ -113,13 +119,14 @@ NyxNiri
 | `Super` + `L`           | Lock screen             |
 | `Super` + `Shift` + `S` | Screenshot              |
 | `Super` + `Shift` + `R` | Reload Niri             |
+| `Super` + `Shift` + `E` | Quit Niri               |
 
 ## Installation
 
 **Quick Install**
 
 ```bash
-curl -sL https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+curl -sL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
 
 **Git Clone (Recommended)**
@@ -133,7 +140,7 @@ cd ~/NyxNiri && ./install.sh
 <summary>Mirror for China</summary>
 
 ```bash
-curl -sL https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+curl -sL --connect-timeout 10 https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
 
 </details>
@@ -160,7 +167,7 @@ An interactive terminal cheatsheet powered by `fzf` for quick navigation of shor
 | --------------- | -------------------------------------------------------------- |
 | `nyxhelp`       | Open the interactive dual-panel cheatsheet menu.               |
 | `nyxhelp keys`  | Display Niri keybindings section.                             |
-| `nyxhelp proxy` | Display proxy controls (`proxy_on`, `proxy_off`, `proxy_status`). |
+| `nyxhelp proxy` | Display proxy controls (`proxy_on [port]`, `proxy_off`, `proxy_status`). |
 | `nyxhelp pkg`   | Display package management shortcuts (`up`, `in`, `se`, `un`, `clean`). |
 | `nyxhelp --all` | Print the full cheatsheet guide.                               |
 
@@ -251,6 +258,7 @@ NyxNiri
     ├── kitty/                  # 终端配置
     ├── fish/                   # Shell 别名与函数
     ├── fastfetch/              # 系统信息展示
+    ├── zed/                    # Zed 编辑器配置
     └── starship.toml           # 提示符主题
 ```
 
@@ -279,7 +287,11 @@ NyxNiri
 | `Super` + `J` / `K`     | 聚焦上/下     |
 | `Super` + `方向键`      | 智能焦点 (自动跨列/跨屏/跨区) |
 | `Super` + `Ctrl` + `方向键` | 智能搬运 (自动跨屏/跨区) |
+| `Super` + `D` / `U`     | 工作区下/上    |
+| `Super` + `Space`      | 切换预设列宽比例 |
 | `Super` + `-` / `=`     | 收缩/拉伸列宽 |
+
+> 完整快捷键列表请运行 `nyxhelp keys` 或按 `Super+/`。
 
 **系统与组件**
 
@@ -296,13 +308,14 @@ NyxNiri
 | `Super` + `L`           | 锁屏         |
 | `Super` + `Shift` + `S` | 截图         |
 | `Super` + `Shift` + `R` | 重载 Niri    |
+| `Super` + `Shift` + `E` | 退出 Niri    |
 
 ## 安装部署
 
 **一键安装**
 
 ```bash
-curl -sL https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+curl -sL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
 
 **Git 克隆（推荐）**
@@ -316,7 +329,7 @@ cd ~/NyxNiri && ./install.sh
 <summary>国内网络加速</summary>
 
 ```bash
-curl -sL https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+curl -sL --connect-timeout 10 https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
 
 </details>

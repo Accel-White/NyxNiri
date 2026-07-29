@@ -1,12 +1,19 @@
 # Changelog
 
-## [v2.1.9] - 2026-07-28
+## [v2.1.9] - 2026-07-29
 
 ### Added
 
 - **智能动态配置自动发现 (Dynamic Config Auto-Discovery)**: 彻底废除硬编码的配置项目录数组，实现 `discover_config_items()` 扫描引擎，自动探索并纳管 `$REPO_DIR/v2/` 下的所有组件；新增 Zed 编辑器配置至 `v2/zed`，实现零代码改动全自动纳管部署、快照备份与回滚。
 - **配置覆盖升级 (Optional Overwrite Upgrade)**: 运行 `nyxniri update` 或选择菜单选项 6 时，支持在 git pull 更新仓库与脚本后选择 `1) 极速直接覆盖`、`2) 安全备份覆盖`、`3) 选择性/逐组件覆盖` 与 `4) 跳过`；部署备份提示调整为 `[y/N]` 默认回车跳过备份，同时完好隔离保护个人硬件配置 `monitor.kdl`。
 - **Starship 实时网络代理指示器 (Starship Real-Time Proxy Indicator)**: 在 `v2/starship.toml` 中新增 `[custom.proxy]` 模块，当检测到全局代理环境变量（`http_proxy` / `all_proxy` 等）激活时，实时在终端 Prompt 中绘制黄底黑字 `󰲝 端口` 胶囊（如 `󰲝 7890`）；重构 `git_branch` 与格式化前缀，实现多场景下 100% 数学对称间距。
+- **壁纸部署安全保护 (Wallpaper Preservation)**: 将壁纸部署逻辑从 `deploy_selected_configs()` 独立抽取为 `deploy_wallpapers()` 函数；部署前交互提示用户是否保留已有壁纸目录（默认 Y 保留），非交互模式（SSH/管道）自动跳过已有目录；选择性覆盖升级模式不再强制替换壁纸。
+
+### Fixed / Hardened
+
+- **更新后新配置目录遗漏修复**: `update_repo_and_script()` 在 repo 和 standalone 两条路径的 git pull 成功后均重新调用 `discover_config_items()` 刷新组件列表，确保更新拉取的新配置目录在本次部署中不会遗漏。
+- **`discover_config_items` 备用数组补全**: 硬编码 fallback 列表新增 `"zed"`，与自动扫描逻辑保持一致。
+- **README 文档修复与校对**: 修正 `Super + Ctrl + Arrows` 键位描述（列移动 vs 窗口移动），补充缺失快捷键及 `nyxhelp` 交互式速查入口；4 条 `curl` 安装命令补齐 `--connect-timeout 10` 防止 GitHub 不可达时无限挂起；英文版 `nyxhelp proxy` 描述对齐中文版的动态端口说明；目录结构树与 fallback 数组同步补全 `zed/`。
 
 ### Changed / Refactored
 
