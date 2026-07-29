@@ -1058,7 +1058,6 @@ deploy_selected_configs() {
 
     if [ -f "$HOME/.config/noctalia/noctalia-config.toml" ]; then
         sed -i "s|/home/[^/]\+/图片/Wallpapers|${esc_wp_dest}|g" "$HOME/.config/noctalia/noctalia-config.toml"
-        sed -i "s|/home/[^/]\+/图片/wallpapers|${esc_wp_dest}|g" "$HOME/.config/noctalia/noctalia-config.toml"
         sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/noctalia/noctalia-config.toml"
     fi
     if [ -f "$HOME/.config/niri/config.kdl" ]; then
