@@ -65,3 +65,7 @@ update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-theme-name" "$gtk_theme"
 # 3. Update GTK 4.0 settings.ini
 update_ini "$HOME/.config/gtk-4.0/settings.ini" "gtk-application-prefer-dark-theme" "$dark_pref"
 
+
+
+
+

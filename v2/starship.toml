@@ -13,7 +13,7 @@ add_newline = false
 # $character
 # """
 format = """
-$cmd_duration 󰜥 $directory $git_branch
+$cmd_duration 󰜥 $directory${git_branch}${custom.proxy}
 $character"""
 
 # Replace the "❯" symbol in the prompt with "➜"
@@ -30,7 +30,7 @@ style = "bg: cyan"
 symbol = "󰘬"
 truncation_length = 12
 truncation_symbol = ""
-format = "󰜥 [](bold fg:cyan)[$symbol $branch(:$remote_branch)](fg:black bg:cyan)[ ](bold fg:cyan)"
+format = " 󰜥 [](bold fg:cyan)[$symbol $branch(:$remote_branch)](fg:black bg:cyan)[](bold fg:cyan)"
 
 [git_commit]
 commit_hash_length = 4
@@ -100,6 +100,14 @@ format = '[](bold fg:green)[󰉋 $path]($style)[](bold fg:green)'
 [cmd_duration]
 min_time = 0
 format = '[](bold fg:yellow)[󰪢 $duration](bold bg:yellow fg:black)[](bold fg:yellow)'
+
+[custom.proxy]
+command = "echo $http_proxy $all_proxy $HTTP_PROXY $ALL_PROXY | tr ' ' '\n' | grep -v '^$' | head -n1 | sed -E 's|.*:||'"
+when = "test -n \"$http_proxy\" -o -n \"$all_proxy\" -o -n \"$HTTP_PROXY\" -o -n \"$ALL_PROXY\""
+style = "bg:yellow fg:black"
+format = " 󰜥 [](bold fg:yellow)[󰲝 $output]($style)[](bold fg:yellow)"
+
+
 
 # >>> NOCTALIA STARSHIP PALETTE >>>
 # Noctalia Starship Palette

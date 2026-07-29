@@ -99,8 +99,8 @@ function nyxhelp --description "NyxNiri Cheatsheet速查手册"
             return
         case proxy
             set_color -o magenta; echo "  [ 网络代理控制 ]"; set_color normal
-            set_color -o yellow; echo -n "     proxy_on [端口/地址]    "; set_color green; echo "-> 开启代理 (默认 127.0.0.1:7890，支持 proxy_on 10808)"; set_color normal
-            set_color -o yellow; echo -n "     proxy_off               "; set_color green; echo "-> 关闭代理 (清除所有环境变量)"; set_color normal
+            set_color -o yellow; echo -n "     proxy_on [端口/地址]    "; set_color green; echo "-> 开启代理 (默认 127.0.0.1:7890，Starship 实时显示)"; set_color normal
+            set_color -o yellow; echo -n "     proxy_off               "; set_color green; echo "-> 关闭代理 (清除环境变量与 Prompt 标识)"; set_color normal
             set_color -o yellow; echo -n "     proxy_status            "; set_color green; echo "-> 检查代理连通性、延迟与公网 IP"; set_color normal
             return
         case pkg

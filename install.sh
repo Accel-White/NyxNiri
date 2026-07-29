@@ -1089,6 +1089,14 @@ deploy_selected_configs() {
             log_msg "INFO" "Non-NVIDIA / Virtual Machine GPU detected. NVIDIA envs kept disabled."
         fi
     fi
+
+    # Post-deployment initialization: Trigger theme-sync to apply GTK and system theme settings
+    if [ -f "$HOME/.config/noctalia/theme-sync.sh" ]; then
+        chmod +x "$HOME/.config/noctalia/theme-sync.sh"
+        bash "$HOME/.config/noctalia/theme-sync.sh" >/dev/null 2>&1 || true
+        echo "  Initialized: Noctalia theme and GTK sync"
+    fi
+
     
     # Enable Noctalia mpvpaper plugin if noctalia CLI is available
     if command -v noctalia >/dev/null 2>&1; then
