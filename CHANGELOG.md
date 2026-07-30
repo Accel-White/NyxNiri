@@ -2,6 +2,15 @@
 
 ## [v2.1.10] - 2026-07-30
 
+### Added / Improved
+
+- **多节点镜像源阶梯降级 (3-Tier Mirror Fallback Protocol)**: 在 `install.sh` 中引入极强鲁棒性的镜像降级引擎。网络拉取与 Git 仓库克隆严格遵循 **官方直连 $\rightarrow$ Fastly jsDelivr CDN $\rightarrow$ gh-proxy 镜像代理 (`gh-proxy.org` / `ghproxy.net`)** 阶梯降级策略；彻底清理废弃的 `bgithub.xyz` 站点。
+- **安装日志透明化沉淀 (Explicit & Transparent Logging)**: 在 Git 节点测试、资源下载与 Fisher 插件安装过程中，引入带色彩的实时终端进度 Log 输出（包含 HTTP 状态码与连通耗时），同步沉淀至 `$LOG_DIR/install.log` (`~/.local/state/NyxNiri/install.log`)。
+- **双模式安装与镜像克隆文档重构**: 在 `README.md` 中英文版中明确划分为 **独立在线管道模式 (Standalone)** 与 **仓库部署模式 (Repository)**；在网络加速卡片中增加 `git clone https://gh-proxy.org/https://github.com/ech678/NyxNiri.git` 镜像克隆指令。
+- **集中化镜像源注册表 (Centralized Mirror Registry)**: 在 `install.sh` 顶部全局集中定义 `GIT_MIRROR_REGISTRY` 与 `RAW_MIRROR_TEMPLATES` 数组，实现镜像配置与探测下载引擎彻底解耦，极大提升项目可维护性。
+- **`set -e` 安全隔离与 Payload 校验**: 隔离 `git fetch` 与 `curl` 网络命令，引入双重超时防护（`--connect-timeout 3` 与 `-m 10`）及 Content-Type HTML 拦截校验，防止网络中断或 404 网页拦截打断安装流程。
+- **Fish Shell 代理诊断增强 (`proxy_status`)**: 在 `v2/fish/config.fish` 的 `proxy_status` 指令中新增对 `https://github.com` 的 HTTP 响应与耗时测试，方便用户一眼分辨终端代理接管 GitHub 流量的状态。
+
 ### Fixed / Hardened
 
 - **壁纸无痛增量同步 (Incremental Wallpaper Sync, Fix Issue #5)**: 彻底重构 `deploy_wallpapers()` 为 `cp -an "$wp_src"/. "$wp_dest"/` 静默增量同步。在自动补全与升级仓库新增壁纸/视频的同时，**100% 完好保留**用户在 `~/Pictures/Wallpapers` 中的个人图片与视频文件；淘汰原有的破坏性 `rm -rf` 整盘清空与二选一弹窗。
@@ -9,6 +18,7 @@
 - **Fish 包管理交互降级兼容 (`se` / `un`)**: 在 `v2/fish/config.fish` 的 `se` (模糊搜索安装) 与 `un` (模糊搜索卸载) 快捷指令中添加 `paru` $\rightarrow$ `yay` $\rightarrow$ `pacman` 动态感知降级检测。当系统未安装 `paru` 时自动使用 `yay` 或 `pacman`，避免命令直接报错崩溃。
 - **Fisher 自动安装网络超时防护**: 在 `install.sh` 的 Fisher 自动安装管道中为 `curl` 添加 `-sfL` (`--fail`) 选项，防止网络超时或 GitHub Raw 拦截返回 HTTP 40x/50x 错误网页时打断 Fish 初始化。
 - **README 文档校对与 CLI 表格补齐**: 在 README 中英文 CLI 工具说明表格中补齐 `nyxniri install [mode]` 与 `nyxniri update [--force]` 指令说明；同步在 `审查方案.md` Changelog 历史集中归档全量审查记录。
+- **README 视觉与排版全面优化 (Visual & Typography Overhaul)**: 快捷键表格全面升级为 `<kbd>` 键帽样式（4 张表格 52 行）；修正 Material You 取色描述为 Noctalia V5 原生取色 + 自定义 Lua 钩子桥接视频壁纸；修正 `Super+J/K` 方向描述 (`up/down` → `down/up`)；故障排除段落标题与正文拆分独立；中文段落消除名词跨行断裂（`Noctalia V5`、`护眼模式 (Super+N)` 等）；安装模式描述结构化排版；修复中文版 LaTeX `$\rightarrow$` 为 Unicode `→`；`lua` 规范为 `Lua`；底部添加分隔线；中文 NOTE/WARNING 断行修复。
 
 ## [v2.1.9] - 2026-07-29
 

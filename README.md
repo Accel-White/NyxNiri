@@ -35,8 +35,9 @@ enhancements.
 
 ## Features
 
-- **Material You Extraction**: Uses `mpvpaper` and a custom lua hook to extract
-  colors from static or video wallpapers and apply them to the Noctalia theme.
+- **Material You Extraction**: Noctalia V5 natively generates color palettes
+  from wallpapers. Custom Lua hooks bridge `mpvpaper` video wallpapers into
+  this pipeline by extracting frame thumbnails via `ffmpeg`.
 - **Theme Synchronization**: A background script keeps GSettings and GTK
   configurations in sync when switching between light and dark modes.
 - **Focus Mode (`Super+N`)**: Adjusts color temperature, disables window blur,
@@ -84,52 +85,61 @@ NyxNiri
 
 **Window Management**
 
-| Shortcut                | Action                  |
-| ----------------------- | ----------------------- |
-| `Super` + `Enter`       | Open terminal           |
-| `Super` + `Q`           | Close window            |
-| `Super` + `T`           | Toggle floating/tiling  |
-| `Super` + `F`           | Maximize current column |
-| `Super` + `Shift` + `F` | Fullscreen              |
-| `Super` + `Tab`         | Workspace overview      |
-| `Super` + `Z`           | Focus left              |
-| `Super` + `C`           | Focus right             |
-| `Super` + `J` / `K`     | Focus up/down           |
-| `Super` + `Arrows`      | Smart focus (Column/Monitor/Workspace) |
-| `Super` + `Ctrl` + `Arrows` | Smart move (Column/Monitor/Workspace) |
-| `Super` + `D` / `U`     | Workspace down/up        |
-| `Super` + `Space`      | Switch preset column widths |
-| `Super` + `-` / `=`     | Decrease/Increase column width |
+| Shortcut | Action |
+| :--- | :--- |
+| <kbd>Super</kbd> + <kbd>Enter</kbd> | Open terminal |
+| <kbd>Super</kbd> + <kbd>Q</kbd> | Close window |
+| <kbd>Super</kbd> + <kbd>T</kbd> | Toggle floating/tiling |
+| <kbd>Super</kbd> + <kbd>F</kbd> | Maximize current column |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | Fullscreen |
+| <kbd>Super</kbd> + <kbd>Tab</kbd> | Workspace overview |
+| <kbd>Super</kbd> + <kbd>Z</kbd> | Focus left |
+| <kbd>Super</kbd> + <kbd>C</kbd> | Focus right |
+| <kbd>Super</kbd> + <kbd>J</kbd> / <kbd>K</kbd> | Focus down/up |
+| <kbd>Super</kbd> + <kbd>Arrows</kbd> | Smart focus (Column/Monitor/Workspace) |
+| <kbd>Super</kbd> + <kbd>Ctrl</kbd> + <kbd>Arrows</kbd> | Smart move (Column/Monitor/Workspace) |
+| <kbd>Super</kbd> + <kbd>D</kbd> / <kbd>U</kbd> | Workspace down/up |
+| <kbd>Super</kbd> + <kbd>Space</kbd> | Switch preset column widths |
+| <kbd>Super</kbd> + <kbd>-</kbd> / <kbd>=</kbd> | Decrease/Increase column width |
 
 > For the complete interactive keybinding reference, run `nyxhelp keys` or
-> press `Super+/` in Niri.
+> press <kbd>Super</kbd> + <kbd>/</kbd> in Niri.
 
 **System & Components**
 
-| Shortcut                | Action                  |
-| ----------------------- | ----------------------- |
-| `Super` + `R`           | App launcher            |
-| `Super` + `E`           | File manager            |
-| `Super` + `X`           | Power menu              |
-| `Super` + `I`           | Control center          |
-| `Super` + `V`           | Clipboard history       |
-| `Super` + `W`           | Static wallpaper picker |
-| `Super` + `Shift` + `W` | Live wallpaper picker   |
-| `Super` + `N`           | Toggle Focus Mode       |
-| `Super` + `L`           | Lock screen             |
-| `Super` + `Shift` + `S` | Screenshot              |
-| `Super` + `Shift` + `R` | Reload Niri             |
-| `Super` + `Shift` + `E` | Quit Niri               |
+| Shortcut | Action |
+| :--- | :--- |
+| <kbd>Super</kbd> + <kbd>R</kbd> | App launcher |
+| <kbd>Super</kbd> + <kbd>E</kbd> | File manager |
+| <kbd>Super</kbd> + <kbd>X</kbd> | Power menu |
+| <kbd>Super</kbd> + <kbd>I</kbd> | Control center |
+| <kbd>Super</kbd> + <kbd>V</kbd> | Clipboard history |
+| <kbd>Super</kbd> + <kbd>W</kbd> | Static wallpaper picker |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | Live wallpaper picker |
+| <kbd>Super</kbd> + <kbd>N</kbd> | Toggle Focus Mode |
+| <kbd>Super</kbd> + <kbd>L</kbd> | Lock screen |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Screenshot |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | Reload Niri |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd> | Quit Niri |
 
 ## Installation
 
-**Quick Install**
+NyxNiri supports two installation modes:
+
+- **Standalone Mode (Online Pipeline)** — `curl ... | bash` caches the
+  repository to `~/.cache/NyxNiri` and deploys automatically without creating a
+  local workspace repo.
+- **Repository Mode (Local / Development — Recommended)** — `git clone ... &&
+  ./install.sh` runs directly inside the local repo directory for easy
+  customization and version control.
+
+### Mode 1: Quick Standalone Install
 
 ```bash
 curl -sL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
 
-**Git Clone (Recommended)**
+### Mode 2: Git Repository Install (Recommended)
 
 ```bash
 git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
@@ -137,11 +147,25 @@ cd ~/NyxNiri && ./install.sh
 ```
 
 <details>
-<summary>Mirror for China</summary>
+<summary>Mirror for China (gh-proxy / CDN Acceleration)</summary>
 
+#### Standalone Online Mirror Install
 ```bash
+# Option 1: gh-proxy.org
+curl -sL --connect-timeout 10 https://gh-proxy.org/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+
+# Option 2: ghproxy.net
 curl -sL --connect-timeout 10 https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
+
+#### Git Repository Mirror Clone
+```bash
+# Clone via gh-proxy.org
+git clone https://gh-proxy.org/https://github.com/ech678/NyxNiri.git ~/NyxNiri
+cd ~/NyxNiri && ./install.sh
+```
+
+*Note: `install.sh` automatically includes a built-in 3-tier fallback engine (Official -> jsDelivr CDN -> gh-proxy) with real-time latency logs.*
 
 </details>
 
@@ -175,19 +199,24 @@ An interactive terminal cheatsheet powered by `fzf` for quick navigation of shor
 
 ## Troubleshooting
 
-**Noctalia hangs on startup** This is usually caused by `ddcutil` scanning the
-I2C bus for monitor brightness controls, which can timeout on certain hardware
-(especially NVIDIA). _Fix_: Disable DDC/CI in
-`~/.config/noctalia/noctalia-config.toml`:
+**Noctalia hangs on startup**
+
+This is usually caused by `ddcutil` scanning the I2C bus for monitor brightness
+controls, which can timeout on certain hardware (especially NVIDIA).
+
+_Fix_: Disable DDC/CI in `~/.config/noctalia/noctalia-config.toml`:
 
 ```toml
 [brightness]
 enable_ddcutil = false
 ```
 
-**Plugin repository corruption** If Noctalia hangs while checking out plugins on
-startup, the local git cache might be corrupted. _Fix_: Reset the plugin
-directories:
+**Plugin repository corruption**
+
+If Noctalia hangs while checking out plugins on startup, the local git cache
+might be corrupted.
+
+_Fix_: Reset the plugin directories:
 
 ```bash
 git -C ~/.local/state/noctalia/plugins/sources/community/repo reset --hard HEAD
@@ -222,20 +251,14 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 
 ## 项目概述
 
-NyxNiri 是一套针对 Arch Linux 和 CachyOS 的桌面配置集。核心基于 Niri
-滚动平铺窗口管理器与 Noctalia
-V5，主要提供动态主题同步、基础系统联动以及终端环境的预设配置。
+NyxNiri 是一套针对 Arch Linux 和 CachyOS 的桌面配置集。核心基于 Niri 滚动平铺窗口管理器与 Noctalia V5，主要提供动态主题同步、基础系统联动以及终端环境的预设配置。
 
 ## 核心特性
 
-- **Material You 取色**：通过 `mpvpaper` 和自定义 lua
-  脚本，支持从静态图片或视频壁纸中提取颜色，并应用到 Noctalia 主题中。
-- **主题同步**：包含一个后台脚本用于同步 GSettings 和 GTK
-  配置，方便切换明暗模式。
-- **护眼模式
-  (`Super+N`)**：开启后会调整色温，关闭窗口模糊效果，并将透明度设为不透明，以降低长时间阅读的视觉疲劳。
-- **终端与 Shell 配置**：预设了 Fish shell 的代理切换别名和缓存清理命令；Kitty
-  终端开启了光标轨迹，并映射了部分常用的 Windows 快捷键。
+- **Material You 取色**：Noctalia V5 原生支持从壁纸提取配色方案。自定义 Lua 钩子将 `mpvpaper` 视频壁纸桥接到此管线，通过 `ffmpeg` 提取帧缩略图供 Noctalia 取色。
+- **主题同步**：包含一个后台脚本用于同步 GSettings 和 GTK 配置，方便切换明暗模式。
+- **护眼模式 (`Super+N`)**：开启后会调整色温，关闭窗口模糊效果，并将透明度设为不透明，以降低长时间阅读的视觉疲劳。
+- **终端与 Shell 配置**：预设了 Fish shell 的代理切换别名和缓存清理命令；Kitty 终端开启了光标轨迹，并映射了部分常用的 Windows 快捷键。
 
 ## 技术栈
 
@@ -265,62 +288,67 @@ NyxNiri
 ```
 
 > [!NOTE]
-> 安装过程会自动将现有配置备份至
-> `~/.config/NyxNiri/backups/`，不会直接覆盖关键文件。
+> 安装过程会自动将现有配置备份至 `~/.config/NyxNiri/backups/`，不会直接覆盖关键文件。
 
 > [!WARNING]
-> 旧版 Dank Material Shell (DMS) 配置已移至 `archive/v1-dms` 分支。`main`
-> 分支仅维护当前的 V2 架构。
+> 旧版 Dank Material Shell (DMS) 配置已移至 `archive/v1-dms` 分支。`main` 分支仅维护当前的 V2 架构。
 
 ## 快捷键
 
 **窗口控制**
 
-| 快捷键                  | 动作          |
-| ----------------------- | ------------- |
-| `Super` + `Enter`       | 打开终端      |
-| `Super` + `Q`           | 关闭窗口      |
-| `Super` + `T`           | 切换浮动/平铺 |
-| `Super` + `F`           | 最大化当前列  |
-| `Super` + `Shift` + `F` | 全屏          |
-| `Super` + `Tab`         | 工作区总览    |
-| `Super` + `Z`           | 聚焦左侧      |
-| `Super` + `C`           | 聚焦右侧      |
-| `Super` + `J` / `K`     | 聚焦上/下     |
-| `Super` + `方向键`      | 智能焦点 (自动跨列/跨屏/跨区) |
-| `Super` + `Ctrl` + `方向键` | 智能搬运 (自动跨屏/跨区) |
-| `Super` + `D` / `U`     | 工作区下/上    |
-| `Super` + `Space`      | 切换预设列宽比例 |
-| `Super` + `-` / `=`     | 收缩/拉伸列宽 |
+| 快捷键 | 动作 |
+| :--- | :--- |
+| <kbd>Super</kbd> + <kbd>Enter</kbd> | 打开终端 |
+| <kbd>Super</kbd> + <kbd>Q</kbd> | 关闭窗口 |
+| <kbd>Super</kbd> + <kbd>T</kbd> | 切换浮动/平铺 |
+| <kbd>Super</kbd> + <kbd>F</kbd> | 最大化当前列 |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | 全屏 |
+| <kbd>Super</kbd> + <kbd>Tab</kbd> | 工作区总览 |
+| <kbd>Super</kbd> + <kbd>Z</kbd> | 聚焦左侧 |
+| <kbd>Super</kbd> + <kbd>C</kbd> | 聚焦右侧 |
+| <kbd>Super</kbd> + <kbd>J</kbd> / <kbd>K</kbd> | 聚焦下/上 |
+| <kbd>Super</kbd> + <kbd>方向键</kbd> | 智能焦点（自动跨列/跨屏/跨区） |
+| <kbd>Super</kbd> + <kbd>Ctrl</kbd> + <kbd>方向键</kbd> | 智能搬运（自动跨屏/跨区） |
+| <kbd>Super</kbd> + <kbd>D</kbd> / <kbd>U</kbd> | 工作区下/上 |
+| <kbd>Super</kbd> + <kbd>Space</kbd> | 切换预设列宽比例 |
+| <kbd>Super</kbd> + <kbd>-</kbd> / <kbd>=</kbd> | 收缩/拉伸列宽 |
 
-> 完整快捷键列表请运行 `nyxhelp keys` 或按 `Super+/`。
+> 完整快捷键列表请运行 `nyxhelp keys` 或按 <kbd>Super</kbd> + <kbd>/</kbd>。
 
 **系统与组件**
 
-| 快捷键                  | 动作         |
-| ----------------------- | ------------ |
-| `Super` + `R`           | 启动器       |
-| `Super` + `E`           | 文件管理器   |
-| `Super` + `X`           | 电源菜单     |
-| `Super` + `I`           | 控制中心     |
-| `Super` + `V`           | 剪贴板       |
-| `Super` + `W`           | 静态壁纸选择 |
-| `Super` + `Shift` + `W` | 动态壁纸选择 |
-| `Super` + `N`           | 护眼模式     |
-| `Super` + `L`           | 锁屏         |
-| `Super` + `Shift` + `S` | 截图         |
-| `Super` + `Shift` + `R` | 重载 Niri    |
-| `Super` + `Shift` + `E` | 退出 Niri    |
+| 快捷键 | 动作 |
+| :--- | :--- |
+| <kbd>Super</kbd> + <kbd>R</kbd> | 启动器 |
+| <kbd>Super</kbd> + <kbd>E</kbd> | 文件管理器 |
+| <kbd>Super</kbd> + <kbd>X</kbd> | 电源菜单 |
+| <kbd>Super</kbd> + <kbd>I</kbd> | 控制中心 |
+| <kbd>Super</kbd> + <kbd>V</kbd> | 剪贴板 |
+| <kbd>Super</kbd> + <kbd>W</kbd> | 静态壁纸选择 |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | 动态壁纸选择 |
+| <kbd>Super</kbd> + <kbd>N</kbd> | 护眼模式 |
+| <kbd>Super</kbd> + <kbd>L</kbd> | 锁屏 |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | 截图 |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | 重载 Niri |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd> | 退出 Niri |
 
 ## 安装部署
 
-**一键安装**
+NyxNiri 支持两种不同的安装与运行模式：
+
+- **独立安装模式（在线管道）** — 运行 `curl ... | bash`，脚本会自动将配置仓库缓存至
+  `~/.cache/NyxNiri` 并完成部署，无需在本地保留源码目录。
+- **仓库部署模式（本地离线/开发 — 推荐）** — 运行 `git clone ... && ./install.sh`，
+  直接在本地仓库中运行，方便进行个人配置定制、Git 版本管理与后续一键 `git pull` 更新。
+
+### 模式 1：独立一键安装
 
 ```bash
 curl -sL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
 
-**Git 克隆（推荐）**
+### 模式 2：Git 仓库部署（推荐）
 
 ```bash
 git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
@@ -328,11 +356,25 @@ cd ~/NyxNiri && ./install.sh
 ```
 
 <details>
-<summary>国内网络加速</summary>
+<summary>国内网络加速 (gh-proxy / CDN 镜像)</summary>
 
+#### 1. 独立一键镜像安装
 ```bash
+# 方案 1: gh-proxy.org
+curl -sL --connect-timeout 10 https://gh-proxy.org/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+
+# 方案 2: ghproxy.net
 curl -sL --connect-timeout 10 https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
+
+#### 2. Git 仓库镜像克隆
+```bash
+# 通过 gh-proxy.org 镜像克隆仓库
+git clone https://gh-proxy.org/https://github.com/ech678/NyxNiri.git ~/NyxNiri
+cd ~/NyxNiri && ./install.sh
+```
+
+*提示：`install.sh` 脚本内置三级自动降级引擎（官方直连 → jsDelivr CDN → gh-proxy）与实时耗时 Log。*
 
 </details>
 
@@ -366,16 +408,22 @@ curl -sL --connect-timeout 10 https://ghproxy.net/https://raw.githubusercontent.
 
 ## 故障排除
 
-**Noctalia 启动卡死** 通常是因为 `ddcutil` 在扫描 I2C
-总线获取显示器亮度控制时超时（在 NVIDIA 硬件上较常见）。 _修复_：在
-`~/.config/noctalia/noctalia-config.toml` 中禁用 DDC/CI：
+**Noctalia 启动卡死**
+
+通常是因为 `ddcutil` 在扫描 I2C 总线获取显示器亮度控制时超时（在 NVIDIA
+硬件上较常见）。
+
+_修复_：在 `~/.config/noctalia/noctalia-config.toml` 中禁用 DDC/CI：
 
 ```toml
 [brightness]
 enable_ddcutil = false
 ```
 
-**插件仓库损坏** 如果 Noctalia 在启动时拉取插件卡死，可能是本地 git 缓存损坏。
+**插件仓库损坏**
+
+如果 Noctalia 在启动时拉取插件卡死，可能是本地 git 缓存损坏。
+
 _修复_：重置插件目录：
 
 ```bash
@@ -401,6 +449,8 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
   桌面歌词组件
 - [Ocfeather/chrome-niri-opacity](https://github.com/Ocfeather/chrome-niri-opacity) -
   浏览器透明度脚本
+
+---
 
 <div align="right">
   <a href="#english">Back to Top / 返回顶部</a>
