@@ -60,6 +60,17 @@ function proxy_status
         echo "失败"
     end
 
+    echo -n "测试 GitHub.com... "
+    set -l gh_start (date +%s%3N)
+    set -l gh_code (curl -I -s --connect-timeout 3 -o /dev/null -w "%{http_code}" https://github.com 2>/dev/null)
+    set -l gh_end (date +%s%3N)
+    if test "$gh_code" = "200" -o "$gh_code" = "301" -o "$gh_code" = "302"
+        set -l gh_duration (math $gh_end - $gh_start)
+        echo "成功 (HTTP $gh_code, $gh_duration ms)"
+    else
+        echo "失败"
+    end
+
     echo ""
     echo "--- IP 地理位置 (IP Location) ---"
     curl -s -m 3 cip.cc 2>/dev/null | head -n 3

@@ -61,6 +61,119 @@ log_msg() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] $clean_msg" >> "$INSTALL_LOG" 2>/dev/null || true
 }
 
+# ==============================================================================
+# Global Mirror Configuration Registries
+# Order: Official -> Fastly jsDelivr CDN -> gh-proxy (gh-proxy.org, ghproxy.net)
+# ==============================================================================
+GIT_MIRROR_REGISTRY=(
+    "Official|https://github.com/ech678/NyxNiri.git"
+    "gh-proxy.org|https://gh-proxy.org/https://github.com/ech678/NyxNiri.git"
+    "ghproxy.net|https://ghproxy.net/https://github.com/ech678/NyxNiri.git"
+)
+
+RAW_MIRROR_TEMPLATES=(
+    "Official|https://raw.githubusercontent.com/{USER_REPO}/{BRANCH}/{FILE_PATH}"
+    "jsDelivr-CDN|https://fastly.jsdelivr.net/gh/{USER_REPO}@{BRANCH}/{FILE_PATH}"
+    "gh-proxy.org|https://gh-proxy.org/https://raw.githubusercontent.com/{USER_REPO}/{BRANCH}/{FILE_PATH}"
+    "ghproxy.net|https://ghproxy.net/https://raw.githubusercontent.com/{USER_REPO}/{BRANCH}/{FILE_PATH}"
+)
+
+# Select best working Git mirror url with explicit terminal logging
+select_git_mirror() {
+    log_msg INFO "Starting Git mirror selection (Priority: Official -> gh-proxy)"
+    echo -e "\e[1;34m:: [Network Check] 正在按优先级检测 Git 镜像源 (官方 -> gh-proxy)... \e[0m" >&2
+
+    local selected_url=""
+    local idx=1
+    for item in "${GIT_MIRROR_REGISTRY[@]}"; do
+        local tag="${item%%|*}"
+        local url="${item#*|}"
+        
+        echo -n "  [$idx/${#GIT_MIRROR_REGISTRY[@]}] [$tag] $url ... " >&2
+        local start_t
+        start_t=$(date +%s%3N 2>/dev/null || date +%s)
+        
+        if git ls-remote --exit-code --connect-timeout 3 "$url" HEAD >/dev/null 2>&1; then
+            local end_t
+            end_t=$(date +%s%3N 2>/dev/null || date +%s)
+            local dur=$((end_t - start_t))
+            [ $dur -lt 0 ] && dur=0
+            echo -e "\e[1;32m✓ 可用 (${dur}ms)\e[0m" >&2
+            log_msg INFO "Git mirror [$tag] SUCCESS ($url) - ${dur}ms"
+            selected_url="$url"
+            break
+        else
+            echo -e "\e[1;31m✕ 不可用/超时\e[0m" >&2
+            log_msg WARN "Git mirror [$tag] FAILED ($url)"
+        fi
+        idx=$((idx + 1))
+    done
+
+    if [ -n "$selected_url" ]; then
+        echo -e "\e[1;32m:: [Network Selected] 已自动选择最佳镜像源: $selected_url\e[0m\n" >&2
+        log_msg INFO "Selected Git mirror: $selected_url"
+        echo "$selected_url"
+    else
+        echo -e "\e[1;31m:: [Network Error] 所有 Git 镜像源均无法连接！使用官方默认 URL。\e[0m\n" >&2
+        log_msg ERROR "All Git mirror sources unreachable"
+        echo "https://github.com/ech678/NyxNiri.git"
+    fi
+}
+
+# Fetch raw file with 3-tier fallback (Official -> jsDelivr CDN -> gh-proxy) and payload validation
+fetch_raw_with_fallback() {
+    local user_repo="$1"
+    local branch="$2"
+    local file_path="$3"
+    local output_file="$4"
+
+    log_msg INFO "Fetching raw file: $user_repo/$file_path ($branch)"
+    echo -e "\e[1;34m:: [Network Check] 正在按优先级下载资源 ($user_repo/$file_path)...\e[0m"
+
+    local idx=1
+    for tpl_entry in "${RAW_MIRROR_TEMPLATES[@]}"; do
+        local tag="${tpl_entry%%|*}"
+        local template="${tpl_entry#*|}"
+        
+        local url="$template"
+        url="${url//\{USER_REPO\}/$user_repo}"
+        url="${url//\{BRANCH\}/$branch}"
+        url="${url//\{FILE_PATH\}/$file_path}"
+
+        echo -n "  [$idx/${#RAW_MIRROR_TEMPLATES[@]}] [$tag] $url ... "
+        local tmp_file
+        tmp_file=$(mktemp)
+        register_temp_path "$tmp_file"
+
+        local start_t
+        start_t=$(date +%s%3N 2>/dev/null || date +%s)
+        local http_code
+        http_code=$(curl -sfL --connect-timeout 3 -m 10 -w "%{http_code}" -o "$tmp_file" "$url" 2>/dev/null || echo "000")
+        local end_t
+        end_t=$(date +%s%3N 2>/dev/null || date +%s)
+        local dur=$((end_t - start_t))
+        [ $dur -lt 0 ] && dur=0
+
+        if [ "$http_code" = "200" ] && [ -s "$tmp_file" ] && ! head -n 5 "$tmp_file" | grep -qi "<html"; then
+            echo -e "\e[1;32m✓ 成功 (HTTP 200, ${dur}ms)\e[0m"
+            log_msg INFO "Downloaded raw file via [$tag] ($url) - ${dur}ms"
+            mv "$tmp_file" "$output_file"
+            echo -e "\e[1;32m:: [Network Selected] 已通过 [$tag] 节点成功拉取资源。\e[0m\n"
+            return 0
+        else
+            echo -e "\e[1;31m✕ 失败 (HTTP ${http_code:-FAIL})\e[0m"
+            log_msg WARN "Fetch failed via [$tag] ($url) - HTTP ${http_code:-FAIL}"
+            rm -f "$tmp_file"
+        fi
+        idx=$((idx + 1))
+    done
+
+    log_msg ERROR "Failed to fetch raw file $user_repo/$file_path from all mirror nodes."
+    echo -e "\e[1;31m:: [Network Error] 所有镜像节点均无法拉取目标资源！\e[0m\n"
+    return 1
+}
+
+
 if [ -n "${BASH_SOURCE[0]}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
     REAL_SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")"
     SCRIPT_DIR="$(cd "$(dirname "$REAL_SCRIPT_PATH")" 2>/dev/null && pwd)"
@@ -211,7 +324,7 @@ msg() {
             checking_updates) echo -e "\n\e[1;34m:: 正在检查配置仓库及脚本更新...\e[0m" ;;
             updating_done) echo -e "\e[1;32m[+] 更新与重载成功！正在重新启动脚本...\e[0m" ;;
             updating_failed) echo -e "\e[1;31m[-] 更新失败，请检查您的网络连接或 Git 仓库状态。\e[0m" ;;
-            mirror_fallback_confirm) echo -e "\e[1;33m[!] 连接 github.com 失败，是否切换到国内镜像 (bgithub.xyz) 继续克隆? [Y/n] \e[0m" ;;
+            mirror_fallback_confirm) echo -e "\e[1;33m[!] 连接 github.com 失败，是否切换到国内镜像 (gh-proxy) 继续克隆? [Y/n] \e[0m" ;;
             mirror_declined) echo -e "\e[1;31m[-] 已取消克隆（拒绝使用非官方镜像）。\e[0m" ;;
             dirty_tree_warn) echo -e "\e[1;33m[!] 检测到 $1 中存在未提交的本地改动，继续更新将丢弃这些改动。\e[0m" ;;
             dirty_tree_confirm) echo -e ":: 是否继续并丢弃本地改动? [y/N] " ;;
@@ -323,7 +436,7 @@ msg() {
             checking_updates) echo -e "\n\e[1;34m:: Checking for repository and script updates...\e[0m" ;;
             updating_done) echo -e "\e[1;32m[+] Update and reload successful! Restarting script...\e[0m" ;;
             updating_failed) echo -e "\e[1;31m[-] Update failed. Please check your network connection or git status.\e[0m" ;;
-            mirror_fallback_confirm) echo -e "\e[1;33m[!] Connection to github.com failed. Switch to the domestic mirror (bgithub.xyz) and continue cloning? [Y/n] \e[0m" ;;
+            mirror_fallback_confirm) echo -e "\e[1;33m[!] Connection to github.com failed. Switch to the domestic mirror (gh-proxy) and continue cloning? [Y/n] \e[0m" ;;
             mirror_declined) echo -e "\e[1;31m[-] Clone cancelled (declined the unofficial mirror).\e[0m" ;;
             dirty_tree_warn) echo -e "\e[1;33m[!] Uncommitted local changes detected in $1; continuing will discard them.\e[0m" ;;
             dirty_tree_confirm) echo -e ":: Continue and discard local changes? [y/N] " ;;
@@ -398,26 +511,14 @@ ensure_repo() {
         if [ ! -d "$CACHE_DIR" ]; then
             msg cloning_repo
 
-            # Test connection to github.com
-            local active_repo_url="$REPO_URL"
-            echo "Testing connection to github.com..."
-            if ! curl -I -s --connect-timeout 3 https://github.com >/dev/null 2>&1; then
-                # Interactive sessions get a chance to opt out of the unofficial
-                # mirror; a non-interactive curl|bash first run can't pause for
-                # input, so it keeps the automatic fallback but logs it either way.
-                if [ -t 0 ]; then
-                    read -p "$(msg mirror_fallback_confirm)" mirror_choice < /dev/tty
-                    if [[ "$mirror_choice" =~ ^[Nn]$ ]]; then
-                        log_msg WARN "User declined bgithub.xyz mirror fallback; aborting clone."
-                        msg mirror_declined
-                        exit 1
-                    fi
-                fi
-                active_repo_url="https://bgithub.xyz/ech678/NyxNiri.git"
-            fi
+            local active_repo_url
+            active_repo_url=$(select_git_mirror)
             log_msg INFO "Cloning repository from: $active_repo_url"
 
-            git clone "$active_repo_url" "$CACHE_DIR"
+            git clone "$active_repo_url" "$CACHE_DIR" || {
+                log_msg ERROR "Failed to clone repository from $active_repo_url"
+                exit 1
+            }
         fi
     fi
 }
@@ -456,7 +557,10 @@ safe_pull_or_reset() {
             fi
         fi
     fi
-    (cd "$dir" && git fetch && git reset --hard origin/main)
+    (cd "$dir" && git fetch && git reset --hard origin/main) 2>/dev/null || {
+        log_msg ERROR "git fetch or reset failed in $dir"
+        return 1
+    }
 }
 
 update_repo_and_script() {
@@ -1100,17 +1204,25 @@ deploy_selected_configs() {
 
     # Install/Update Fisher plugins if fish is available
     if command -v fish >/dev/null 2>&1; then
-        echo ":: Installing/Updating Fisher plugins..."
-        fish -c "
-            if not functions -q fisher
-                echo 'Fisher not found, attempting to install fisher...'
-                curl -sfL --connect-timeout 5 https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher || echo '[-] Network timeout or raw.githubusercontent.com unreachable. Skipping Fisher auto-install.'
-            end
-            if test -f ~/.config/fish/fish_plugins && functions -q fisher
-                echo 'Installing plugins listed in fish_plugins...'
-                fisher update || echo '[-] Fisher update skipped due to network connectivity issue.'
-            end
-        "
+        echo -e "\e[1;34m:: [Fisher] 正在检查/更新 Fisher 插件管理器...\e[0m"
+        log_msg INFO "Checking Fisher plugin manager installation"
+        local fisher_tmp
+        fisher_tmp=$(mktemp)
+        register_temp_path "$fisher_tmp"
+        if fetch_raw_with_fallback "jorgebucaran/fisher" "main" "functions/fisher.fish" "$fisher_tmp"; then
+            fish -c "
+                if not functions -q fisher
+                    source '$fisher_tmp' && fisher install jorgebucaran/fisher
+                end
+                if test -f ~/.config/fish/fish_plugins && functions -q fisher
+                    echo 'Installing plugins listed in fish_plugins...'
+                    fisher update || echo '[-] Fisher update skipped due to network connectivity issue.'
+                end
+            "
+        else
+            echo "[-] Fisher auto-install skipped due to network connectivity issues across all mirrors."
+            log_msg WARN "Fisher auto-install skipped (all mirrors unreachable)"
+        fi
     fi
 
     msg copy_done
