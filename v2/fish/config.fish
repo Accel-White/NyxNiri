@@ -201,16 +201,41 @@ if status is-interactive
 
     # se：模糊搜索软件包 (官方源 + AUR) 并用 fzf 交互安装
     function se --description "模糊搜索并安装软件包 (官方源 + AUR)"
-        set -l pkgs (paru -Slq | fzf --multi --prompt='📦 安装 > ' \
-            --preview 'paru -Si {1}' --preview-window 'right:60%:wrap')
-        test -n "$pkgs"; and paru -S $pkgs
+        set -l helper "pacman"
+        if command -v paru &>/dev/null
+            set helper "paru"
+        else if command -v yay &>/dev/null
+            set helper "yay"
+        end
+
+        set -l pkgs
+        if test "$helper" = "paru"
+            set pkgs (paru -Slq | fzf --multi --prompt='📦 安装 > ' \
+                --preview 'paru -Si {1}' --preview-window 'right:60%:wrap')
+            test -n "$pkgs"; and paru -S $pkgs
+        else if test "$helper" = "yay"
+            set pkgs (yay -Slq | fzf --multi --prompt='📦 安装 > ' \
+                --preview 'yay -Si {1}' --preview-window 'right:60%:wrap')
+            test -n "$pkgs"; and yay -S $pkgs
+        else
+            set pkgs (pacman -Slq | fzf --multi --prompt='📦 安装 > ' \
+                --preview 'pacman -Si {1}' --preview-window 'right:60%:wrap')
+            test -n "$pkgs"; and sudo pacman -S $pkgs
+        end
     end
 
     # un：模糊搜索已安装的包并用 fzf 交互卸载
     function un --description "模糊搜索并卸载已安装软件包"
+        set -l remove_cmd "sudo pacman -Rns"
+        if command -v paru &>/dev/null
+            set remove_cmd "paru -Rns"
+        else if command -v yay &>/dev/null
+            set remove_cmd "yay -Rns"
+        end
+
         set -l pkgs (pacman -Qq | fzf --multi --prompt='🗑  卸载 > ' \
             --preview 'pacman -Qi {1}' --preview-window 'right:60%:wrap')
-        test -n "$pkgs"; and paru -Rns $pkgs
+        test -n "$pkgs"; and eval "$remove_cmd $pkgs"
     end
     
     if command -v eza &>/dev/null

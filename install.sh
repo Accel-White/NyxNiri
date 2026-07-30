@@ -1003,7 +1003,7 @@ deploy_selected_configs() {
     local repo_config_dir="$REPO_DIR/$CONFIG_DIR_NAME"
     
     mkdir -p "$HOME/.config"
-    
+
     for item in "${items_to_deploy[@]}"; do
         local src="$repo_config_dir/$item"
         local dest="$HOME/.config/$item"
@@ -1104,7 +1104,7 @@ deploy_selected_configs() {
         fish -c "
             if not functions -q fisher
                 echo 'Fisher not found, attempting to install fisher...'
-                curl -sL --connect-timeout 5 https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher || echo '[-] Network timeout or raw.githubusercontent.com unreachable. Skipping Fisher auto-install.'
+                curl -sfL --connect-timeout 5 https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher || echo '[-] Network timeout or raw.githubusercontent.com unreachable. Skipping Fisher auto-install.'
             end
             if test -f ~/.config/fish/fish_plugins && functions -q fisher
                 echo 'Installing plugins listed in fish_plugins...'
@@ -1126,22 +1126,9 @@ deploy_wallpapers() {
         return 0
     fi
 
-    if [ -e "$wp_dest" ] || [ -L "$wp_dest" ]; then
-        if [ -t 0 ]; then
-            read -p "$(msg ask_keep_wallpapers)" wp_choice < /dev/tty
-        else
-            wp_choice="y"
-        fi
-        if [[ "$wp_choice" =~ ^[Yy]$ || -z "$wp_choice" ]]; then
-            echo "  Preserved: $wp_dest"
-            return 0
-        fi
-    fi
-
-    mkdir -p "$pics_dir"
-    rm -rf "$wp_dest"
-    cp -a "$wp_src" "$wp_dest"
-    echo "  Deployed: $wp_dest"
+    mkdir -p "$wp_dest"
+    cp -an "$wp_src"/. "$wp_dest"/ 2>/dev/null || cp -a "$wp_src"/. "$wp_dest"/
+    echo "  Deployed & Synced (incremental): $wp_dest"
 }
 
 run_selective_upgrade_menu() {

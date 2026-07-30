@@ -152,6 +152,8 @@ A lightweight utility to manage configurations and diagnose issues.
 | Command                    | Description                                                  |
 | -------------------------- | ------------------------------------------------------------ |
 | `nyxniri`                  | Open the interactive TUI menu.                               |
+| `nyxniri install [mode]`   | Deploy dotfile configurations or full environment.           |
+| `nyxniri update [--force]` | Check for updates and optionally overwrite configurations.   |
 | `nyxniri snapshot [note]`  | Save the current configuration state.                        |
 | `nyxniri rollback [index]` | Revert to a previous snapshot (auto-backs up current state). |
 | `nyxniri list`             | Show available snapshots.                                    |
@@ -341,6 +343,8 @@ curl -sL --connect-timeout 10 https://ghproxy.net/https://raw.githubusercontent.
 | 指令                      | 作用                                   |
 | ------------------------- | -------------------------------------- |
 | `nyxniri`                 | 打开交互式菜单                         |
+| `nyxniri install [模式]`   | 部署配置文件或全量安装环境             |
+| `nyxniri update [--force]` | 检查仓库更新与可选覆盖升级             |
 | `nyxniri snapshot [备注]` | 保存当前配置状态                       |
 | `nyxniri rollback [序号]` | 恢复历史快照（恢复前自动备份当前状态） |
 | `nyxniri list`            | 查看可用快照                           |

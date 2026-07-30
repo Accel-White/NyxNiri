@@ -1,5 +1,15 @@
 # Changelog
 
+## [v2.1.10] - 2026-07-30
+
+### Fixed / Hardened
+
+- **壁纸无痛增量同步 (Incremental Wallpaper Sync, Fix Issue #5)**: 彻底重构 `deploy_wallpapers()` 为 `cp -an "$wp_src"/. "$wp_dest"/` 静默增量同步。在自动补全与升级仓库新增壁纸/视频的同时，**100% 完好保留**用户在 `~/Pictures/Wallpapers` 中的个人图片与视频文件；淘汰原有的破坏性 `rm -rf` 整盘清空与二选一弹窗。
+- **配置纯净直接覆盖与消除误判弹窗**: 还原 `atomic_replace_dir()` 为干净原子的直接整盘覆盖，完全移除 `has_custom` 误判检测逻辑，消除 `effects.kdl`（运行时生成）和 `fish_variables`（Fish 动态生成）等非仓库文件导致频繁误弹的问题；彻底消除误导性的备份文案，配置覆盖行为完全由开头的 `:: 是否在部署前备份当前配置？[y/N]` 统一掌控。
+- **Fish 包管理交互降级兼容 (`se` / `un`)**: 在 `v2/fish/config.fish` 的 `se` (模糊搜索安装) 与 `un` (模糊搜索卸载) 快捷指令中添加 `paru` $\rightarrow$ `yay` $\rightarrow$ `pacman` 动态感知降级检测。当系统未安装 `paru` 时自动使用 `yay` 或 `pacman`，避免命令直接报错崩溃。
+- **Fisher 自动安装网络超时防护**: 在 `install.sh` 的 Fisher 自动安装管道中为 `curl` 添加 `-sfL` (`--fail`) 选项，防止网络超时或 GitHub Raw 拦截返回 HTTP 40x/50x 错误网页时打断 Fish 初始化。
+- **README 文档校对与 CLI 表格补齐**: 在 README 中英文 CLI 工具说明表格中补齐 `nyxniri install [mode]` 与 `nyxniri update [--force]` 指令说明；同步在 `审查方案.md` Changelog 历史集中归档全量审查记录。
+
 ## [v2.1.9] - 2026-07-29
 
 ### Added
