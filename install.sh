@@ -871,6 +871,29 @@ atomic_replace_dir() {
     rm -rf "$tmp_new" 2>/dev/null
     register_temp_path "$tmp_new"
     cp -a "$src" "$tmp_new" || { rm -rf "$tmp_new"; return 1; }
+
+    # [NEW] Dunder 私有命名空间继承 (High Robustness & Zero False Positives)
+    if [ -d "$dest" ]; then
+        # 1. 继承入口文件 (如 __custom__.kdl)
+        (cd "$dest" && find . -type f -name "__custom__.*" -print0 2>/dev/null | while IFS= read -r -d '' file; do
+            mkdir -p "$tmp_new/$(dirname "$file")"
+            cp -a "$file" "$tmp_new/$file"
+            echo "  Preserved custom file: $dest/${file#./}"
+            if [ -n "$NYXNIRI_CUSTOM_LOG" ]; then
+                echo "    - File: $dest/${file#./}" >> "$NYXNIRI_CUSTOM_LOG"
+            fi
+        done)
+        # 2. 继承整套自定义目录 (允许用户自由命名其内部的脚本)
+        (cd "$dest" && find . -type d -name "__custom__" -print0 2>/dev/null | while IFS= read -r -d '' dir; do
+            mkdir -p "$tmp_new/$(dirname "$dir")"
+            cp -a "$dir" "$tmp_new/$(dirname "$dir")/"
+            echo "  Preserved custom dir:  $dest/${dir#./}"
+            if [ -n "$NYXNIRI_CUSTOM_LOG" ]; then
+                echo "    - Dir:  $dest/${dir#./}" >> "$NYXNIRI_CUSTOM_LOG"
+            fi
+        done)
+    fi
+
     rm -rf "$dest"
     mv "$tmp_new" "$dest"
 }
@@ -1094,6 +1117,9 @@ deploy_selected_configs() {
     msg copying_configs
     local repo_config_dir="$REPO_DIR/$CONFIG_DIR_NAME"
 
+    export NYXNIRI_CUSTOM_LOG=$(mktemp)
+    register_temp_path "$NYXNIRI_CUSTOM_LOG"
+
     mkdir -p "$HOME/.config"
 
     for item in "${items_to_deploy[@]}"; do
@@ -1214,6 +1240,15 @@ deploy_selected_configs() {
     fi
 
     msg copy_done
+
+    if [ -n "$NYXNIRI_CUSTOM_LOG" ] && [ -s "$NYXNIRI_CUSTOM_LOG" ]; then
+        echo -e "\n\e[1;36m==================================================\e[0m"
+        echo -e "\e[1;36m[ NyxNiri Customizations Preserved ]\e[0m"
+        cat "$NYXNIRI_CUSTOM_LOG"
+        echo -e "\e[1;36m==================================================\e[0m\n"
+    fi
+    [ -n "$NYXNIRI_CUSTOM_LOG" ] && rm -f "$NYXNIRI_CUSTOM_LOG" 2>/dev/null
+    unset NYXNIRI_CUSTOM_LOG
 }
 
 deploy_wallpapers() {

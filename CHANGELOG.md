@@ -1,6 +1,13 @@
 # Changelog
 
-## [v2.1.11] (未完成)
+## [v2.1.11] - 2026-07-30
+
+### Added / Improved
+
+- **Dunder 私有配置与文件夹继承机制 (Dunder Custom Preservation Protocol)**: 在 `install.sh` 的 `atomic_replace_dir()` 原子替换引擎中接入针对 `__custom__.*` 私有文件与 `__custom__/` 私有命名空间文件夹的继承防护逻辑。在更新部署时自动将用户个人的入口配置（如 `__custom__.kdl`, `__custom__.fish`）及整个私有文件夹连根提取并无缝合并，彻底解决系统覆盖更新时用户自定义脚本被破坏的问题。
+- **自定义文件双语模版预置**: 在 `v2/niri/__custom__.kdl` 与 `v2/fish/conf.d/__custom__.fish` 下下发预置的中英双语空白注释模版，并在 `v2/niri/config.kdl` 末尾默认挂载 `include "__custom__.kdl"` 引入钩子。
+- **部署日志透明化与末尾总结输出**: 在配置覆盖阶段提供亮蓝色的可视化日志沉淀，并在部署完成前自动归档打印 `[ NyxNiri Customizations Preserved ]` 摘要总结卡片；离开时自动安全回收临时日志句柄。
+- **README 文档与描述修正**: 在 README 中英文版中新增 `> [!TIP]` 标注的 Dunder 自定义配置使用说明，并修正安装备份提示为可选预留逻辑。
 
 ### Changed / Refactored
 

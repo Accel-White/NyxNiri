@@ -73,9 +73,15 @@ NyxNiri
     └── starship.toml           # Prompt theme
 ```
 
+> [!TIP]
+> **Customization (Dunder Mechanism)**
+> NyxNiri updates atomically replace configuration directories. To preserve your personal modifications across updates:
+> - **Custom Files**: Any file matching `__custom__.*` (e.g., `__custom__.kdl`, `__custom__.fish`) will be securely preserved.
+> - **Custom Namespace**: You can create a `__custom__/` folder inside any config directory (e.g., `~/.config/niri/__custom__/`) to store your own scripts or assets. The entire folder is immune to updates.
+
 > [!NOTE]
-> The installation process automatically backs up existing configurations to
-> `~/.config/NyxNiri/backups/`.
+> The installation process offers an optional backup prompt to save existing configurations to
+> `~/.config/NyxNiri/backups/` before deployment.
 
 > [!WARNING]
 > The legacy Dank Material Shell (DMS) configuration has been moved to the
@@ -287,8 +293,14 @@ NyxNiri
     └── starship.toml           # 提示符主题
 ```
 
+> [!TIP]
+> **自定义配置 (Dunder 机制)**
+> NyxNiri 更新时会原子覆盖配置目录。为保证你的私人配置在更新时安全保留：
+> - **自定义文件**：任何命名为 `__custom__.*` 的文件（如 `__custom__.kdl`, `__custom__.fish`）都会被完整继承，免于覆盖。
+> - **私有命名空间**：你可以在配置目录下建立 `__custom__/` 文件夹（如 `~/.config/niri/__custom__/`），在里面自由存放及命名个人脚本与素材，该文件夹在更新时将被连根完整保留。
+
 > [!NOTE]
-> 安装过程会自动将现有配置备份至 `~/.config/NyxNiri/backups/`，不会直接覆盖关键文件。
+> 安装过程提供可选的备份提示，允许你在部署前将现有配置备份至 `~/.config/NyxNiri/backups/`。
 
 > [!WARNING]
 > 旧版 Dank Material Shell (DMS) 配置已移至 `archive/v1-dms` 分支。`main` 分支仅维护当前的 V2 架构。
