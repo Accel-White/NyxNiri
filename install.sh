@@ -79,45 +79,33 @@ RAW_MIRROR_TEMPLATES=(
 )
 
 # Select best working Git mirror url with explicit terminal logging
-select_git_mirror() {
-    log_msg INFO "Starting Git mirror selection (Priority: Official -> gh-proxy)"
-    echo -e "\e[1;34m:: [Network Check] 正在按优先级检测 Git 镜像源 (官方 -> gh-proxy)... \e[0m" >&2
+clone_repo_with_fallback() {
+    local target_dir="$1"
+    log_msg INFO "Starting Git clone with fallback (Priority: Official -> gh-proxy)"
+    echo -e "\e[1;34m:: [Network] 正在按优先级拉取仓库 (官方 -> gh-proxy)... \e[0m" >&2
 
-    local selected_url=""
     local idx=1
     for item in "${GIT_MIRROR_REGISTRY[@]}"; do
         local tag="${item%%|*}"
         local url="${item#*|}"
-        
-        echo -n "  [$idx/${#GIT_MIRROR_REGISTRY[@]}] [$tag] $url ... " >&2
-        local start_t
-        start_t=$(date +%s%3N 2>/dev/null || date +%s)
-        
-        if git ls-remote --exit-code --connect-timeout 3 "$url" HEAD >/dev/null 2>&1; then
-            local end_t
-            end_t=$(date +%s%3N 2>/dev/null || date +%s)
-            local dur=$((end_t - start_t))
-            [ $dur -lt 0 ] && dur=0
-            echo -e "\e[1;32m✓ 可用 (${dur}ms)\e[0m" >&2
-            log_msg INFO "Git mirror [$tag] SUCCESS ($url) - ${dur}ms"
-            selected_url="$url"
-            break
+
+        echo -e "\n  \e[1;36m[$idx/${#GIT_MIRROR_REGISTRY[@]}] 尝试从 [$tag] 节点拉取...\e[0m" >&2
+        rm -rf "$target_dir" 2>/dev/null
+
+        if git clone --depth 1 "$url" "$target_dir"; then
+            echo -e "\e[1;32m:: [Network Selected] 已成功通过 [$tag] 节点完成仓库拉取。\e[0m\n" >&2
+            log_msg INFO "Git clone [$tag] SUCCESS ($url)"
+            return 0
         else
-            echo -e "\e[1;31m✕ 不可用/超时\e[0m" >&2
-            log_msg WARN "Git mirror [$tag] FAILED ($url)"
+            echo -e "\e[1;31m✕ 从 [$tag] 节点拉取失败，尝试下一个节点...\e[0m" >&2
+            log_msg WARN "Git clone [$tag] FAILED ($url)"
         fi
         idx=$((idx + 1))
     done
 
-    if [ -n "$selected_url" ]; then
-        echo -e "\e[1;32m:: [Network Selected] 已自动选择最佳镜像源: $selected_url\e[0m\n" >&2
-        log_msg INFO "Selected Git mirror: $selected_url"
-        echo "$selected_url"
-    else
-        echo -e "\e[1;31m:: [Network Error] 所有 Git 镜像源均无法连接！使用官方默认 URL。\e[0m\n" >&2
-        log_msg ERROR "All Git mirror sources unreachable"
-        echo "https://github.com/ech678/NyxNiri.git"
-    fi
+    echo -e "\e[1;31m:: [Network Error] 所有 Git 镜像源均无法完成拉取！请检查网络状态。\e[0m\n" >&2
+    log_msg ERROR "All Git clone attempts failed"
+    return 1
 }
 
 # Fetch raw file with 3-tier fallback (Official -> jsDelivr CDN -> gh-proxy) and payload validation
@@ -134,7 +122,7 @@ fetch_raw_with_fallback() {
     for tpl_entry in "${RAW_MIRROR_TEMPLATES[@]}"; do
         local tag="${tpl_entry%%|*}"
         local template="${tpl_entry#*|}"
-        
+
         local url="$template"
         url="${url//\{USER_REPO\}/$user_repo}"
         url="${url//\{BRANCH\}/$branch}"
@@ -238,27 +226,27 @@ msg() {
             checking_dep) echo -e "\n\e[1;34m:: 正在检查系统依赖项...\e[0m" ;;
             installed) echo -e "\e[1;32m[已安装]\e[0m" ;;
             missing) echo -e "\e[1;31m[未安装]\e[0m" ;;
-            
+
             # Main Menu
             menu_title) echo -e "\n\e[1;35m=== $PROJECT_NAME 控制面板与工具箱 ===\e[0m" ;;
             menu_group_deploy) echo -e "  \e[1;36m[ 部署与安装 ]\e[0m" ;;
             menu_opt1) echo -e "  \e[1;32m1)\e[0m 一键完整部署 (依赖 + 配置)" ;;
             menu_opt2) echo -e "  \e[1;32m2)\e[0m 检查与安装依赖项" ;;
             menu_opt3) echo -e "  \e[1;32m3)\e[0m 仅部署配置文件" ;;
-            
+
             menu_group_backup) echo -e "\n  \e[1;36m[ 备份与恢复 ]\e[0m" ;;
             menu_opt4) echo -e "  \e[1;32m4)\e[0m 创建配置安全快照" ;;
             menu_opt5) echo -e "  \e[1;32m5)\e[0m 一键回滚配置" ;;
-            
+
             menu_group_maint) echo -e "\n  \e[1;36m[ 运维与诊断 ]\e[0m" ;;
             menu_opt6) echo -e "  \e[1;32m6)\e[0m 检查更新与可选覆盖" ;;
             menu_opt7) echo -e "  \e[1;32m7)\e[0m 运行 System Doctor 健康诊断" ;;
             menu_opt8) echo -e "  \e[1;32m8)\e[0m 生成 Bug Report 诊断报告" ;;
-            
+
             menu_group_system) echo -e "\n  \e[1;36m[ 系统管理 ]\e[0m" ;;
             menu_opt9) echo -e "  \e[1;31m9)\e[0m 卸载与复原环境" ;;
             menu_opt0) echo -e "  \e[1;30m0)\e[0m 退出" ;;
-            
+
             menu_prompt) echo -e ":: 请选择操作 [0-9]: " ;;
             invalid_opt) echo -e "\e[1;31m[-] 无效的选项，请重新选择。\e[0m" ;;
             press_any_key) echo -e "\n按任意键返回主菜单..." ;;
@@ -276,7 +264,7 @@ msg() {
             selective_hint) echo -e "输入空格分隔的序列号（如 1 3）来勾选/取消，直接回车开始升级选中组件：" ;;
             upgrading_selected) echo -e "\n\e[1;34m:: 正在覆盖升级选中的组件配置...\e[0m" ;;
             overwrite_done) echo -e "\e[1;32m[+] 选中的配置文件已成功覆盖升级！\e[0m" ;;
-            
+
             # Uninstall Strings
             uninstall_title) echo -e "\n\e[1;31m────────────────────────────────────────────────────────────────\e[0m\n \e[1;31m:: NyxNiri 卸载与复原工具\e[0m\n\e[1;31m────────────────────────────────────────────────────────────────\e[0m" ;;
             uninstall_opt1) echo -e "  \e[1;32m1)\e[0m 标准安全卸载 (推荐 - 打包备份当前配置，移除配置与 CLI)" ;;
@@ -288,7 +276,7 @@ msg() {
             uninstall_done) echo -e "\e[1;32m[+] NyxNiri 卸载完成！感谢您的使用。\e[0m" ;;
             purge_done) echo -e "\e[1;32m[+] 深度清理完毕，所有 NyxNiri 相关配置与缓存已完全粉碎。\e[0m" ;;
             restore_origin_done) echo -e "\e[1;32m[+] 已成功将您的电脑环境原路复原至安装前状态！\e[0m" ;;
-            
+
             # Rollback Strings
             no_backups_found) echo -e "\e[1;33m[!] 未找到任何可用的配置快照！\e[0m" ;;
             available_backups) echo -e "\n\e[1;36m:: 可用的 NyxNiri 配置快照列表\e[0m" ;;
@@ -298,18 +286,18 @@ msg() {
             pre_rollback_backup) echo -e "\e[1;30m[安全防护] 回滚前已自动为当前配置创建安全快照: $1\e[0m" ;;
             rollback_done) echo -e "\e[1;32m[+] 配置回滚成功！已恢复至快照: $1\e[0m" ;;
             snapshot_note_prompt) echo -e ":: 请输入快照备注 (直接回车跳过): " ;;
-            
+
             # Dependency Menu
             dep_menu_title) echo -e "\n\e[1;33m:: 请选择要安装的依赖（输入数字切换，直接回车开始安装）：\e[0m" ;;
             dep_menu_hint) echo -e "输入空格分隔的序列号（如 1 3 5）来勾选/取消，直接回车开始安装选中包：" ;;
             installing_selected) echo -e "\n\e[1;34m:: 正在通过包管理器安装选中的依赖...\e[0m" ;;
-            
+
             # Deployment & Backup
             backing_up) echo -e "\n\e[1;34m:: 正在创建配置快照...\e[0m" ;;
             backup_done) echo -e "\e[1;32m[+] 快照创建成功！保存路径: $1\e[0m" ;;
             copying_configs) echo -e "\n\e[1;34m:: 正在部署 dotfiles 配置文件...\e[0m" ;;
             copy_done) echo -e "\e[1;32m[+] 配置文件部署与复制成功！\e[0m" ;;
-            
+
             # System Doctor
             running_doctor) echo -e "\n\e[1;35m:: 正在运行 System Doctor 进行系统诊断...\e[0m" ;;
             doctor_ok) echo -e "\e[1;32m[  OK  ]\e[0m $1" ;;
@@ -317,7 +305,7 @@ msg() {
             doctor_err) echo -e "\e[1;31m[ FAIL ]\e[0m $1" ;;
             all_done) echo -e "\n\e[1;32m[+] 所有的部署和诊断检查已全部完成！\e[0m" ;;
             reboot_hint) echo -e "\e[1;36m提示: 建议重启 Noctalia 或重新加载 Niri 使得所有新配置完全生效。\e[0m" ;;
-            
+
             # Standalone & Update Strings
             git_required) echo -e "\e[1;31m[-] 错误: 需要安装 git 才能下载或更新配置仓库。\e[0m" ;;
             cloning_repo) echo -e "\n\e[1;34m:: 检测到独立运行模式。正在克隆 NyxNiri 仓库到缓存目录 ($CACHE_DIR)... \e[0m" ;;
@@ -330,7 +318,7 @@ msg() {
             dirty_tree_confirm) echo -e ":: 是否继续并丢弃本地改动? [y/N] " ;;
             update_cancelled_dirty) echo -e "\e[1;34m已取消更新，本地改动已保留。\e[0m" ;;
             syntax_check_failed) echo -e "\e[1;31m[-] 下载的新版本脚本语法校验失败，可能下载不完整，已中止自更新。\e[0m\n请手动检查: $1" ;;
-            
+
             # AUR & mpvpaper
             aur_skip) echo -e "\e[1;33m[!] AUR 包 ($1) 需要 AUR helper (paru/yay)，跳过安装。\e[0m" ;;
             aur_helper_required) echo -e "\e[1;33m    请先安装 paru 或 yay，然后重新运行依赖安装。\e[0m" ;;
@@ -340,14 +328,14 @@ msg() {
             mpvpaper_upgrade_prompt) echo -e ":: 是否安装 mpvpaper-git（AUR）替代当前 mpvpaper $1 以修复泄漏？[y/N]: " ;;
             mpvpaper_upgrade_done) echo -e "\e[1;32m[+] mpvpaper-git 安装完成，内存泄漏问题已修复。\e[0m" ;;
             mpvpaper_upgrade_skip) echo -e "如需手动升级，请运行: paru -S mpvpaper-git 或 yay -S mpvpaper-git" ;;
-            
+
             # Alerts / Prompts
             warn_deps_missing) echo -e "\n\e[1;33m[!] 警告: 检测到你缺少一些运行所需的依赖组件！\e[0m" ;;
             ask_install_now) echo -e ":: 是否现在检查并进入依赖安装菜单？[Y/n]: " ;;
             ask_backup_again) echo -e ":: 检测到今天已备份过配置，是否重新备份？[y/N]: " ;;
             ask_backup_before_deploy) echo -e ":: 是否在部署前备份当前配置？[y/N] (默认直接部署不备份): " ;;
             ask_keep_monitor) echo -e "\n\e[1;36m:: 检测到已存在显示配置 ~/.config/niri/monitor.kdl (包含针对您个人硬件的配置)。\e[0m\n:: 是否保留您当前的显示器配置？[Y/n]: " ;;
-            ask_keep_wallpapers) echo -e "\n\e[1;36m:: 检测到已存在壁纸目录。\e[0m\n:: 是否保留您当前的壁纸？（选择"否"将替换为 NyxNiri 默认壁纸）[Y/n]: " ;; 
+            ask_keep_wallpapers) echo -e "\n\e[1;36m:: 检测到已存在壁纸目录。\e[0m\n:: 是否保留您当前的壁纸？（选择"否"将替换为 NyxNiri 默认壁纸）[Y/n]: " ;;
         esac
     else
         case "$key" in
@@ -356,27 +344,27 @@ msg() {
             checking_dep) echo -e "\n\e[1;34m:: Checking system dependencies...\e[0m" ;;
             installed) echo -e "\e[1;32m[Installed]\e[0m" ;;
             missing) echo -e "\e[1;31m[Missing]\e[0m" ;;
-            
+
             # Main Menu
             menu_title) echo -e "\n\e[1;35m=== $PROJECT_NAME Control Panel & Toolbox ===\e[0m" ;;
             menu_group_deploy) echo -e "  \e[1;36m[ Deployment & Setup ]\e[0m" ;;
             menu_opt1) echo -e "  \e[1;32m1)\e[0m Full Setup (Install Dependencies + Deploy Configs)" ;;
             menu_opt2) echo -e "  \e[1;32m2)\e[0m Check & Install Dependencies Only" ;;
             menu_opt3) echo -e "  \e[1;32m3)\e[0m Deploy Configurations Only" ;;
-            
+
             menu_group_backup) echo -e "\n  \e[1;36m[ Snapshots & Recovery ]\e[0m" ;;
             menu_opt4) echo -e "  \e[1;32m4)\e[0m Snapshot Configurations" ;;
             menu_opt5) echo -e "  \e[1;32m5)\e[0m Rollback Configurations" ;;
-            
+
             menu_group_maint) echo -e "\n  \e[1;36m[ Maintenance & Diagnostics ]\e[0m" ;;
             menu_opt6) echo -e "  \e[1;32m6)\e[0m Update Repo & Optional Overwrite" ;;
             menu_opt7) echo -e "  \e[1;32m7)\e[0m Run System Doctor Diagnostics" ;;
             menu_opt8) echo -e "  \e[1;32m8)\e[0m Generate Bug Report" ;;
-            
+
             menu_group_system) echo -e "\n  \e[1;36m[ System Management ]\e[0m" ;;
             menu_opt9) echo -e "  \e[1;31m9)\e[0m Uninstall NyxNiri" ;;
             menu_opt0) echo -e "  \e[1;30m0)\e[0m Exit" ;;
-            
+
             menu_prompt) echo -e ":: Please select an option [0-9]: " ;;
             invalid_opt) echo -e "\e[1;31m[-] Invalid option, please try again.\e[0m" ;;
             press_any_key) echo -e "\nPress any key to return to main menu..." ;;
@@ -394,7 +382,7 @@ msg() {
             selective_hint) echo -e "Type space-separated numbers (e.g. 1 3) to toggle, then press Enter to upgrade:" ;;
             upgrading_selected) echo -e "\n\e[1;34m:: Overwrite upgrading selected components...\e[0m" ;;
             overwrite_done) echo -e "\e[1;32m[+] Selected configurations overwritten and upgraded successfully!\e[0m" ;;
-            
+
             # Uninstall Strings
             uninstall_title) echo -e "\n\e[1;31m────────────────────────────────────────────────────────────────\e[0m\n \e[1;31m:: NyxNiri Uninstall & Environment Restoration Tool\e[0m\n\e[1;31m────────────────────────────────────────────────────────────────\e[0m" ;;
             uninstall_opt1) echo -e "  \e[1;32m1)\e[0m Standard Safe Uninstall (Archive current configs, remove CLI)" ;;
@@ -406,7 +394,7 @@ msg() {
             uninstall_done) echo -e "\e[1;32m[+] NyxNiri uninstalled successfully! Thank you for using.\e[0m" ;;
             purge_done) echo -e "\e[1;32m[+] Deep purge complete. All NyxNiri configs and caches purged.\e[0m" ;;
             restore_origin_done) echo -e "\e[1;32m[+] Successfully restored your system to its original pre-install state!\e[0m" ;;
-            
+
             # Rollback Strings
             no_backups_found) echo -e "\e[1;33m[!] No configuration snapshots found!\e[0m" ;;
             available_backups) echo -e "\n\e[1;36m:: Available NyxNiri Snapshots\e[0m" ;;
@@ -416,12 +404,12 @@ msg() {
             pre_rollback_backup) echo -e "\e[1;30m[Safety] Auto-saved pre-rollback snapshot of current configs: $1\e[0m" ;;
             rollback_done) echo -e "\e[1;32m[+] Rollback complete! Restored to snapshot: $1\e[0m" ;;
             snapshot_note_prompt) echo -e ":: Enter snapshot note (press Enter to skip): " ;;
-            
+
             # Dependency Menu
             dep_menu_title) echo -e "\n\e[1;33m:: Select dependencies to install (type numbers to toggle, press Enter to confirm):\e[0m" ;;
             dep_menu_hint) echo -e "Type space-separated numbers (e.g. 1 3 5) to toggle, then press Enter to install:" ;;
             copy_done) echo -e "\e[1;32mConfigurations deployed and copied successfully!\e[0m" ;;
-            
+
             # System Doctor
             running_doctor) echo -e "\n\e[1;35mRunning System Doctor for diagnostics...\e[0m" ;;
             doctor_ok) echo -e "\e[1;32m[  OK  ]\e[0m $1" ;;
@@ -429,7 +417,7 @@ msg() {
             doctor_err) echo -e "\e[1;31m[ FAIL ]\e[0m $1" ;;
             all_done) echo -e "\n\e[1;32m[+] All deployment and diagnostics completed successfully!\e[0m" ;;
             reboot_hint) echo -e "\e[1;36mHint: It is recommended to restart Noctalia or reload Niri for all settings to take effect.\e[0m" ;;
-            
+
             # Standalone & Update Strings
             git_required) echo -e "\e[1;31m[-] Error: git is required to download or update the repository.\e[0m" ;;
             cloning_repo) echo -e "\n\e[1;34m:: Standalone mode detected. Cloning NyxNiri repository to cache ($CACHE_DIR)... \e[0m" ;;
@@ -442,7 +430,7 @@ msg() {
             dirty_tree_confirm) echo -e ":: Continue and discard local changes? [y/N] " ;;
             update_cancelled_dirty) echo -e "\e[1;34mUpdate cancelled; local changes preserved.\e[0m" ;;
             syntax_check_failed) echo -e "\e[1;31m[-] Syntax check failed on the downloaded script; the download may be incomplete. Self-update aborted.\e[0m\nPlease check manually: $1" ;;
-            
+
             # AUR & mpvpaper
             aur_skip) echo -e "\e[1;33m[!] AUR packages ($1) require an AUR helper (paru/yay). Skipping.\e[0m" ;;
             aur_helper_required) echo -e "\e[1;33m    Install paru or yay first, then re-run dependency installation.\e[0m" ;;
@@ -452,14 +440,14 @@ msg() {
             mpvpaper_upgrade_prompt) echo -e ":: Install mpvpaper-git (AUR) to replace mpvpaper $1 and fix the leak? [y/N]: " ;;
             mpvpaper_upgrade_done) echo -e "\e[1;32m[+] mpvpaper-git installed, memory leak fixed.\e[0m" ;;
             mpvpaper_upgrade_skip) echo -e "To manually upgrade, run: paru -S mpvpaper-git or yay -S mpvpaper-git" ;;
-            
+
             # Alerts / Prompts
             warn_deps_missing) echo -e "\n\e[1;33m[!] Warning: Some required dependencies are missing on your system!\e[0m" ;;
             ask_install_now) echo -e ":: Would you like to check and install missing dependencies now? [Y/n]: " ;;
             ask_backup_again) echo -e ":: A backup has already been made today. Do you want to back up again? [y/N]: " ;;
             ask_backup_before_deploy) echo -e ":: Do you want to back up current configs before deploying? [y/N] (Default direct deploy without backup): " ;;
             ask_keep_monitor) echo -e "\n\e[1;36m:: Existing monitor config ~/.config/niri/monitor.kdl detected (contains resolution/layout settings specific to your personal hardware).\e[0m\n:: Preserve your current monitor settings? [Y/n]: " ;;
-            ask_keep_wallpapers) echo -e "\n\e[1;36m:: Existing wallpaper directory detected.\e[0m\n:: Keep your current wallpapers? (Choosing \"No\" will replace with NyxNiri defaults) [Y/n]: " ;; 
+            ask_keep_wallpapers) echo -e "\n\e[1;36m:: Existing wallpaper directory detected.\e[0m\n:: Keep your current wallpapers? (Choosing \"No\" will replace with NyxNiri defaults) [Y/n]: " ;;
         esac
     fi
 }
@@ -469,7 +457,7 @@ ensure_nyxniri_symlink() {
     mkdir -p "$HOME/.local/bin"
     local target_bin="$HOME/.local/bin/nyxniri"
     local current_script="$REAL_SCRIPT_PATH"
-    
+
     if [ -z "$current_script" ] || [ ! -f "$current_script" ]; then
         if [ -f "$CACHE_DIR/install.sh" ]; then
             current_script="$CACHE_DIR/install.sh"
@@ -508,17 +496,17 @@ ensure_repo() {
             msg git_required
             exit 1
         fi
-        if [ ! -d "$CACHE_DIR" ]; then
+        if [ ! -d "$CACHE_DIR/.git" ]; then
             msg cloning_repo
 
-            local active_repo_url
-            active_repo_url=$(select_git_mirror)
-            log_msg INFO "Cloning repository from: $active_repo_url"
+            # 如果缓存目录存在但并不是合法的 git 仓库（比如是个空目录），将其清理
+            if [ -d "$CACHE_DIR" ] && [ -n "$CACHE_DIR" ] && [[ "$CACHE_DIR" == *".cache/NyxNiri" ]]; then
+                rm -rf "$CACHE_DIR"
+            fi
 
-            git clone "$active_repo_url" "$CACHE_DIR" || {
-                log_msg ERROR "Failed to clone repository from $active_repo_url"
+            if ! clone_repo_with_fallback "$CACHE_DIR"; then
                 exit 1
-            }
+            fi
         fi
     fi
 }
@@ -650,11 +638,11 @@ check_all_deps() {
     for i in "${!DEPS[@]}"; do
         local cmd="${DEPS[$i]}"
         local is_installed=0
-        
+
         if [ "$cmd" = "inotify-tools" ]; then
             cmd="inotifywait"
         fi
-        
+
         if [ "$cmd" = "ttf-jetbrains-mono-nerd" ]; then
             if command -v fc-list >/dev/null 2>&1 && fc-list : family 2>/dev/null | grep -qi "JetBrainsMono"; then
                 is_installed=1
@@ -668,7 +656,7 @@ check_all_deps() {
                 is_installed=1
             fi
         fi
-        
+
         if [ "$is_installed" -eq 1 ]; then
             DEP_STATUS[$i]=1
             DEP_SELECT[$i]=0
@@ -686,7 +674,7 @@ show_dep_menu() {
     for i in "${!DEPS[@]}"; do
         local status=""
         local check=" "
-        
+
         if [ "${DEP_STATUS[$i]}" -eq 1 ]; then
             status=$(msg installed)
             check="x"
@@ -699,7 +687,7 @@ show_dep_menu() {
                 check=" "
             fi
         fi
-        
+
         printf "  [%s] %2d) %-15s %s\n" "$check" "$((i+1))" "${DEPS[$i]}" "$status"
     done
     echo ""
@@ -714,7 +702,7 @@ run_dep_menu_loop() {
         if [ -z "$choice" ]; then
             break
         fi
-        
+
         for num in $choice; do
             if [[ "$num" =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le "${#DEPS[@]}" ]; then
                 local index=$((num-1))
@@ -728,7 +716,7 @@ run_dep_menu_loop() {
             fi
         done
     done
-    
+
     install_selected_deps
 }
 
@@ -752,11 +740,11 @@ install_selected_deps() {
             fi
         fi
     done
-    
+
     if [ ${#repo_install[@]} -eq 0 ] && [ ${#aur_install[@]} -eq 0 ]; then
         return
     fi
-    
+
     msg installing_selected
     local pkg_manager=""
     local has_aur_helper=false
@@ -769,14 +757,14 @@ install_selected_deps() {
     else
         pkg_manager="sudo pacman"
     fi
-    
+
     # Install official repo packages
     if [ ${#repo_install[@]} -gt 0 ]; then
         $pkg_manager -S --noconfirm "${repo_install[@]}" || {
             echo "Some repo package installations failed. Continuing..."
         }
     fi
-    
+
     # Install AUR packages (requires AUR helper)
     if [ ${#aur_install[@]} -gt 0 ]; then
         if [ "$has_aur_helper" = true ]; then
@@ -789,7 +777,7 @@ install_selected_deps() {
             msg aur_helper_required
         fi
     fi
-    
+
     check_mpvpaper_version
 }
 
@@ -797,7 +785,7 @@ check_mpvpaper_version() {
     if ! command -v mpvpaper >/dev/null 2>&1; then
         return
     fi
-    
+
     msg checking_mpvpaper
 
     # Check if mpvpaper-git is installed
@@ -808,22 +796,22 @@ check_mpvpaper_version() {
     fi
 
     local version=$(LC_ALL=C pacman -Qi mpvpaper 2>/dev/null | awk '/^Version/{print $3}')
-    
+
     if [ -z "$version" ]; then
         return
     fi
-    
+
     # Sanitize version string (remove Epoch like 1:, remove revision suffix like -1, keep digits & dots)
     local clean_ver=$(echo "$version" | sed -E 's/^[0-9]+://; s/-.*//; s/[^0-9.]//g')
     local major=$(echo "$clean_ver" | cut -d. -f1)
     local minor=$(echo "$clean_ver" | cut -d. -f2)
-    
+
     # Ensure major and minor are clean integers
     major=${major//[^0-9]/}
     minor=${minor//[^0-9]/}
     major=${major:-0}
     minor=${minor:-0}
-    
+
     if [ "$major" -gt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -ge 9 ]; }; then
         msg mpvpaper_version_ok "$version"
     else
@@ -898,7 +886,7 @@ backup_configs() {
     local timestamp=$(date +%Y%m%d_%H%M%S)
     local backup_dir="$BACKUP_BASE_DIR/snapshot_$timestamp"
     mkdir -p "$backup_dir"
-    
+
     for item in "${CONFIG_ITEMS[@]}"; do
         if [ -e "$HOME/.config/$item" ]; then
             cp -rP "$HOME/.config/$item" "$backup_dir/"
@@ -909,7 +897,7 @@ backup_configs() {
     if [ -n "$note" ]; then
         echo "$note" > "$backup_dir/note.txt"
     fi
-    
+
     msg backup_done "$backup_dir"
 }
 
@@ -1105,13 +1093,13 @@ deploy_selected_configs() {
 
     msg copying_configs
     local repo_config_dir="$REPO_DIR/$CONFIG_DIR_NAME"
-    
+
     mkdir -p "$HOME/.config"
 
     for item in "${items_to_deploy[@]}"; do
         local src="$repo_config_dir/$item"
         local dest="$HOME/.config/$item"
-        
+
         if [ -e "$src" ]; then
             local temp_monitor=""
             if [ "$item" = "niri" ] && [ -f "$dest/monitor.kdl" ]; then
@@ -1130,15 +1118,15 @@ deploy_selected_configs() {
                 rm -f "$temp_monitor"
                 echo "  Preserved existing: ~/.config/niri/monitor.kdl"
             fi
-            
+
             echo "  Deployed: ~/.config/$item"
         fi
     done
-    
+
     local pics_dir=$(xdg-user-dir PICTURES 2>/dev/null)
     [ -z "$pics_dir" ] && pics_dir="$HOME/Pictures"
     local wp_dest="$pics_dir/Wallpapers"
-    
+
     # Ensure scripts are executable and initial effects symlink exists
     if [ -f "$HOME/.config/fish/clean-cache" ]; then
         chmod +x "$HOME/.config/fish/clean-cache"
@@ -1195,7 +1183,7 @@ deploy_selected_configs() {
         echo "  Initialized: Noctalia theme and GTK sync"
     fi
 
-    
+
     # Enable Noctalia mpvpaper plugin if noctalia CLI is available
     if command -v noctalia >/dev/null 2>&1; then
         echo ":: Enabling Noctalia mpvpaper plugin..."
@@ -1350,7 +1338,7 @@ offer_overwrite_upgrade() {
 
 install_configs() {
     local mode="${1:-full}"
-    
+
     # Ask for backup, default [y/N]
     read -p "$(msg ask_backup_before_deploy)" choice < /dev/tty
     local do_backup="nobackup"
@@ -1369,7 +1357,7 @@ install_configs() {
                 missing_count=$((missing_count + 1))
             fi
         done
-        
+
         if [ "$missing_count" -gt 0 ]; then
             msg warn_deps_missing
             read -p "$(msg ask_install_now)" choice < /dev/tty
@@ -1386,32 +1374,32 @@ install_configs() {
 run_doctor() {
     msg running_doctor
     sleep 1
-    
+
     if [ "$XDG_CURRENT_DESKTOP" = "niri" ]; then
         msg doctor_ok "Compositor: Niri is currently running."
     else
         msg doctor_warn "Compositor: Current desktop environment is '$XDG_CURRENT_DESKTOP' (Niri is not running)."
     fi
-    
+
     if [ -f "/usr/share/wayland-sessions/niri.desktop" ]; then
         msg doctor_ok "Session: Niri Wayland session desktop file is registered."
     else
         msg doctor_warn "Session: /usr/share/wayland-sessions/niri.desktop is missing. (Niri might not show up on your Display Manager login screen)"
     fi
-    
+
     if noctalia msg status >/dev/null 2>&1; then
         msg doctor_ok "Noctalia Daemon: Running and responsive."
     else
         msg doctor_err "Noctalia Daemon: Not running. (Launch: niri msg action spawn -- noctalia)"
     fi
-    
+
     local doc_pics_dir=$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")
     if [ -d "$doc_pics_dir/Wallpapers" ]; then
         msg doctor_ok "Wallpapers: $doc_pics_dir/Wallpapers directory exists."
     else
         msg doctor_err "Wallpapers: $doc_pics_dir/Wallpapers directory is missing."
     fi
-    
+
     local missing_critical=0
     for cmd in niri noctalia fish starship; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -1419,11 +1407,11 @@ run_doctor() {
             missing_critical=$((missing_critical + 1))
         fi
     done
-    
+
     if [ "$missing_critical" -eq 0 ]; then
         msg doctor_ok "Core Dependencies: All core tools (niri, noctalia, fish, starship) are installed."
     fi
-    
+
     for script in "theme-sync.sh" "wallpaper-hook.sh" "mpvpaper-sync.sh"; do
         local path="$HOME/.config/noctalia/$script"
         if [ -f "$path" ]; then
@@ -1435,7 +1423,7 @@ run_doctor() {
             fi
         fi
     done
-    
+
     # Check clean-cache in fish config directory
     local cc_path="$HOME/.config/fish/clean-cache"
     if [ -f "$cc_path" ]; then
@@ -1465,7 +1453,7 @@ run_doctor() {
     else
         msg doctor_warn "EyeCare Component: wlsunset is missing (Night mode temperature ramp will be unavailable)."
     fi
-    
+
     if [[ "$SHELL" == *fish ]]; then
         msg doctor_ok "Shell: Fish is the current default shell."
     else
@@ -1494,7 +1482,7 @@ run_doctor() {
     if command -v lspci >/dev/null 2>&1 && lspci | grep -i -q "VMware\|VirtualBox\|QEMU\|Virtio"; then
         msg doctor_warn "Virtual Machine detected (VMware/VirtualBox/QEMU). Ensure 'Accelerate 3D Graphics' is enabled in VM settings to avoid black screen in Niri Wayland!"
     fi
-    
+
     msg all_done
     msg reboot_hint
 }
@@ -1503,7 +1491,7 @@ generate_bug_report() {
     msg generating_report
     local timestamp=$(date +%Y%m%d_%H%M%S)
     local report_file="$HOME/nyxniri-bug-report-${timestamp}.md"
-    
+
     {
         echo "# NyxNiri System Diagnostic Bug Report"
         echo "Generated at: $(date)"
@@ -1587,7 +1575,7 @@ generate_bug_report() {
         fi
         echo '```'
     } > "$report_file"
-    
+
     msg report_done "$report_file"
 }
 
@@ -1600,28 +1588,28 @@ main_menu() {
         show_logo
         msg welcome
         msg menu_title
-        
+
         msg menu_group_deploy
         msg menu_opt1
         msg menu_opt2
         msg menu_opt3
-        
+
         msg menu_group_backup
         msg menu_opt4
         msg menu_opt5
-        
+
         msg menu_group_maint
         msg menu_opt6
         msg menu_opt7
         msg menu_opt8
-        
+
         msg menu_group_system
         msg menu_opt9
         msg menu_opt0
-        
+
         echo ""
         read -p "$(msg menu_prompt)" opt < /dev/tty
-        
+
         case "$opt" in
             1)
                 install_configs "full"
@@ -1683,7 +1671,7 @@ main() {
     init_logger
     log_msg "INFO" "NyxNiri CLI launched in $RUN_MODE mode ($MODE_LABEL)"
     ensure_nyxniri_symlink
-    
+
     if [ $# -gt 0 ]; then
         case "$1" in
             install|deploy)

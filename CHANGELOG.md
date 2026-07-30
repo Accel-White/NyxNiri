@@ -1,5 +1,13 @@
 # Changelog
 
+## [v2.1.11] (未完成)
+
+### Changed / Refactored
+
+- **Git 克隆与镜像降级策略重构 (`clone_repo_with_fallback`)**: 在 `install.sh` 中废弃先通过 `git ls-remote` 预测试延迟的 `select_git_mirror` 方案，重构为按优先级直接尝试 `git clone --depth 1` 并自动回退的引擎。当某一节点拉取失败时自动清理残存文件夹并切至下一个镜像节点，显著提升在不稳定网络环境下的部署成功率与抗波动能力。
+- **缓存目录验证与自动修复 (`ensure_repo`)**: 校验逻辑升级为严格检查 `$CACHE_DIR/.git` 文件夹的存在性；若缓存目录存在但非合法 Git 仓库（如上次异常中断留下的空目录），自动触发 `rm -rf` 彻底清理后重新拉取，防范因残缺目录导致误判或部署阻断。
+- **代码精简与规范清理**: 移除测速与毫秒耗时计算等约 30 行非核心开销代码，使主干流程更加直观干净；清理脚本内多处尾随空格（Trailing Whitespaces）。
+
 ## [v2.1.10] - 2026-07-30
 
 ### Added / Improved
