@@ -57,7 +57,11 @@ main() {
     # Check if running inside local repository
     if [ -n "$script_dir" ] && [ -f "$script_dir/lib/main.sh" ]; then
         chmod +x "$script_dir/lib/main.sh" 2>/dev/null || true
-        exec bash "$script_dir/lib/main.sh" "$@"
+        if [ ! -t 0 ] && [ -t 1 ] && [ -r /dev/tty ]; then
+            exec bash "$script_dir/lib/main.sh" "$@" < /dev/tty
+        else
+            exec bash "$script_dir/lib/main.sh" "$@"
+        fi
     fi
 
     # Standalone mode: requires git and cache repository
@@ -73,7 +77,11 @@ main() {
 
     if [ -f "$CACHE_DIR/lib/main.sh" ]; then
         chmod +x "$CACHE_DIR/lib/main.sh" 2>/dev/null || true
-        exec bash "$CACHE_DIR/lib/main.sh" "$@"
+        if [ ! -t 0 ] && [ -t 1 ] && [ -r /dev/tty ]; then
+            exec bash "$CACHE_DIR/lib/main.sh" "$@" < /dev/tty
+        else
+            exec bash "$CACHE_DIR/lib/main.sh" "$@"
+        fi
     else
         echo -e "\e[1;31m[-] 错误: 缓存目录中未找到 lib/main.sh，仓库可能损坏。\e[0m"
         exit 1
