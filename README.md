@@ -76,8 +76,8 @@ NyxNiri
 > [!TIP]
 > **Customization (Dunder Mechanism)**
 > NyxNiri updates atomically replace configuration directories. To preserve your personal modifications across updates:
-> - **Custom Files**: Any file matching `__custom__.*` (e.g., `__custom__.kdl`, `__custom__.fish`) will be securely preserved.
-> - **Custom Namespace**: You can create a `__custom__/` folder inside any config directory (e.g., `~/.config/niri/__custom__/`) to store your own scripts or assets. The entire folder is immune to updates.
+> - **Custom Files**: Any file matching `*__custom__*` (e.g., `__custom__.kdl`, `01__custom__.fish`, `__custom__env`) will be securely preserved across updates (supports number prefixes for controlling load order).
+> - **Custom Namespace**: You can create any `*__custom__*` folder inside any config directory (e.g., `~/.config/niri/__custom__/`, `~/.config/niri/01__custom__/`) to store your own scripts or assets. The entire folder and all its contents are immune to updates.
 
 > [!NOTE]
 > The installation process offers an optional backup prompt to save existing configurations to
@@ -296,8 +296,8 @@ NyxNiri
 > [!TIP]
 > **自定义配置 (Dunder 机制)**
 > NyxNiri 更新时会原子覆盖配置目录。为保证你的私人配置在更新时安全保留：
-> - **自定义文件**：任何命名为 `__custom__.*` 的文件（如 `__custom__.kdl`, `__custom__.fish`）都会被完整继承，免于覆盖。
-> - **私有命名空间**：你可以在配置目录下建立 `__custom__/` 文件夹（如 `~/.config/niri/__custom__/`），在里面自由存放及命名个人脚本与素材，该文件夹在更新时将被连根完整保留。
+> - **自定义文件**：任何命名匹配 `*__custom__*` 的文件（如 `__custom__.kdl`, `01__custom__.fish`, `__custom__env`）都会被完整继承，免于覆盖（支持添加前缀数字调控加载与执行顺序）。
+> - **私有命名空间**：你可以在配置目录下建立任何 `*__custom__*` 文件夹（如 `~/.config/niri/__custom__/`, `~/.config/niri/01__custom__/`），在里面自由存放及命名个人脚本与素材，整个文件夹及其内部所有文件在更新时将被连根完整保留。
 
 > [!NOTE]
 > 安装过程提供可选的备份提示，允许你在部署前将现有配置备份至 `~/.config/NyxNiri/backups/`。

@@ -1,5 +1,21 @@
 # Changelog
 
+## [v2.1.12] - 2026-07-31 (WIP / 未完成)
+
+### Added / Improved
+
+- **`*__custom__*` 私有配置通配继承与数字排序支持 (Enhanced Custom Preservation Protocol)**:
+  - 升级 `install.sh` 的 `atomic_replace_item()` 部署引擎，匹配规则扩展为 `*__custom__*`。
+  - 全面支持无后缀文件（如 `__custom__env`）、规则文件（如 `01__custom__.fish`）及数字前缀排序，允许用户通过前缀（如 `01-` / `99-`）精确控制在 Fish `conf.d/` 或其它加载环境中的字母表解析与覆盖顺序。
+  - 在 `find` 引擎中引入 `-prune` 剪枝，连根提取 `*__custom__*` 目录及其内部所有脚本与素材，彻底消除重复递归与多余控制台日志。
+- **Kitty 终端私有配置挂载补全**: 在 `v2/kitty/kitty.conf` 最末尾接入 `include __custom__.conf` 挂载点，并在 `v2/kitty/__custom__.conf` 中下发双语注释模版，预置 `include glob:*__custom__*.conf` 高级通配指令。
+- **文档与测试规范更新**: 同步更新 `README.md` 中英文版关于 `*__custom__*` 通配与数字前缀排序的标注；在 `审查方案.md` 中新增物理隔离沙箱与实机 `~/.config` 测试方法规范及 Changelog 归档。
+
+### Fixed / Hardened
+
+- **单文件部署类型隔离 (Single File Deployment Hardening)**: 修复 `atomic_replace_dir` 在处理单文件（如 `starship.toml`）时尝试执行目录 `find` 与 `mkdir` 的类型混淆缺陷，隔离文件级原子替换与目录替换逻辑。
+- **非 TTY 与批处理环境崩溃防护**: 在 `install.sh` 的 `ask_keep_monitor` 与 `ask_backup_before_deploy` 交互读取处增加 `[ -t 0 ] && [ -c /dev/tty ]` 联合校验，解决在管道、非交互及无 TTY 环境下因 `set -e` 导致脚本突然中断报错的问题。
+
 ## [v2.1.11] - 2026-07-30
 
 ### Added / Improved

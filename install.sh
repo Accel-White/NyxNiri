@@ -865,8 +865,18 @@ discover_config_items
 # copy to a sibling temp dir first (dest untouched if this fails), then swap
 # in with rm+mv instead of a long-running rm+cp that a Ctrl+C/crash could
 # interrupt mid-copy.
-atomic_replace_dir() {
+atomic_replace_item() {
     local src="$1" dest="$2"
+    if [ -f "$src" ]; then
+        local tmp_file="${dest}.new.$$"
+        rm -f "$tmp_file" 2>/dev/null
+        register_temp_path "$tmp_file"
+        cp -a "$src" "$tmp_file" || { rm -f "$tmp_file"; return 1; }
+        rm -f "$dest" 2>/dev/null
+        mv "$tmp_file" "$dest"
+        return 0
+    fi
+
     local tmp_new="${dest}.new.$$"
     rm -rf "$tmp_new" 2>/dev/null
     register_temp_path "$tmp_new"
@@ -874,8 +884,8 @@ atomic_replace_dir() {
 
     # [NEW] Dunder 私有命名空间继承 (High Robustness & Zero False Positives)
     if [ -d "$dest" ]; then
-        # 1. 继承入口文件 (如 __custom__.kdl)
-        (cd "$dest" && find . -type f -name "__custom__.*" -print0 2>/dev/null | while IFS= read -r -d '' file; do
+        # 1. 继承入口文件 (匹配 *__custom__*，跳过 *__custom__* 目录内部)
+        (cd "$dest" && find . -type d -name "*__custom__*" -prune -o -type f -name "*__custom__*" -print0 2>/dev/null | while IFS= read -r -d '' file; do
             mkdir -p "$tmp_new/$(dirname "$file")"
             cp -a "$file" "$tmp_new/$file"
             echo "  Preserved custom file: $dest/${file#./}"
@@ -883,8 +893,8 @@ atomic_replace_dir() {
                 echo "    - File: $dest/${file#./}" >> "$NYXNIRI_CUSTOM_LOG"
             fi
         done)
-        # 2. 继承整套自定义目录 (允许用户自由命名其内部的脚本)
-        (cd "$dest" && find . -type d -name "__custom__" -print0 2>/dev/null | while IFS= read -r -d '' dir; do
+        # 2. 继承整套自定义目录 (连根提取 *__custom__* 目录及其内部全部文件)
+        (cd "$dest" && find . -type d -name "*__custom__*" -prune -print0 2>/dev/null | while IFS= read -r -d '' dir; do
             mkdir -p "$tmp_new/$(dirname "$dir")"
             cp -a "$dir" "$tmp_new/$(dirname "$dir")/"
             echo "  Preserved custom dir:  $dest/${dir#./}"
@@ -896,6 +906,10 @@ atomic_replace_dir() {
 
     rm -rf "$dest"
     mv "$tmp_new" "$dest"
+}
+
+atomic_replace_dir() {
+    atomic_replace_item "$@"
 }
 
 backup_configs() {
@@ -1129,7 +1143,10 @@ deploy_selected_configs() {
         if [ -e "$src" ]; then
             local temp_monitor=""
             if [ "$item" = "niri" ] && [ -f "$dest/monitor.kdl" ]; then
-                read -p "$(msg ask_keep_monitor)" mon_choice < /dev/tty
+                local mon_choice="y"
+                if [ -t 0 ] && [ -c /dev/tty ]; then
+                    read -p "$(msg ask_keep_monitor)" mon_choice < /dev/tty || mon_choice="y"
+                fi
                 if [[ "$mon_choice" =~ ^[Yy]$ || -z "$mon_choice" ]]; then
                     temp_monitor=$(mktemp)
                     register_temp_path "$temp_monitor"
@@ -1374,8 +1391,10 @@ offer_overwrite_upgrade() {
 install_configs() {
     local mode="${1:-full}"
 
-    # Ask for backup, default [y/N]
-    read -p "$(msg ask_backup_before_deploy)" choice < /dev/tty
+    local choice=""
+    if [ -t 0 ] && [ -c /dev/tty ]; then
+        read -p "$(msg ask_backup_before_deploy)" choice < /dev/tty || true
+    fi
     local do_backup="nobackup"
     if [[ "$choice" =~ ^[Yy]$ ]]; then
         do_backup="backup"
