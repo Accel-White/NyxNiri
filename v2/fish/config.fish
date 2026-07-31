@@ -194,8 +194,8 @@ if status is-interactive
         bind \t custom_tab_complete
     end
 
-    # Use starship prompt
-    if command -v starship &>/dev/null
+    # Use starship prompt (Disable in pure TTY to avoid Nerd Font square boxes)
+    if test "$TERM" != "linux"; and command -v starship &>/dev/null
         starship init fish | source
     end
 
@@ -250,6 +250,10 @@ if status is-interactive
     end
     
     if command -v eza &>/dev/null
-        alias ls 'eza --icons=auto'
+        if test "$TERM" != "linux"
+            alias ls 'eza --icons=auto'
+        else
+            alias ls 'eza'
+        end
     end
 end

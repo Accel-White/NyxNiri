@@ -1,5 +1,11 @@
 # Changelog
 
+## [v2.1.14] - 2026-07-31
+
+### Fixed
+
+- **纯 TTY 控制台图标降级兼容 (TTY Console Icon Fallback, Fix Issue #8)**: 修复在退出桌面环境进入纯 Linux 虚拟控制台（TTY）时，命令行提示符因不支持渲染 Nerd Font 而显示方块乱码的问题。通过检测 `$TERM == "linux"`，自动回退并禁用 Starship 提示符与 `eza --icons`，在桌面终端保留高颜值配置的同时，为纯字符 TTY 环境提供干净的原生纯 ASCII 体验。
+
 ## [v2.1.13] - 2026-07-31
 
 ### Fixed
