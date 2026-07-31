@@ -44,7 +44,7 @@ apply_effects() {
 # spawn-at-startup so a niri restart — e.g. right after a config redeploy —
 # re-aligns effects.kdl with whatever wlsunset is actually doing, instead of
 # staying stuck on the deploy's Normal default until the next manual toggle.
-if [ "$1" = "--sync" ]; then
+if [ "${1:-}" = "--sync" ]; then
     if [ "$CURRENTLY_ON" = "true" ]; then
         apply_effects on
     else
