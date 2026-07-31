@@ -2,6 +2,9 @@
 # NyxNiri EyeCare One-shot Self-Healing Toggle & Sync Script
 # Zero background process besides wlsunset itself. Runs in < 2ms then exits.
 #
+# shellcheck disable=SC2317  # pgrep non-zero exit is intentional control flow via &&
+set -uo pipefail
+#
 # On/off state is derived from whether wlsunset is currently running rather
 # than tracked in a separate state file. A config redeploy always wipes and
 # recreates ~/.config/niri from the template (effects.kdl reset to Normal)

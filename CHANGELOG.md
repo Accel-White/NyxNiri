@@ -1,11 +1,17 @@
 # Changelog
 
-## [v2.1.12] - 2026-07-31 (WIP / 未完成)
+## [v2.1.12] - 2026-07-31
 
 ### Added / Improved
 
+- **安装脚本全面模块化拆分 (Modular Script Architecture)**:
+  - 将原单文件约 1800 行的 `install.sh` 重构拆分为模块化架构：根目录仅保留极简 `install.sh` 引导程序（兼顾 `curl` 在线一键安装与本地仓库部署），根目录简洁利落。
+  - 主程序控制台解耦移入 `lib/main.sh`，并划分出 7 大功能库模块：`lib/core.sh` (核心基础/日志/Trap), `lib/i18n.sh` (双语国际化字典), `lib/network.sh` (镜像源回退/超时防断), `lib/deps.sh` (依赖检测/安装), `lib/backup.sh` (快照备份/回滚/卸载), `lib/deploy.sh` (原子部署/自适应替换), `lib/doctor.sh` (健康诊断与 Bug Report 导出)。
+- **Bash 严苛执行模式与安全性强化 (Strict Shell Mode & Safety Hardening)**:
+  - 全库模块开启 `set -euo pipefail` 严格错误与未定义变量捕获模式，全面消除未初始化变量可能引发的逻辑与部署陷阱。
+  - 优化 `trap cleanup` 机制，所有临时路径统一入队注册并自动防死锁清理。
 - **`*__custom__*` 私有配置通配继承与数字排序支持 (Enhanced Custom Preservation Protocol)**:
-  - 升级 `install.sh` 的 `atomic_replace_item()` 部署引擎，匹配规则扩展为 `*__custom__*`。
+  - 升级部署引擎中的 `atomic_replace_item()`，匹配规则扩展为 `*__custom__*`。
   - 全面支持无后缀文件（如 `__custom__env`）、规则文件（如 `01__custom__.fish`）及数字前缀排序，允许用户通过前缀（如 `01-` / `99-`）精确控制在 Fish `conf.d/` 或其它加载环境中的字母表解析与覆盖顺序。
   - 在 `find` 引擎中引入 `-prune` 剪枝，连根提取 `*__custom__*` 目录及其内部所有脚本与素材，彻底消除重复递归与多余控制台日志。
 - **Kitty 终端私有配置挂载补全**: 在 `v2/kitty/kitty.conf` 最末尾接入 `include __custom__.conf` 挂载点，并在 `v2/kitty/__custom__.conf` 中下发双语注释模版，预置 `include glob:*__custom__*.conf` 高级通配指令。
@@ -13,8 +19,19 @@
 
 ### Fixed / Hardened
 
+- **字体识别算法与依赖菜单交互修复 (Package Detection & Dep Menu State Fix)**:
+  - 修复 `lib/deps.sh` 依赖检测：优先通过 `pacman -Qq <pkg>` 查询包数据库，结合增强正则匹配，彻底解决 `ttf-jetbrains-mono-nerd` 和 `noto-fonts-cjk` 因空格/后缀在 `fc-list` 中匹配失败导致误报 `[未安装]` 的缺陷。
+  - 修复依赖安装菜单交互：解耦系统检测 `check_all_deps` 与用户交互勾选数组 `DEP_SELECT`，解决每次循环按键刷新都导致用户 `[*]` / `[ ]` 勾选状态被强制擦除重置的 bug。
 - **单文件部署类型隔离 (Single File Deployment Hardening)**: 修复 `atomic_replace_dir` 在处理单文件（如 `starship.toml`）时尝试执行目录 `find` 与 `mkdir` 的类型混淆缺陷，隔离文件级原子替换与目录替换逻辑。
-- **非 TTY 与批处理环境崩溃防护**: 在 `install.sh` 的 `ask_keep_monitor` 与 `ask_backup_before_deploy` 交互读取处增加 `[ -t 0 ] && [ -c /dev/tty ]` 联合校验，解决在管道、非交互及无 TTY 环境下因 `set -e` 导致脚本突然中断报错的问题。
+- **非 TTY 与批处理环境崩溃防护**: 在交互读取处增加 `[ -t 0 ] && [ -c /dev/tty ]` 联合校验，解决在管道、非交互及无 TTY 环境下因 `set -e` 导致脚本突然中断报错的问题。
+- **全仓库鲁棒性审查修复 (Full Repository Robustness Audit)**:
+  - **`lib/backup.sh`**: `rollback_configs` 回滚循环从非原子 `rm -rf` + `cp -rP` 改为 `atomic_replace_dir`，消除 Ctrl+C 中断时配置目录只删不建的数据丢失风险，与 `deploy_selected_configs` 保持一致。
+  - **`lib/network.sh`**: `safe_pull_or_reset` 中 `git pull` 和 `git fetch` 添加 `http.lowSpeedTime=15` 超时配置，防止网络不通时菜单更新操作无限挂起；`ensure_repo` 的 `rm -rf` 补充路径深度（≥3 层 `/`）校验加固高危删除安全保护。
+  - **`lib/deploy.sh`**: 将 `noctalia-config.toml` 壁纸路径替换从依赖 `图片` 中文字符改为 TOML 键名精准匹配（`^directory` / `^video_directory`），兼容所有语言系统（如英文 `~/Pictures`）；修复 `export VAR=$(mktemp)` 在 `set -e` 下掩盖 mktemp 失败的 Bash 语义陷阱，改为先赋值后 export。
+  - **`lib/doctor.sh`**: 将 noctalia 检测从单一分支拆分为三条独立诊断，区分「noctalia 未安装」与「进程未运行」，提升故障排查精度。
+  - **`v2/niri/toggle-eyecare.sh`**: 添加 `set -uo pipefail` 严格模式（不开 `-e`，保留 pgrep `&&` 控制流语义）。
+  - **`审查方案.md`**: 1.2 节补充软链接例外条款（系统配置内部互链不违反隔离原则）；第 4 节归档全量审查记录。
+  - **`README.md`**: 修复 `nyxhelp --all` 错误参数为 `nyxhelp all`；补全 `nyxniri install [full|config]` 参数说明；目录树添加缺失的 `lib/` 核心模块目录条目（中英文均已修复）。
 
 ## [v2.1.11] - 2026-07-30
 

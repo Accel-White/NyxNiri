@@ -62,6 +62,7 @@ enhancements.
 ```text
 NyxNiri
 ├── install.sh                  # Installation script (backup, dependency check)
+├── lib/                        # Core modules (deploy, backup, network, doctor, i18n…)
 ├── Wallpapers/                 # Wallpaper library
 └── v2/                         # Noctalia V5 configurations
     ├── niri/                   # Window manager config
@@ -182,7 +183,7 @@ A lightweight utility to manage configurations and diagnose issues.
 | Command                    | Description                                                  |
 | -------------------------- | ------------------------------------------------------------ |
 | `nyxniri`                  | Open the interactive TUI menu.                               |
-| `nyxniri install [mode]`   | Deploy dotfile configurations or full environment.           |
+| `nyxniri install [full\|config]` | Deploy full environment (`full`) or sync configs only (`config`). |
 | `nyxniri update [--force]` | Check for updates and optionally overwrite configurations.   |
 | `nyxniri snapshot [note]`  | Save the current configuration state.                        |
 | `nyxniri rollback [index]` | Revert to a previous snapshot (auto-backs up current state). |
@@ -201,7 +202,7 @@ An interactive terminal cheatsheet powered by `fzf` for quick navigation of shor
 | `nyxhelp keys`  | Display Niri keybindings section.                             |
 | `nyxhelp proxy` | Display proxy controls (`proxy_on [port]`, `proxy_off`, `proxy_status`). |
 | `nyxhelp pkg`   | Display package management shortcuts (`up`, `in`, `se`, `un`, `clean`). |
-| `nyxhelp --all` | Print the full cheatsheet guide.                               |
+| `nyxhelp all`   | Print the full cheatsheet guide.                               |
 
 ## Troubleshooting
 
@@ -282,6 +283,7 @@ NyxNiri 是一套针对 Arch Linux 和 CachyOS 的桌面配置集。核心基于
 ```text
 NyxNiri
 ├── install.sh                  # 安装脚本（包含依赖检测与配置备份）
+├── lib/                        # 核心功能模块（部署、备份、网络、诊断、国际化…）
 ├── Wallpapers/                 # 壁纸库
 └── v2/                         # Noctalia V5 配置
     ├── niri/                   # 窗口管理器配置
@@ -397,7 +399,7 @@ cd ~/NyxNiri && ./install.sh
 | 指令                      | 作用                                   |
 | ------------------------- | -------------------------------------- |
 | `nyxniri`                 | 打开交互式菜单                         |
-| `nyxniri install [模式]`   | 部署配置文件或全量安装环境             |
+| `nyxniri install [full\|config]` | 全量安装（`full`）或仅同步配置文件（`config`）  |
 | `nyxniri update [--force]` | 检查仓库更新与可选覆盖升级             |
 | `nyxniri snapshot [备注]` | 保存当前配置状态                       |
 | `nyxniri rollback [序号]` | 恢复历史快照（恢复前自动备份当前状态） |
@@ -416,7 +418,7 @@ cd ~/NyxNiri && ./install.sh
 | `nyxhelp keys`  | 快速展示 Niri 桌面核心快捷键                                   |
 | `nyxhelp proxy` | 展示网络代理控制指令（支持 `proxy_on 10808` 动态端口）          |
 | `nyxhelp pkg`   | 展示包管理与缓存清理指令 (`up`, `in`, `se`, `un`, `clean`)     |
-| `nyxhelp --all` | 静态打印完整速查手册                                           |
+| `nyxhelp all`   | 静态打印完整速查手册                                           |
 
 ## 故障排除
 
