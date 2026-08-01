@@ -204,10 +204,53 @@ if status is-interactive
     alias celar "printf '\033[2J\033[3J\033[1;1H'"
     alias claer "printf '\033[2J\033[3J\033[1;1H'"
     
-    # Shelly 统一包管理别名 (CachyOS 官方推荐)
-    alias up='shelly upgrade all'                 # 一键更新官方包、AUR、Flatpak、AppImage
-    alias update='shelly upgrade all'             # 同上，完整拼写
-    alias in='shelly install'                     # 安装软件包 (支持官方源/AUR/Flatpak)
+    # 智能一键更新 (自动降级兼容 Shelly -> Paru -> Yay -> Pacman)
+    function up --description "一键系统与软件包更新"
+        if command -v shelly &>/dev/null
+            shelly upgrade all $argv
+            if test $status -ne 0
+                echo -e "\n[!] Shelly 更新遇到异常，自动为您回退至备用包管理器 (paru/yay)..."
+                if command -v paru &>/dev/null
+                    paru -Syu $argv
+                else if command -v yay &>/dev/null
+                    yay -Syu $argv
+                else
+                    sudo pacman -Syu $argv
+                end
+            end
+        else if command -v paru &>/dev/null
+            paru -Syu $argv
+        else if command -v yay &>/dev/null
+            yay -Syu $argv
+        else
+            sudo pacman -Syu $argv
+        end
+    end
+    alias update='up'                             # 同上，完整拼写
+
+    # 智能安装 (自动降级兼容)
+    function in --description "智能安装软件包"
+        if command -v shelly &>/dev/null
+            shelly install $argv
+            if test $status -ne 0
+                echo -e "\n[!] Shelly 安装遇到异常，自动为您回退至备用包管理器 (paru/yay)..."
+                if command -v paru &>/dev/null
+                    paru -S $argv
+                else if command -v yay &>/dev/null
+                    yay -S $argv
+                else
+                    sudo pacman -S $argv
+                end
+            end
+        else if command -v paru &>/dev/null
+            paru -S $argv
+        else if command -v yay &>/dev/null
+            yay -S $argv
+        else
+            sudo pacman -S $argv
+        end
+    end
+
     alias clean='~/.config/fish/clean-cache'      # 运行一键缓存清理脚本
 
     # se：模糊搜索软件包 (官方源 + AUR) 并用 fzf 交互安装
