@@ -258,8 +258,7 @@ if [[ "$response" =~ ^(yes|y)$ ]]; then
         # 5.1 Shelly (Package Manager Cleanup)
         if command -v shelly &>/dev/null; then
             log_info "运行 Shelly 清理孤立包与本地下载缓存..."
-            sudo shelly purify --no-confirm
-            sudo shelly cache-clean --no-confirm
+            sudo shelly purify standard --orphans --cache --no-confirm
             log_success "Shelly 包管理缓存清理完成"
         fi
 
