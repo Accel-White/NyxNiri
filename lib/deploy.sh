@@ -30,7 +30,7 @@ atomic_replace_item() {
     # [NEW] Dunder 私有命名空间继承 (High Robustness & Zero False Positives)
     if [ -d "$dest" ]; then
         # 1. 继承入口文件 (匹配 *__custom__*，跳过 *__custom__* 目录内部)
-        (cd "$dest" && find . -type d -name "*__custom__*" -prune -o -type f -name "*__custom__*" -print0 2>/dev/null | while IFS= read -r -d '' file; do
+        (cd "$dest" && find . -type d -name "*__custom__*" -prune -o \( -type f -o -type l \) -name "*__custom__*" -print0 2>/dev/null | while IFS= read -r -d '' file; do
             mkdir -p "$tmp_new/$(dirname "$file")"
             cp -a "$file" "$tmp_new/$file"
             echo "  Preserved custom file: $dest/${file#./}"

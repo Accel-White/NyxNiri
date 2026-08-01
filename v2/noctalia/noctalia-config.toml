@@ -129,6 +129,7 @@ media = false
 
 [shell]
 font_family = "Noto Sans CJK SC"
+polkit_agent = true
 settings_show_advanced = true
 
 [shell.greeter_sync]

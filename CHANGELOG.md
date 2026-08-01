@@ -1,10 +1,15 @@
 # Changelog
 
-## [v2.1.15] - 2026-07-31
+## [v2.1.15] - 2026-08-01
 
 ### Fixed
 
 - **护眼模式无参调用崩溃修复 (EyeCare Mode Argument Fix)**: 修复了 `v2/niri/toggle-eyecare.sh` 在通过 `Mod+N` 快捷键无参调用时，因近期引入的 `set -uo pipefail` 严格模式导致脚本因 `$1` 变量未绑定而直接崩溃的问题，通过采用 `"${1:-}"` 语法安全展开缺省参数，恢复了护眼功能的正常切换。
+- **自定义软链接静默丢失修复 (Custom Symlink Preservation Fix)**: 修复了 `lib/deploy.sh` 的 `atomic_replace_item` 中因 `find -type f` 漏判软链接（`-type l`）导致更新时用户外部挂载的自定义配置文件（如 `01__custom__.fish -> /other/path`）被静默删除的红线级缺陷，提升文件匹配规则为 `\( -type f -o -type l \)` 彻底保障数据完整性。
+- **Noctalia Polkit 代理与免密同步 (Noctalia Built-in Polkit & Greeter Sync)**: 
+  - 在 `v2/noctalia/noctalia-config.toml` 的 `[shell]` 模块中默认开启 Noctalia 现代化内置认证代理 `polkit_agent = true`，解决移除外部代理自启后导致 `pkexec` 无法弹窗而抛出同步外观失败通知的问题。
+  - 在 `README.md` 故障排除模块新增了通过写入系统级 Polkit 规则实现 `greeter` 外观免密静默同步的完整解决方案。
+- **README 参考文档排版修正 (README References Restructure)**: 优化中英文版 `README.md` 排版，将致谢项目 (`RanXom/glassy-niri`) 与其它推荐组件剥离，消除误导表述。
 
 ## [v2.1.14] - 2026-07-31
 

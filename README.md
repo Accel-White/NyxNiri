@@ -230,6 +230,23 @@ git -C ~/.local/state/noctalia/plugins/sources/community/repo reset --hard HEAD
 git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 ```
 
+**Password prompt appears when syncing theme to Greeter**
+
+Noctalia uses `pkexec` to apply the greeter theme. To avoid entering your password every time, you can add a Polkit exemption rule.
+
+_Fix_: Run the following command to create a Polkit rule (requires `sudo`):
+
+```bash
+sudo bash -c 'cat > /etc/polkit-1/rules.d/50-noctalia-greeter.rules << EOF
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.noctalia.greeter.apply-appearance" &&
+        subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+    }
+});
+EOF'
+```
+
 ## Community & Acknowledgments
 
 **Contact & Support**
@@ -241,10 +258,13 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
   [Issue](https://github.com/ech678/NyxNiri/issues).
 - Sponsorship: [afdian.com/a/Echoes678](https://afdian.com/a/Echoes678)
 
-**References**
+**Acknowledgments**
 
 - [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) - Blur settings
   reference
+
+**Recommended Projects**
+
 - [h465855hgg/noctalia-lyrics](https://github.com/h465855hgg/noctalia-lyrics) -
   Desktop lyrics widget
 - [Ocfeather/chrome-niri-opacity](https://github.com/Ocfeather/chrome-niri-opacity) -
@@ -445,6 +465,23 @@ git -C ~/.local/state/noctalia/plugins/sources/community/repo reset --hard HEAD
 git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 ```
 
+**每次同步 Greeter 外观都需要输入密码**
+
+Noctalia 依靠 `pkexec` 来应用 Greeter 主题。为了实现免密静默同步，可以添加一条 Polkit 豁免规则。
+
+_修复_：运行以下命令创建免密规则（需要 `sudo` 权限）：
+
+```bash
+sudo bash -c 'cat > /etc/polkit-1/rules.d/50-noctalia-greeter.rules << EOF
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.noctalia.greeter.apply-appearance" &&
+        subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+    }
+});
+EOF'
+```
+
 ## 社区与致谢
 
 **交流与反馈**
@@ -456,9 +493,12 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
   [Issue](https://github.com/ech678/NyxNiri/issues)。
 - 赞助支持：[爱发电](https://afdian.com/a/Echoes678)
 
-**参考项目**
+**致谢**
 
 - [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) - 模糊效果设置参考
+
+**推荐项目**
+
 - [h465855hgg/noctalia-lyrics](https://github.com/h465855hgg/noctalia-lyrics) -
   桌面歌词组件
 - [Ocfeather/chrome-niri-opacity](https://github.com/Ocfeather/chrome-niri-opacity) -
