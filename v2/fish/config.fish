@@ -205,8 +205,8 @@ if status is-interactive
     alias claer "printf '\033[2J\033[3J\033[1;1H'"
     
     # Shelly 统一包管理别名 (CachyOS 官方推荐)
-    alias up='shelly upgrade-all'                 # 一键更新官方包、AUR、Flatpak、AppImage
-    alias update='shelly upgrade-all'             # 同上，完整拼写
+    alias up='shelly upgrade all'                 # 一键更新官方包、AUR、Flatpak、AppImage
+    alias update='shelly upgrade all'             # 同上，完整拼写
     alias in='shelly install'                     # 安装软件包 (支持官方源/AUR/Flatpak)
     alias clean='~/.config/fish/clean-cache'      # 运行一键缓存清理脚本
 
