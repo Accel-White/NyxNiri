@@ -262,6 +262,7 @@ EOF'
 
 - [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) - Blur settings
   reference
+- [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri) - Window rules reference
 
 **Recommended Projects**
 
@@ -496,6 +497,7 @@ EOF'
 **致谢**
 
 - [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) - 模糊效果设置参考
+- [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri) - 窗口规则设置参考
 
 **推荐项目**
 
