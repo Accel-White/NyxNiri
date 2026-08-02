@@ -116,10 +116,10 @@ function nyxhelp --description "NyxNiri Cheatsheet速查手册"
             return
         case pkg
             set_color -o magenta; echo "  [ 包管理与清理 ]"; set_color normal
-            set_color -o yellow; echo -n "     up / update             "; set_color green; echo "-> 运行 shelly 一键全量更新"; set_color normal
-            set_color -o yellow; echo -n "     in <包名>               "; set_color green; echo "-> 运行 shelly 安装软件包"; set_color normal
-            set_color -o yellow; echo -n "     se                      "; set_color green; echo "-> 模糊搜索软件包并 fzf 交互安装"; set_color normal
-            set_color -o yellow; echo -n "     un                      "; set_color green; echo "-> 模糊搜索已安装包并 fzf 交互卸载"; set_color normal
+            set_color -o yellow; echo -n "     up / update             "; set_color green; echo "-> 运行 paru/yay/shelly 一键全量更新"; set_color normal
+            set_color -o yellow; echo -n "     in [包名]               "; set_color green; echo "-> 安装软件包 (无参时自动开启 se 模糊搜索)"; set_color normal
+            set_color -o yellow; echo -n "     se [关键字]             "; set_color green; echo "-> 模糊搜索软件包并 fzf 交互安装"; set_color normal
+            set_color -o yellow; echo -n "     un [关键字]             "; set_color green; echo "-> 模糊搜索已安装包并 fzf 交互卸载"; set_color normal
             set_color -o yellow; echo -n "     clean [--auto]          "; set_color green; echo "-> 扫描并清理大缓存与日志垃圾"; set_color normal
             return
         case keys bind keybindings
@@ -204,92 +204,177 @@ if status is-interactive
     alias celar "printf '\033[2J\033[3J\033[1;1H'"
     alias claer "printf '\033[2J\033[3J\033[1;1H'"
     
-    # 智能一键更新 (自动降级兼容 Shelly -> Paru -> Yay -> Pacman)
-    function up --description "一键系统与软件包更新"
-        if command -v shelly &>/dev/null
-            shelly upgrade all $argv
-            if test $status -ne 0
-                echo -e "\n[!] Shelly 更新遇到异常，自动为您回退至备用包管理器 (paru/yay)..."
-                if command -v paru &>/dev/null
-                    paru -Syu $argv
-                else if command -v yay &>/dev/null
-                    yay -Syu $argv
-                else
-                    sudo pacman -Syu $argv
-                end
-            end
-        else if command -v paru &>/dev/null
-            paru -Syu $argv
+    # 私有包管理器感知助手 (Paru > Yay > Shelly > Pacman)
+    function _nyxniri_pkg_helper
+        if command -v paru &>/dev/null
+            echo "paru"
         else if command -v yay &>/dev/null
-            yay -Syu $argv
+            echo "yay"
+        else if command -v shelly &>/dev/null
+            echo "shelly"
         else
-            sudo pacman -Syu $argv
+            echo "pacman"
+        end
+    end
+
+    # 智能一键更新 (优先 paru/yay，自动防中途取消误触发)
+    function up --description "一键系统与软件包更新 (Arch / CachyOS)"
+        set -l helper (_nyxniri_pkg_helper)
+        set -l res 0
+
+        switch "$helper"
+            case paru
+                paru -Syu $argv
+                set res $status
+            case yay
+                yay -Syu $argv
+                set res $status
+            case shelly
+                shelly upgrade all $argv
+                set res $status
+            case '*'
+                sudo pacman -Syu $argv
+                set res $status
+        end
+
+        # 用户按 Ctrl+C / SIGINT (130) 或 SIGTERM (143) 取消操作时，安静退出
+        if test $res -eq 130 -o $res -eq 143
+            set_color yellow; echo "[!] 更新操作已由用户取消"; set_color normal
+            return 130
+        end
+
+        if test $res -ne 0 -a "$helper" = "shelly"
+            set_color yellow; echo "[!] Shelly 更新遇到异常，尝试使用备用包管理器..."; set_color normal
+            if command -v paru &>/dev/null
+                paru -Syu $argv
+            else if command -v yay &>/dev/null
+                yay -Syu $argv
+            else
+                sudo pacman -Syu $argv
+            end
         end
     end
     alias update='up'                             # 同上，完整拼写
 
-    # 智能安装 (自动降级兼容)
-    function in --description "智能安装软件包"
-        if command -v shelly &>/dev/null
-            shelly install $argv
-            if test $status -ne 0
-                echo -e "\n[!] Shelly 安装遇到异常，自动为您回退至备用包管理器 (paru/yay)..."
-                if command -v paru &>/dev/null
-                    paru -S $argv
-                else if command -v yay &>/dev/null
-                    yay -S $argv
-                else
-                    sudo pacman -S $argv
-                end
+    # 智能安装 (无参自动触发 se 模糊搜索)
+    function in --description "智能安装软件包 (支持包名或交互搜索)"
+        if test (count $argv) -eq 0
+            se
+            return
+        end
+
+        set -l helper (_nyxniri_pkg_helper)
+        set -l res 0
+
+        switch "$helper"
+            case paru
+                paru -S $argv
+                set res $status
+            case yay
+                yay -S $argv
+                set res $status
+            case shelly
+                shelly install $argv
+                set res $status
+            case '*'
+                sudo pacman -S $argv
+                set res $status
+        end
+
+        if test $res -eq 130 -o $res -eq 143
+            set_color yellow; echo "[!] 安装操作已由用户取消"; set_color normal
+            return 130
+        end
+
+        if test $res -ne 0 -a "$helper" = "shelly"
+            set_color yellow; echo "[!] Shelly 安装遇到异常，尝试使用备用包管理器..."; set_color normal
+            if command -v paru &>/dev/null
+                paru -S $argv
+            else if command -v yay &>/dev/null
+                yay -S $argv
+            else
+                sudo pacman -S $argv
             end
-        else if command -v paru &>/dev/null
-            paru -S $argv
-        else if command -v yay &>/dev/null
-            yay -S $argv
-        else
-            sudo pacman -S $argv
         end
     end
 
     alias clean='~/.config/fish/clean-cache'      # 运行一键缓存清理脚本
 
-    # se：模糊搜索软件包 (官方源 + AUR) 并用 fzf 交互安装
+    # se：模糊搜索软件包 (官方源 + AUR) 并用 fzf 交互安装 (无 fzf 时自动降级)
     function se --description "模糊搜索并安装软件包 (官方源 + AUR)"
-        set -l helper "pacman"
-        if command -v paru &>/dev/null
-            set helper "paru"
-        else if command -v yay &>/dev/null
-            set helper "yay"
+        set -l helper (_nyxniri_pkg_helper)
+
+        # 无 fzf 时的降级处理
+        if not command -v fzf &>/dev/null
+            set_color yellow; echo "[!] 未检测到 fzf，切换至标准 CLI 搜索..."; set_color normal
+            switch "$helper"
+                case paru
+                    paru -Ss $argv
+                case yay
+                    yay -Ss $argv
+                case shelly
+                    shelly search $argv
+                case '*'
+                    pacman -Ss $argv
+            end
+            return
         end
 
-        set -l pkgs
+        # 构建 fzf 选项与搜索预填
+        set -l fzf_query ""
+        if test (count $argv) -gt 0
+            set fzf_query "$argv"
+        end
+
+        set -l preview_cmd "pacman -Si {1}"
         if test "$helper" = "paru"
-            set pkgs (paru -Slq | fzf --multi --prompt='📦 安装 > ' \
-                --preview 'paru -Si {1}' --preview-window 'right:60%:wrap')
-            test -n "$pkgs"; and paru -S $pkgs
+            set preview_cmd "paru -Si {1}"
         else if test "$helper" = "yay"
-            set pkgs (yay -Slq | fzf --multi --prompt='📦 安装 > ' \
-                --preview 'yay -Si {1}' --preview-window 'right:60%:wrap')
-            test -n "$pkgs"; and yay -S $pkgs
-        else
-            set pkgs (pacman -Slq | fzf --multi --prompt='📦 安装 > ' \
-                --preview 'pacman -Si {1}' --preview-window 'right:60%:wrap')
-            test -n "$pkgs"; and sudo pacman -S $pkgs
+            set preview_cmd "yay -Si {1}"
+        end
+
+        set -l pkgs (pacman -Slq | fzf --multi --prompt='📦 安装 > ' \
+            --header='[Tab] 多选 | [Enter] 确认安装 | [Esc] 取消' \
+            --query="$fzf_query" \
+            --preview "$preview_cmd" --preview-window 'right:60%:wrap')
+
+        if test -n "$pkgs"
+            in $pkgs
         end
     end
 
-    # un：模糊搜索已安装的包并用 fzf 交互卸载
+    # un：模糊搜索已安装的包并用 fzf 交互卸载 (无 fzf 时自动降级)
     function un --description "模糊搜索并卸载已安装软件包"
-        set -l remove_cmd "sudo pacman -Rns"
-        if command -v paru &>/dev/null
-            set remove_cmd "paru -Rns"
-        else if command -v yay &>/dev/null
-            set remove_cmd "yay -Rns"
+        set -l helper (_nyxniri_pkg_helper)
+
+        if not command -v fzf &>/dev/null
+            set_color yellow; echo "[!] 未检测到 fzf，切换至标准已安装查询..."; set_color normal
+            pacman -Qs $argv
+            return
+        end
+
+        set -l fzf_query ""
+        if test (count $argv) -gt 0
+            set fzf_query "$argv"
         end
 
         set -l pkgs (pacman -Qq | fzf --multi --prompt='🗑  卸载 > ' \
+            --header='[Tab] 多选 | [Enter] 确认卸载 | [Esc] 取消' \
+            --query="$fzf_query" \
             --preview 'pacman -Qi {1}' --preview-window 'right:60%:wrap')
-        test -n "$pkgs"; and eval "$remove_cmd $pkgs"
+
+        if test -n "$pkgs"
+            switch "$helper"
+                case paru
+                    paru -Rns $pkgs
+                case yay
+                    yay -Rns $pkgs
+                case shelly
+                    shelly remove standard $pkgs
+                case '*'
+                    sudo pacman -Rns $pkgs
+            end
+        end
     end
     
     if command -v eza &>/dev/null

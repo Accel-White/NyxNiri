@@ -26,7 +26,12 @@ clone_repo_bootstrap() {
         local url="${item#*|}"
 
         echo -e "  [$idx/${#GIT_MIRROR_REGISTRY[@]}] 尝试从 [$tag] 节点拉取..." >&2
-        rm -rf "$target_dir" 2>/dev/null || true
+        
+        local _t_depth
+        _t_depth=$(printf '%s' "$target_dir" | tr -cd '/' | wc -c)
+        if [ -n "$target_dir" ] && [ "$_t_depth" -ge 3 ] && [[ "$target_dir" == *".cache/NyxNiri" ]]; then
+            rm -rf "$target_dir" 2>/dev/null || true
+        fi
 
         if git clone --depth 1 "$url" "$target_dir"; then
             echo -e "\e[1;32m✓ 从 [$tag] 成功拉取仓库！\e[0m\n" >&2

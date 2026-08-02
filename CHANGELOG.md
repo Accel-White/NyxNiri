@@ -1,9 +1,14 @@
 # Changelog
 
-## [v2.1.15] - 2026-08-01
+## [v2.1.15] - 2026-08-02
+
+### Changed
+
+- **Fish 包管理终端交互重构 (Terminal Package Management Refactor)**: 全面重构 `up` / `in` / `se` / `un` 命令，引入 `_nyxniri_pkg_helper` 智能感知 `paru` > `yay` > `shelly` > `pacman` 优先级以消除 `AccessDenied` 报错；支持带参无参智能跳转；拦截 `Ctrl+C` 二次触发；引入无 `fzf` 的平滑降级，全面提高防呆与容错体验。
 
 ### Fixed
 
+- **安装脚本核心删除加固 (Installer Rm-rf Hardening)**: 为 `install.sh` 在克隆仓库前的 `rm -rf "$target_dir"` 增加了多重断言。只有在目录非空、路径深度 `>= 3` 且匹配 `.cache/NyxNiri` 后缀时才执行删除，从源头消灭参数丢失导致误删关键目录的红线风险。
 - **护眼模式无参调用崩溃修复 (EyeCare Mode Argument Fix)**: 修复了 `v2/niri/toggle-eyecare.sh` 在通过 `Mod+N` 快捷键无参调用时，因近期引入的 `set -uo pipefail` 严格模式导致脚本因 `$1` 变量未绑定而直接崩溃的问题，通过采用 `"${1:-}"` 语法安全展开缺省参数，恢复了护眼功能的正常切换。
 - **自定义软链接静默丢失修复 (Custom Symlink Preservation Fix)**: 修复了 `lib/deploy.sh` 的 `atomic_replace_item` 中因 `find -type f` 漏判软链接（`-type l`）导致更新时用户外部挂载的自定义配置文件（如 `01__custom__.fish -> /other/path`）被静默删除的红线级缺陷，提升文件匹配规则为 `\( -type f -o -type l \)` 彻底保障数据完整性。
 - **Noctalia Polkit 代理与免密同步 (Noctalia Built-in Polkit & Greeter Sync)**: 
