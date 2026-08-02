@@ -1,5 +1,15 @@
 # Changelog
 
+## [v2.1.16] - 2026-08-02
+
+### Changed
+
+- **Niri 配置文件纯粹拆分与模块化 (Niri Config Pure Splitting)**: 彻底重构了原本庞大的 `v2/niri/config.kdl`，在**绝对不改动任何核心外观**与原有规则优先级的前提下，将其模块化解耦。
+  - 将外观布局参数与动画曲线拆分为独立的 `layout.kdl` 和 `animations.kdl`。
+  - 将所有窗口规则与图层规则 (Window/Layer Rules) 提取至 `rules.kdl`。
+  - **输入外设私有保护 (Input Preservation)**: 利用部署引擎原生的 Dunder 保护机制，将鼠标、触摸板、手势等设备配置专门剥离至 `input__custom__.kdl` 中。在日后执行 `./install.sh update` 同步仓库时，用户的键盘布局和硬件习惯将被自动保留而不被覆盖。
+  - 主文件 `config.kdl` 现仅保留极简的核心挂载入口和环境变量，代码可读性与可维护性极大提升。
+
 ## [v2.1.15] - 2026-08-02
 
 ### Changed
