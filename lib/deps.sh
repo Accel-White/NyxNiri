@@ -122,6 +122,111 @@ run_dep_menu_loop() {
     install_selected_deps
 }
 
+# Return the name of a *usable* AUR helper (paru/yay) on stdout, or non-zero.
+# Presence alone is not enough: a prebuilt -bin helper is linked against the
+# libalpm soname of the system that built it and can die at runtime on a
+# different one (e.g. upstream Arch AUR vs CachyOS's libalpm v16). Running
+# `--version` proves the binary actually executes.
+aur_helper_usable() {
+    local helper
+    for helper in paru yay; do
+        if command -v "$helper" >/dev/null 2>&1 && "$helper" --version >/dev/null 2>&1; then
+            echo "$helper"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Bootstrap an AUR helper (paru) when none is usable. Runs as the normal user
+# (never root); `makepkg -si` handles the privileged install via sudo.
+# Strategy: prefer the official repo package (ABI always matches the local
+# libalpm), then build the AUR *source* package on this machine. A prebuilt
+# -bin helper is deliberately avoided — it is linked against the libalpm of
+# whatever built it and fails at runtime elsewhere.
+# Returns 0 only if a usable helper is available afterwards. Never aborts the
+# caller on failure — every step is fault-tolerant.
+ensure_aur_helper() {
+    if aur_helper_usable >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local choice="y"
+    if [ -t 0 ] && [ -c /dev/tty ]; then
+        read -p "$(msg aur_bootstrap_prompt)" choice < /dev/tty || choice="y"
+    fi
+    if [[ ! "$choice" =~ ^[Yy]$ ]]; then
+        msg aur_bootstrap_skip
+        return 1
+    fi
+
+    msg aur_bootstrap_start
+
+    if ! command -v pacman >/dev/null 2>&1; then
+        msg aur_bootstrap_failed
+        return 1
+    fi
+
+    # An earlier failed bootstrap can leave paru-bin/paru-bin-debug installed.
+    # They conflict with the paru package by name (same /usr/bin/paru), which
+    # would abort both the repo install and `pacman -U` from the source build.
+    # Remove them before attempting either path.
+    if pacman -Qq paru-bin >/dev/null 2>&1; then
+        msg aur_bootstrap_cleanup
+        sudo pacman -Rdd --noconfirm paru-bin || true
+    fi
+    if pacman -Qq paru-bin-debug >/dev/null 2>&1; then
+        sudo pacman -Rdd --noconfirm paru-bin-debug || true
+    fi
+
+    # 1) Official repo first (paru is in Arch extra and CachyOS): built against
+    #    the system's own libalpm, so always ABI-compatible.
+    if pacman -Si paru >/dev/null 2>&1; then
+        msg aur_bootstrap_repo
+        if sudo pacman -S --needed --noconfirm paru && aur_helper_usable >/dev/null 2>&1; then
+            msg aur_bootstrap_ok
+            return 0
+        fi
+        # Installed but unusable (should not happen for a repo build); remove it
+        # so the source build below does not hit a file/name conflict.
+        if pacman -Qq paru >/dev/null 2>&1; then
+            sudo pacman -Rdd --noconfirm paru || true
+        fi
+    fi
+
+    if ! sudo pacman -S --needed --noconfirm base-devel git; then
+        msg aur_bootstrap_failed
+        return 1
+    fi
+
+    # 2) AUR source package, compiled on this machine against the local libalpm.
+    msg aur_bootstrap_source
+    local build_dir
+    build_dir=$(mktemp -d) || {
+        msg aur_bootstrap_failed
+        return 1
+    }
+    register_temp_path "$build_dir"
+
+    if ! git clone --depth 1 -c http.lowSpeedLimit=0 -c http.lowSpeedTime=15 \
+        https://aur.archlinux.org/paru.git "$build_dir/paru" 2>/dev/null; then
+        msg aur_bootstrap_failed
+        return 1
+    fi
+
+    if ! (cd "$build_dir/paru" && makepkg -si --noconfirm); then
+        msg aur_bootstrap_failed
+        return 1
+    fi
+
+    if aur_helper_usable >/dev/null 2>&1; then
+        msg aur_bootstrap_ok
+        return 0
+    fi
+    msg aur_bootstrap_failed
+    return 1
+}
+
 install_selected_deps() {
     local repo_install=()
     local aur_install=()
@@ -150,11 +255,9 @@ install_selected_deps() {
     msg installing_selected
     local pkg_manager=""
     local has_aur_helper=false
-    if command -v paru >/dev/null 2>&1; then
-        pkg_manager="paru"
-        has_aur_helper=true
-    elif command -v yay >/dev/null 2>&1; then
-        pkg_manager="yay"
+    local mgr=""
+    if mgr=$(aur_helper_usable); then
+        pkg_manager="$mgr"
         has_aur_helper=true
     else
         pkg_manager="sudo pacman"
@@ -167,8 +270,12 @@ install_selected_deps() {
         }
     fi
 
-    # Install AUR packages (requires AUR helper)
+    # Install AUR packages (bootstraps paru if no helper is available)
     if [ ${#aur_install[@]} -gt 0 ]; then
+        if [ "$has_aur_helper" = false ] && ensure_aur_helper; then
+            pkg_manager="paru"
+            has_aur_helper=true
+        fi
         if [ "$has_aur_helper" = true ]; then
             $pkg_manager -S --noconfirm "${aur_install[@]}" || {
                 echo "Some AUR package installations failed. Continuing..."
@@ -192,13 +299,13 @@ check_mpvpaper_version() {
 
     if LC_ALL=C pacman -Qi mpvpaper-git >/dev/null 2>&1; then
         local git_version
-        git_version=$(LC_ALL=C pacman -Qi mpvpaper-git 2>/dev/null | awk '/^Version/{print $3}')
+        git_version=$(LC_ALL=C pacman -Qi mpvpaper-git 2>/dev/null | awk '/^Version/{print $3}' || true)
         msg mpvpaper_version_ok "git (${git_version:-unknown})"
         return
     fi
 
     local version
-    version=$(LC_ALL=C pacman -Qi mpvpaper 2>/dev/null | awk '/^Version/{print $3}')
+    version=$(LC_ALL=C pacman -Qi mpvpaper 2>/dev/null | awk '/^Version/{print $3}' || true)
     if [ -z "$version" ]; then
         return
     fi
@@ -223,17 +330,20 @@ check_mpvpaper_version() {
             read -p "$(msg mpvpaper_upgrade_prompt)" choice < /dev/tty || choice="n"
         fi
         if [[ "$choice" =~ ^[Yy]$ ]]; then
-            if command -v paru >/dev/null 2>&1; then
-                paru -S --noconfirm mpvpaper-git && msg mpvpaper_upgrade_done || {
-                    echo -e "\e[1;31m[-] Failed to install mpvpaper-git.\e[0m"
+            local mgr=""
+            if ! mgr=$(aur_helper_usable); then
+                ensure_aur_helper || {
+                    msg mpvpaper_upgrade_skip
+                    return
                 }
-            elif command -v yay >/dev/null 2>&1; then
-                yay -S --noconfirm mpvpaper-git && msg mpvpaper_upgrade_done || {
-                    echo -e "\e[1;31m[-] Failed to install mpvpaper-git.\e[0m"
+                mgr=$(aur_helper_usable) || {
+                    msg mpvpaper_upgrade_skip
+                    return
                 }
-            else
-                msg mpvpaper_upgrade_skip
             fi
+            $mgr -S --noconfirm mpvpaper-git && msg mpvpaper_upgrade_done || {
+                echo -e "\e[1;31m[-] Failed to install mpvpaper-git.\e[0m"
+            }
         else
             msg mpvpaper_upgrade_skip
         fi

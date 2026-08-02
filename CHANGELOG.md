@@ -10,6 +10,24 @@
   - **输入外设私有保护 (Input Preservation)**: 利用部署引擎原生的 Dunder 保护机制，将鼠标、触摸板、手势等设备配置专门剥离至 `input__custom__.kdl` 中。在日后执行 `./install.sh update` 同步仓库时，用户的键盘布局和硬件习惯将被自动保留而不被覆盖。
   - 主文件 `config.kdl` 现仅保留极简的核心挂载入口和环境变量，代码可读性与可维护性极大提升。
 
+### Added
+
+- **可选登录启动器模块 (Optional Noctalia Greeter Module)**: 新增独立可选模块 `lib/greeter.sh`，为 greetd 登录界面提供一键安装与配置能力：
+  - 新增 CLI 子命令 `nyxniri greeter install|status|uninstall`，并在 `install full` 交互流程末尾提供 y/N 可选提示（非交互模式默认跳过，保持向后兼容）。
+  - 自动安装 `greetd`（官方源）与 `noctalia-greeter`（AUR），备份并原子写入 `/etc/greetd/config.toml`（会话名经 `noctalia-greeter sessions` 运行时校验），补建 `/var/lib/noctalia-greeter` 状态目录，启用 `greetd` 服务（不抢占当前会话 VT）。
+  - 写入 Greeter 主题免密同步 Polkit 规则；检测到其他显示管理器时仅打印一行提示、绝不自动禁用；全部特权步骤经 `sudo` 单命令容错执行，失败仅 WARN 不中断主流程。
+  - `nyxniri greeter status` 与 `nyxniri doctor` 集成 Polkit 规则三态检测（present / missing / unverifiable），正确处理 polkit 126+ 默认 `750 root:polkitd` 锁定目录下的内容感知检测。
+- **AUR Helper 自动自举 (Automatic AUR Helper Bootstrap)**: `lib/deps.sh` 新增 `ensure_aur_helper()`，`install full` 在缺少可用 paru/yay 时自动安装 `paru`——优先官方软件源（如 CachyOS），否则克隆 AUR 源码包在本机编译（全程非 root，`makepkg` 拒绝 root 运行），使纯命令行环境可一键安装包含 AUR 依赖（`noctalia`、`mpvpaper`）的完整 DE；任一环节失败自动回退到原有跳过逻辑，不中断安装。
+
+### Fixed
+
+- **CLI 命令 CONFIG_ITEMS 空数组缺陷 (CLI CONFIG_ITEMS No-op Fix)**: 修复 `nyxniri install/snapshot/rollback/uninstall/purge` 从命令行调用时未执行 `discover_config_items` 导致 `CONFIG_ITEMS` 为空、命令静默空操作（如快照为空目录、卸载不归档不移除）的缺陷，使 CLI 模式行为与交互菜单一致。
+- **mpvpaper 版本检查 pipefail 中断 (mpvpaper Version Check Abort Fix)**: 修复 `check_mpvpaper_version` 中两处未受保护的命令替换在 `set -o pipefail` 下因 `pacman -Qi` 返回非零而中断 `install full` 的隐患，为 `git_version`/`version` 取值补充容错展开。
+- **Greeter Polkit 规则误报 (Greeter Polkit Rule False Negative Fix)**: 修复 `greeter_status` 在 `/etc/polkit-1/rules.d`（polkit 126+ 默认 `750 root:polkitd`）下普通用户无法遍历目录而误报规则 `missing` 的问题，改为在 root 上下文内按 action 内容进行通配检测（兼容任意文件名），并区分不可验证 `unverifiable` 状态。
+- **AUR Helper 预编译 ABI 不兼容 (AUR Helper Prebuilt ABI Fix)**: 修复 AUR 预编译 `paru-bin` 二进制链接的 libalpm 版本与本机不一致（新版 Arch / CachyOS 的 libalpm v16 下运行时报 `libalpm.so.15: cannot open shared object file`）导致自举"安装成功但不可运行"、进而连锁拖垮 AUR 依赖与 Greeter 安装的缺陷：新增 `aur_helper_usable()` 以 `--version` 真实运行验证取代原有仅 `command -v` 的存在性判断（坏 helper 一律视为不存在），并统一替换 deps/greeter 各处的存在性检测；自举策略改为官方源优先、AUR 源码包本机编译兜底，彻底规避 -bin 预编译的 ABI 陷阱。
+- **残留 paru-bin 包冲突 (Stale paru-bin Conflict Fix)**: 修复早期失败自举残留的 `paru-bin`/`paru-bin-debug` 包与 `paru` 同名文件（`/usr/bin/paru`）冲突、导致 `pacman -U`/`pacman -S` 在 `--noconfirm` 下默认拒绝卸载而事务失败的问题；在 repo 与源码两条安装路径之前先按 `-Qq` 守卫逐个移除残留包。
+- **README 排版与说明 (README Polish)**: 中英文版新增 greeter 可选模块、AUR 依赖自举与 Polkit 规则说明；清理重复表格行，保持与既有文档风格一致。
+
 ## [v2.1.15] - 2026-08-02
 
 ### Changed

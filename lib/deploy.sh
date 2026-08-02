@@ -379,5 +379,16 @@ install_configs() {
                 run_dep_menu_loop
             fi
         fi
+
+        # Optional: Noctalia Greeter login setup (interactive only, opt-in)
+        if [ -t 0 ] && [ -c /dev/tty ]; then
+            local g_choice=""
+            read -p "$(msg greeter_ask)" g_choice < /dev/tty || g_choice="n"
+            if [[ "$g_choice" =~ ^[Yy]$ ]]; then
+                greeter_install || true
+            fi
+        else
+            msg greeter_noninteractive_skip
+        fi
     fi
 }

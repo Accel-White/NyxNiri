@@ -98,6 +98,36 @@ msg() {
             dep_menu_hint) echo -e "输入空格分隔的序列号（如 1 3 5）来勾选/取消，直接回车开始安装选中包：" ;;
             installing_selected) echo -e "\n\e[1;34m:: 正在通过包管理器安装选中的依赖...\e[0m" ;;
 
+            # Optional Greeter Module
+            greeter_install_title) echo -e "\n\e[1;35m[ 可选模块 ] Noctalia Greeter 登录启动器安装与配置\e[0m" ;;
+            greeter_install_pkgs) echo -e "\n\e[1;34m:: 正在安装 greetd 与 noctalia-greeter 依赖...\e[0m" ;;
+            greeter_aur_required) echo -e "\e[1;33m[!] noctalia-greeter (AUR) 需要 paru/yay，请先安装 AUR helper 后重试。\e[0m" ;;
+            greeter_pkg_failed) echo -e "\e[1;31m[!] 软件包 $p1 安装失败，继续后续步骤...\e[0m" ;;
+            greeter_install_failed) echo -e "\e[1;31m[!] noctalia-greeter 未安装成功，已中止配置。可稍后运行 nyxniri greeter install 重试。\e[0m" ;;
+            greeter_dm_conflict) echo -e "\e[1;33m[!] 已检测到其他显示管理器: $p1。如需使用 greetd 登录，请自行禁用它（如 sudo systemctl disable sddm）。\e[0m" ;;
+            greeter_config_skip) echo -e "\e[1;32m[+] greetd 已配置为使用 noctalia-greeter，跳过写入。\e[0m" ;;
+            greeter_config_written) echo -e "\e[1;32m[+] 已写入 greetd 配置: $p1（原配置已备份）。\e[0m" ;;
+            greeter_config_failed) echo -e "\e[1;31m[!] 写入 greetd 配置失败: $p1（可能需要 sudo 权限）。\e[0m" ;;
+            greeter_state_dir_created) echo -e "\e[1;32m[+] 已创建状态目录 /var/lib/noctalia-greeter。\e[0m" ;;
+            greeter_cmd_failed) echo -e "\e[1;31m[!] 特权命令执行失败: $p1（可能需要 sudo 权限）。\e[0m" ;;
+            greeter_polkit_skip) echo -e "\e[1;32m[+] polkit 免密规则已存在，跳过。\e[0m" ;;
+            greeter_polkit_written) echo -e "\e[1;32m[+] 已写入 polkit 免密规则: $p1（wheel 组免密同步 Greeter 主题）。\e[0m" ;;
+            greeter_polkit_failed) echo -e "\e[1;31m[!] 写入 polkit 规则失败。\e[0m" ;;
+            greeter_enabled) echo -e "\e[1;32m[+] 已启用 greetd 服务（重启后生效）。\e[0m" ;;
+            greeter_enabled_skip) echo -e "\e[1;32m[+] greetd 服务已启用。\e[0m" ;;
+            greeter_enable_failed) echo -e "\e[1;31m[!] 启用 greetd 服务失败，请手动执行: sudo systemctl enable greetd\e[0m" ;;
+            greeter_reboot_hint) echo -e "\e[1;36m提示: 重启或注销后登录界面将变为 Noctalia Greeter。主题同步请在 Noctalia 设置 → 安全 → Noctalia Greeter → Sync Now。\e[0m" ;;
+            greeter_ask) echo -e ":: 是否安装并配置 Noctalia Greeter 登录启动器（可选）？[y/N]: " ;;
+            greeter_noninteractive_skip) echo -e "  [skip] Noctalia Greeter（可选）— 非交互模式跳过，可运行 nyxniri greeter install 配置。" ;;
+            greeter_status_title) echo -e "\n\e[1;36m:: Noctalia Greeter 状态检查\e[0m" ;;
+            greeter_status_ok) echo -e "\e[1;32m[+] Greeter 已完整就绪！\e[0m" ;;
+            greeter_status_hint) echo -e "\e[1;36m提示: 运行 nyxniri greeter install 完成安装与配置。\e[0m" ;;
+            greeter_uninstall_title) echo -e "\n\e[1;33m:: Noctalia Greeter 卸载（保留已安装的软件包）\e[0m" ;;
+            greeter_uninstall_restored) echo -e "\e[1;32m[+] 已还原 greetd 配置: $p1\e[0m" ;;
+            greeter_uninstall_nobackup) echo -e "\e[1;33m[!] 未找到 greetd 配置备份，保留现有配置。\e[0m" ;;
+            greeter_uninstall_polkit) echo -e "\e[1;32m[+] 已移除 polkit 免密规则。\e[0m" ;;
+            greeter_uninstall_done) echo -e "\e[1;32m[+] Greeter 卸载完成。如需移除软件包: paru -R noctalia-greeter greetd\e[0m" ;;
+
             # Deployment & Backup
             backing_up) echo -e "\n\e[1;34m:: 正在创建配置快照...\e[0m" ;;
             backup_done) echo -e "\e[1;32m[+] 快照创建成功！保存路径: $p1\e[0m" ;;
@@ -128,6 +158,14 @@ msg() {
             # AUR & mpvpaper
             aur_skip) echo -e "\e[1;33m[!] AUR 包 ($p1) 需要 AUR helper (paru/yay)，跳过安装。\e[0m" ;;
             aur_helper_required) echo -e "\e[1;33m    请先安装 paru 或 yay，然后重新运行依赖安装。\e[0m" ;;
+            aur_bootstrap_prompt) echo -e "未检测到 AUR helper (paru/yay)。是否自动安装 paru 以继续安装 AUR 依赖？[Y/n]: " ;;
+            aur_bootstrap_start) echo -e "\n\e[1;34m:: 正在准备 paru (AUR helper)：官方源优先，其次本机源码构建（需要 base-devel、git 与 sudo）...\e[0m" ;;
+            aur_bootstrap_cleanup) echo -e ":: 移除残留的 paru-bin 包...\e[0m" ;;
+            aur_bootstrap_repo) echo -e ":: 尝试从官方软件源安装 paru...\e[0m" ;;
+            aur_bootstrap_source) echo -e ":: 官方源无 paru，改为本机源码构建（需 Rust 工具链，约 1-3 分钟）...\e[0m" ;;
+            aur_bootstrap_ok) echo -e "\e[1;32m[+] paru 安装成功。\e[0m" ;;
+            aur_bootstrap_failed) echo -e "\e[1;31m[!] paru 自举失败，已跳过 AUR 依赖安装。可手动安装 paru 后重试。\e[0m" ;;
+            aur_bootstrap_skip) echo -e "\e[1;33m[!] 已取消自动安装 paru，跳过 AUR 依赖。\e[0m" ;;
             checking_mpvpaper) echo -e "\n\e[1;34m:: 检查 mpvpaper 版本...\e[0m" ;;
             mpvpaper_version_ok) echo -e "\e[1;32m[  OK  ]\e[0m mpvpaper $p1 >= 1.9，无已知内存泄漏问题。" ;;
             mpvpaper_leak_warn) echo -e "\e[1;31m[ WARN ]\e[0m mpvpaper $p1 在默认硬件解码配置下存在已知 OpenGL 内存泄漏，建议升级至 1.9+ 或安装 mpvpaper-git！\n   (参见: https://github.com/GhostNaN/mpvpaper/issues/127)" ;;
@@ -216,6 +254,36 @@ msg() {
             dep_menu_hint) echo -e "Type space-separated numbers (e.g. 1 3 5) to toggle, then press Enter to install:" ;;
             copy_done) echo -e "\e[1;32mConfigurations deployed and copied successfully!\e[0m" ;;
 
+            # Optional Greeter Module
+            greeter_install_title) echo -e "\n\e[1;35m[ Optional Module ] Noctalia Greeter login setup\e[0m" ;;
+            greeter_install_pkgs) echo -e "\n\e[1;34m:: Installing greetd and noctalia-greeter...\e[0m" ;;
+            greeter_aur_required) echo -e "\e[1;33m[!] noctalia-greeter (AUR) requires paru/yay. Install an AUR helper and retry.\e[0m" ;;
+            greeter_pkg_failed) echo -e "\e[1;31m[!] Failed to install $p1; continuing...\e[0m" ;;
+            greeter_install_failed) echo -e "\e[1;31m[!] noctalia-greeter not installed; aborted. Retry later with: nyxniri greeter install\e[0m" ;;
+            greeter_dm_conflict) echo -e "\e[1;33m[!] Other display managers detected: $p1. Disable them yourself to use greetd login (e.g. sudo systemctl disable sddm).\e[0m" ;;
+            greeter_config_skip) echo -e "\e[1;32m[+] greetd already configured to use noctalia-greeter; skipped.\e[0m" ;;
+            greeter_config_written) echo -e "\e[1;32m[+] greetd config written: $p1 (previous config backed up).\e[0m" ;;
+            greeter_config_failed) echo -e "\e[1;31m[!] Failed to write greetd config: $p1 (may need sudo).\e[0m" ;;
+            greeter_state_dir_created) echo -e "\e[1;32m[+] Created state dir /var/lib/noctalia-greeter.\e[0m" ;;
+            greeter_cmd_failed) echo -e "\e[1;31m[!] Privileged command failed: $p1 (may need sudo).\e[0m" ;;
+            greeter_polkit_skip) echo -e "\e[1;32m[+] polkit rule already present; skipped.\e[0m" ;;
+            greeter_polkit_written) echo -e "\e[1;32m[+] polkit rule written: $p1 (passwordless greeter theme sync for wheel).\e[0m" ;;
+            greeter_polkit_failed) echo -e "\e[1;31m[!] Failed to write polkit rule.\e[0m" ;;
+            greeter_enabled) echo -e "\e[1;32m[+] greetd service enabled (takes effect after reboot).\e[0m" ;;
+            greeter_enabled_skip) echo -e "\e[1;32m[+] greetd service already enabled.\e[0m" ;;
+            greeter_enable_failed) echo -e "\e[1;31m[!] Failed to enable greetd. Run manually: sudo systemctl enable greetd\e[0m" ;;
+            greeter_reboot_hint) echo -e "\e[1;36mHint: After reboot/logout the login screen becomes Noctalia Greeter. Sync theme via Noctalia Settings → Security → Noctalia Greeter → Sync Now.\e[0m" ;;
+            greeter_ask) echo -e ":: Install & configure Noctalia Greeter login (optional)? [y/N]: " ;;
+            greeter_noninteractive_skip) echo -e "  [skip] Noctalia Greeter (optional) — skipped in non-interactive mode; run nyxniri greeter install to set up." ;;
+            greeter_status_title) echo -e "\n\e[1;36m:: Noctalia Greeter status\e[0m" ;;
+            greeter_status_ok) echo -e "\e[1;32m[+] Greeter fully ready!\e[0m" ;;
+            greeter_status_hint) echo -e "\e[1;36mHint: run nyxniri greeter install to set up.\e[0m" ;;
+            greeter_uninstall_title) echo -e "\n\e[1;33m:: Noctalia Greeter uninstall (keeps installed packages)\e[0m" ;;
+            greeter_uninstall_restored) echo -e "\e[1;32m[+] Restored greetd config: $p1\e[0m" ;;
+            greeter_uninstall_nobackup) echo -e "\e[1;33m[!] No greetd config backup found; kept current config.\e[0m" ;;
+            greeter_uninstall_polkit) echo -e "\e[1;32m[+] polkit rule removed.\e[0m" ;;
+            greeter_uninstall_done) echo -e "\e[1;32m[+] Greeter uninstalled. To remove packages: paru -R noctalia-greeter greetd\e[0m" ;;
+
             # System Doctor
             running_doctor) echo -e "\n\e[1;35mRunning System Doctor for diagnostics...\e[0m" ;;
             doctor_ok) echo -e "\e[1;32m[  OK  ]\e[0m $p1" ;;
@@ -240,6 +308,14 @@ msg() {
             # AUR & mpvpaper
             aur_skip) echo -e "\e[1;33m[!] AUR packages ($p1) require an AUR helper (paru/yay). Skipping.\e[0m" ;;
             aur_helper_required) echo -e "\e[1;33m    Install paru or yay first, then re-run dependency installation.\e[0m" ;;
+            aur_bootstrap_prompt) echo -e "No AUR helper (paru/yay) detected. Auto-install paru to continue with AUR packages? [Y/n]: " ;;
+            aur_bootstrap_start) echo -e "\n\e[1;34m:: Setting up paru (AUR helper): official repo first, then local source build (requires base-devel, git, sudo)...\e[0m" ;;
+            aur_bootstrap_cleanup) echo -e ":: Removing stale paru-bin packages...\e[0m" ;;
+            aur_bootstrap_repo) echo -e ":: Trying to install paru from official repos...\e[0m" ;;
+            aur_bootstrap_source) echo -e ":: paru not in official repos; building from AUR source (Rust compile, ~1-3 min)...\e[0m" ;;
+            aur_bootstrap_ok) echo -e "\e[1;32m[+] paru installed successfully.\e[0m" ;;
+            aur_bootstrap_failed) echo -e "\e[1;31m[!] paru bootstrap failed; skipped AUR packages. Install paru manually and retry.\e[0m" ;;
+            aur_bootstrap_skip) echo -e "\e[1;33m[!] Auto-install of paru cancelled; skipped AUR packages.\e[0m" ;;
             checking_mpvpaper) echo -e "\n\e[1;34m:: Checking mpvpaper version...\e[0m" ;;
             mpvpaper_version_ok) echo -e "\e[1;32m[  OK  ]\e[0m mpvpaper $p1 >= 1.9, no known memory leak." ;;
             mpvpaper_leak_warn) echo -e "\e[1;31m[ WARN ]\e[0m mpvpaper $p1 has a known OpenGL memory leak with hwdec enabled. Upgrade to 1.9+ or install mpvpaper-git!\n   (See: https://github.com/GhostNaN/mpvpaper/issues/127)" ;;

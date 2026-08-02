@@ -19,6 +19,7 @@ source "$LIB_DIR/deps.sh"
 source "$LIB_DIR/backup.sh"
 source "$LIB_DIR/deploy.sh"
 source "$LIB_DIR/doctor.sh"
+source "$LIB_DIR/greeter.sh"
 
 init_environment_paths
 
@@ -154,16 +155,19 @@ main() {
         case "$1" in
             install|deploy)
                 shift
+                discover_config_items
                 install_configs "${1:-full}"
                 exit 0
                 ;;
             snapshot|backup)
                 shift
+                discover_config_items
                 backup_configs "$*" "non_interactive"
                 exit 0
                 ;;
             rollback|restore)
                 shift
+                discover_config_items
                 rollback_configs "${1:-}"
                 exit 0
                 ;;
@@ -173,15 +177,35 @@ main() {
                 ;;
             uninstall|remove)
                 shift
+                discover_config_items
                 uninstall_nyxniri "${1:-}"
                 exit 0
                 ;;
             purge)
+                discover_config_items
                 uninstall_nyxniri "purge"
                 exit 0
                 ;;
             doctor)
                 run_doctor
+                exit 0
+                ;;
+            greeter)
+                shift
+                case "${1:-}" in
+                    install|setup)
+                        greeter_install
+                        exit $?
+                        ;;
+                    uninstall|remove)
+                        greeter_uninstall
+                        exit $?
+                        ;;
+                    *)
+                        greeter_status
+                        exit $?
+                        ;;
+                esac
                 exit 0
                 ;;
             update)
@@ -201,6 +225,7 @@ main() {
                 echo "  uninstall            Safely uninstall NyxNiri (with auto config archive)"
                 echo "  purge                Deep purge all NyxNiri configs, cache & wallpapers"
                 echo "  doctor               Run System Doctor diagnostics"
+                echo "  greeter [install|status|uninstall]  Optional Noctalia Greeter (greetd login) setup"
                 echo "  update [--force]     Update repository and optionally overwrite configs"
                 echo "  help                 Show this help message"
                 echo "  (no arguments)       Open interactive control panel menu"

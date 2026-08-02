@@ -123,6 +123,8 @@ run_doctor() {
         msg doctor_warn "Virtual Machine detected (VMware/VirtualBox/QEMU). Ensure 'Accelerate 3D Graphics' is enabled in VM settings to avoid black screen in Niri Wayland!"
     fi
 
+    greeter_status
+
     msg all_done
     msg reboot_hint
 }

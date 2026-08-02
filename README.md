@@ -176,6 +176,14 @@ cd ~/NyxNiri && ./install.sh
 
 </details>
 
+> [!NOTE]
+> **AUR Dependencies**
+> `noctalia` and `mpvpaper` are AUR packages. When running `install full` on a
+> system without a usable AUR helper (paru/yay), the installer bootstraps `paru`
+> automatically (requires `base-devel`, `git`, and `sudo`) — it prefers the
+> official repos when available, otherwise builds the AUR source package on your
+> machine (avoiding prebuilt `-bin` ABI mismatches).
+
 ## CLI Tool (`nyxniri`)
 
 A lightweight utility to manage configurations and diagnose issues.
@@ -191,6 +199,25 @@ A lightweight utility to manage configurations and diagnose issues.
 | `nyxniri uninstall`        | Remove NyxNiri and restore previous configs.                 |
 | `nyxniri purge`            | Delete all NyxNiri configs, caches, and wallpapers.          |
 | `nyxniri doctor`           | Check dependencies and system health.                        |
+| `nyxniri greeter [install\|status\|uninstall]` | Optional Noctalia Greeter (greetd login screen) setup.       |
+
+> [!NOTE]
+> **Optional: Noctalia Greeter (Login Screen)**
+> NyxNiri does not configure a display manager by default. To install and
+> configure [Noctalia Greeter](https://github.com/noctalia-dev/noctalia-greeter)
+> (a greetd login screen that matches the Noctalia theme), run:
+>
+> ```bash
+> nyxniri greeter install
+> ```
+>
+> This installs `greetd` + `noctalia-greeter` (AUR), backs up and writes
+> `/etc/greetd/config.toml`, enables the `greetd` service (takes effect after
+> reboot), writes a Polkit rule for passwordless theme sync, and prints a notice
+> if another display manager is detected (it never disables anything itself).
+> If a display manager is already running, use `nyxniri greeter status` to review
+> the state before proceeding. Use `nyxniri greeter uninstall` to disable greetd
+> and restore the previous `/etc/greetd/config.toml`.
 
 ## Cheatsheet TUI (`nyxhelp`)
 
@@ -234,6 +261,8 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 
 Noctalia uses `pkexec` to apply the greeter theme. To avoid entering your password every time, you can add a Polkit exemption rule.
 
+> `nyxniri greeter install` writes this rule automatically. The manual steps below are only needed when you configure the greeter yourself.
+
 _Fix_: Run the following command to create a Polkit rule (requires `sudo`):
 
 ```bash
@@ -262,7 +291,7 @@ EOF'
 
 - [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) - Blur settings
   reference
-- [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri) - Window rules reference
+- [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri) - A lot
 
 **Recommended Projects**
 
@@ -413,6 +442,13 @@ cd ~/NyxNiri && ./install.sh
 
 </details>
 
+> [!NOTE]
+> **AUR 依赖**
+> `noctalia` 与 `mpvpaper` 为 AUR 包。执行 `install full` 时若系统没有可用的
+> AUR helper（paru/yay），安装器会自动自举安装 `paru`（需 `base-devel`、`git`
+> 与 `sudo`）——优先官方软件源，否则在本机编译 AUR 源码包（规避预编译
+> `-bin` 包的 ABI 不匹配问题）。
+
 ## CLI 工具 (`nyxniri`)
 
 用于管理配置快照和系统诊断。
@@ -428,6 +464,24 @@ cd ~/NyxNiri && ./install.sh
 | `nyxniri uninstall`       | 卸载并复原配置                         |
 | `nyxniri purge`           | 清除所有相关配置、缓存与壁纸           |
 | `nyxniri doctor`          | 检查依赖与系统状态                     |
+| `nyxniri greeter [install\|status\|uninstall]` | 可选 Noctalia Greeter（greetd 登录界面）配置 |
+
+> [!NOTE]
+> **可选：Noctalia Greeter（登录启动器）**
+> NyxNiri 默认不配置显示管理器。如需安装并配置
+> [Noctalia Greeter](https://github.com/noctalia-dev/noctalia-greeter)
+> （与 Noctalia 主题一致的 greetd 登录界面），运行：
+>
+> ```bash
+> nyxniri greeter install
+> ```
+>
+> 该命令会安装 `greetd` + `noctalia-greeter`（AUR），备份并写入
+> `/etc/greetd/config.toml`，启用 `greetd` 服务（重启后生效），写入
+> Greeter 主题免密同步所需的 Polkit 规则，并在检测到其他显示管理器时给出
+> 一行提示（**绝不会自动禁用任何管理器**）。若已在使用其他显示管理器，请先
+> 用 `nyxniri greeter status` 查看状态再决定。使用 `nyxniri greeter uninstall`
+> 可停用 greetd 并还原原有的 `/etc/greetd/config.toml`。
 
 ## 终端速查手册 (`nyxhelp`)
 
@@ -470,6 +524,8 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 
 Noctalia 依靠 `pkexec` 来应用 Greeter 主题。为了实现免密静默同步，可以添加一条 Polkit 豁免规则。
 
+> `nyxniri greeter install` 会自动写入该规则。以下手动步骤仅在你自行配置 Greeter 时使用。
+
 _修复_：运行以下命令创建免密规则（需要 `sudo` 权限）：
 
 ```bash
@@ -497,7 +553,7 @@ EOF'
 **致谢**
 
 - [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) - 模糊效果设置参考
-- [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri) - 窗口规则设置参考
+- [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri) - 参考了很多!
 
 **推荐项目**
 
