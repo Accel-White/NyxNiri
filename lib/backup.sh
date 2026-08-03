@@ -188,6 +188,7 @@ uninstall_nyxniri() {
                 fi
             done
             [ -L "$HOME/.local/bin/nyxniri" ] && rm -f "$HOME/.local/bin/nyxniri"
+            fcitx_uninstall || true
             msg uninstall_done
             ;;
         2|restore|--restore)
@@ -218,6 +219,7 @@ uninstall_nyxniri() {
             [ -L "$HOME/.local/bin/nyxniri" ] && rm -f "$HOME/.local/bin/nyxniri"
             [ -d "$HOME/.cache/NyxNiri" ] && rm -rf "$HOME/.cache/NyxNiri"
             [ -d "$HOME/.config/NyxNiri" ] && rm -rf "$HOME/.config/NyxNiri"
+            fcitx_uninstall || true
             local pics_dir
             pics_dir=$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")
             [ -d "$pics_dir/Wallpapers" ] && rm -rf "$pics_dir/Wallpapers"

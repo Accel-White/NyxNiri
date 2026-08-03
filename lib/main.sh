@@ -20,6 +20,7 @@ source "$LIB_DIR/backup.sh"
 source "$LIB_DIR/deploy.sh"
 source "$LIB_DIR/doctor.sh"
 source "$LIB_DIR/greeter.sh"
+source "$LIB_DIR/fcitx.sh"
 
 init_environment_paths
 
@@ -208,6 +209,28 @@ main() {
                 esac
                 exit 0
                 ;;
+            fcitx)
+                shift
+                case "${1:-}" in
+                    install|setup)
+                        fcitx_install
+                        exit $?
+                        ;;
+                    uninstall|remove)
+                        fcitx_uninstall
+                        exit $?
+                        ;;
+                    status)
+                        fcitx_status
+                        exit $?
+                        ;;
+                    *)
+                        fcitx_usage
+                        exit 0
+                        ;;
+                esac
+                exit 0
+                ;;
             update)
                 shift
                 update_repo_and_script "${1:-}"
@@ -226,6 +249,7 @@ main() {
                 echo "  purge                Deep purge all NyxNiri configs, cache & wallpapers"
                 echo "  doctor               Run System Doctor diagnostics"
                 echo "  greeter [install|status|uninstall]  Optional Noctalia Greeter (greetd login) setup"
+                echo "  fcitx [install|status|uninstall]    Optional NyxMellow dynamic fcitx5 skin (Noctalia colors)"
                 echo "  update [--force]     Update repository and optionally overwrite configs"
                 echo "  help                 Show this help message"
                 echo "  (no arguments)       Open interactive control panel menu"

@@ -198,6 +198,24 @@ wallpaper_scheme = "m3-content"
 builtin_ids = ["kitty", "qt", "starship"]
 community_ids = []
 
+# NyxMellow 动态 fcitx5 皮肤（mellow 形状 + Material You 自动取色）
+# 路径中的 /home/user 为占位符，由 lib/deploy.sh 在部署时替换为实际 $HOME
+[theme.templates.user.nyxmellow_theme]
+index = 0
+input_path = "/home/user/.local/share/fcitx5/themes/nyxmellow/templates/theme.conf"
+output_path = "/home/user/.local/share/fcitx5/themes/nyxmellow/theme.conf"
+
+[theme.templates.user.nyxmellow_panel]
+index = 1
+input_path = "/home/user/.local/share/fcitx5/themes/nyxmellow/templates/panel.svg"
+output_path = "/home/user/.local/share/fcitx5/themes/nyxmellow/panel.svg"
+
+[theme.templates.user.nyxmellow_highlight]
+index = 2
+input_path = "/home/user/.local/share/fcitx5/themes/nyxmellow/templates/highlight.svg"
+output_path = "/home/user/.local/share/fcitx5/themes/nyxmellow/highlight.svg"
+post_hook = "if pgrep -x fcitx5 >/dev/null 2>&1; then pkill -x fcitx5; sleep 1; fcitx5 -d >/dev/null 2>&1 & fi"
+
 [wallpaper]
 directory = "/home/ray/图片/Wallpapers"
 fill_mode = "crop"

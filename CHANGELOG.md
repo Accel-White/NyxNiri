@@ -1,5 +1,20 @@
 # Changelog
 
+## [v2.1.17] - 2026-08-03
+
+### Added
+
+- **NyxMellow 动态 fcitx5 皮肤模块 (Dynamic Fcitx5 Skin Module)**: 新增可选模块 `lib/fcitx.sh`，将 mellow 系列的圆角形状与 Noctalia Material You 自动取色结合，提供实时跟随壁纸/明暗模式的输入法皮肤：
+  - 主题源码存放于仓库根目录 `fcitx5/nyxmellow/templates/`（仿 `Wallpapers/` 资产目录）：`theme.conf` 沿用 mellow 的布局与边距、`panel.svg`/`highlight.svg` 保留 mellow 原版几何（圆角 9.5 / 描边 1.2 / 阴影），颜色全部替换为 Noctalia 模板变量（`surface_container_lowest`/`outline`/`primary`/`on_surface`/`on_primary`/`outline_variant`）。
+  - 在 `v2/noctalia/noctalia-config.toml` 静态注册三条 `theme.templates.user.nyxmellow_*` 模板（路径用 `/home/user` 占位符，部署时由既有 sed 机制替换为 `$HOME`），末条附 `post_hook` 在渲染后安全重启 fcitx5（仅当进程在运行时）。
+  - 新增 CLI 子命令 `nyxniri fcitx install|status|uninstall`：`install` 部署模板 → 定向改写 `classicui.conf` 的 `Theme`/`DarkTheme`（其余设置不动，原始值备份至 `~/.local/state/NyxNiri/`）→ `noctalia msg templates-apply` 渲染 → 重启 fcitx5；`uninstall` 剔除模板注册、删除主题目录并还原原主题。
+  - `install.sh deploy/update` 流程在 `deploy_wallpapers` 之后自动调用 `deploy_fcitx_theme`（fcitx5 未安装时仅部署模板并跳过激活，不中断主流程）；`uninstall/purge` 一并清理。
+  - 单模板随明暗模式自动重渲染：`{{ colors.X.default.hex }}` 跟随当前 mode，切换 `theme-mode-set dark/light` 即重新取色（浅色白面板/深色暗面板）。
+
+### Fixed
+
+- **fcitx 模块 REPO_DIR 加载时序缺陷 (Fcitx Module REPO_DIR Source-Time Resolution Fix)**: 修复 `lib/fcitx.sh` 在模块加载时（`main.sh` 于 `init_environment_paths` 之前 source）即展开 `FCITX_SOURCE_DIR="${REPO_DIR:-.}/..."`，导致 `REPO_DIR` 尚未赋值而回退为当前工作目录、从非仓库目录运行（如 `nyxniri` 软链/standalone 缓存模式）时模板源码路径失效、皮肤步骤被跳过的缺陷；改为 `fcitx_source_dir()` 调用时解析。
+
 ## [v2.1.16] - 2026-08-02
 
 ### Changed

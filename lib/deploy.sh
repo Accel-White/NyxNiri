@@ -297,6 +297,7 @@ offer_overwrite_upgrade() {
     if [ "$flag" = "--force" ] || [ "$flag" = "--deploy" ]; then
         deploy_selected_configs "nobackup"
         deploy_wallpapers
+        deploy_fcitx_theme
         return 0
     elif [ "$flag" = "--no-deploy" ]; then
         return 0
@@ -305,6 +306,7 @@ offer_overwrite_upgrade() {
     if [ ! -t 0 ]; then
         deploy_selected_configs "nobackup"
         deploy_wallpapers
+        deploy_fcitx_theme
         return 0
     fi
 
@@ -324,11 +326,13 @@ offer_overwrite_upgrade() {
         1)
             deploy_selected_configs "nobackup"
             deploy_wallpapers
+            deploy_fcitx_theme
             msg overwrite_done
             ;;
         2)
             deploy_selected_configs "backup"
             deploy_wallpapers
+            deploy_fcitx_theme
             msg overwrite_done
             ;;
         3)
@@ -340,6 +344,7 @@ offer_overwrite_upgrade() {
         *)
             deploy_selected_configs "nobackup"
             deploy_wallpapers
+            deploy_fcitx_theme
             msg overwrite_done
             ;;
     esac
@@ -359,6 +364,7 @@ install_configs() {
 
     deploy_selected_configs "$do_backup"
     deploy_wallpapers
+    deploy_fcitx_theme
 
     if [ "$mode" = "full" ]; then
         check_all_deps

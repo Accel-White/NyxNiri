@@ -200,6 +200,24 @@ A lightweight utility to manage configurations and diagnose issues.
 | `nyxniri purge`            | Delete all NyxNiri configs, caches, and wallpapers.          |
 | `nyxniri doctor`           | Check dependencies and system health.                        |
 | `nyxniri greeter [install\|status\|uninstall]` | Optional Noctalia Greeter (greetd login screen) setup.       |
+| `nyxniri fcitx [install\|status\|uninstall]` | Optional NyxMellow dynamic fcitx5 skin (Noctalia Material You colors). |
+
+> [!NOTE]
+> **Optional: NyxMellow Dynamic Fcitx5 Skin**
+> NyxNiri ships a fcitx5 skin that keeps the mellow rounded shape while its
+> colors follow the Noctalia Material You palette (light/dark auto-switching).
+> To activate it:
+>
+> ```bash
+> nyxniri fcitx install
+> ```
+>
+> This deploys the theme templates, registers them as Noctalia user templates,
+> switches fcitx5 to the `nyxmellow` theme, and re-renders on every wallpaper /
+> light-dark change. Run `nyxniri fcitx status` to inspect, and
+> `nyxniri fcitx uninstall` to restore your previous fcitx5 theme.
+> Fcitx5 is not required at deploy time; if it is missing the templates are
+> staged and you can enable the skin later once fcitx5 is installed.
 
 > [!NOTE]
 > **Optional: Noctalia Greeter (Login Screen)**

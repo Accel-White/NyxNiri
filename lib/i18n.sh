@@ -128,6 +128,20 @@ msg() {
             greeter_uninstall_polkit) echo -e "\e[1;32m[+] 已移除 polkit 免密规则。\e[0m" ;;
             greeter_uninstall_done) echo -e "\e[1;32m[+] Greeter 卸载完成。如需移除软件包: paru -R noctalia-greeter greetd\e[0m" ;;
 
+            # Optional Fcitx5 Dynamic Theme Module
+            fcitx_install_title) echo -e "\n\e[1;35m[ 可选模块 ] NyxMellow 动态 fcitx5 皮肤安装与配置\e[0m" ;;
+            fcitx_skip_no_fcitx5) echo -e "\e[1;33m[!] 未检测到 fcitx5，跳过皮肤配置（主题模板仍已部署，安装 fcitx5 后可用 nyxniri fcitx install 启用）。\e[0m" ;;
+            fcitx_templates_deployed) echo -e "\e[1;32m[+] 主题模板已部署: ~/.local/share/fcitx5/themes/nyxmellow/templates/\e[0m" ;;
+            fcitx_render_ok) echo -e "\e[1;32m[+] Noctalia 已按当前主题渲染 nyxmellow 皮肤。\e[0m" ;;
+            fcitx_render_pending) echo -e "\e[1;33m[!] noctalia 未运行，模板将在下次主题切换时自动生效（可用 nyxniri fcitx install 手动触发）。\e[0m" ;;
+            fcitx_theme_set) echo -e "\e[1;32m[+] fcitx5 已切换主题: nyxmellow（$p1）\e[0m" ;;
+            fcitx_restarted) echo -e "\e[1;32m[+] fcitx5 已重启以加载新皮肤。\e[0m" ;;
+            fcitx_status_title) echo -e "\n\e[1;36m:: NyxMellow 动态 fcitx5 皮肤状态\e[0m" ;;
+            fcitx_uninstall_title) echo -e "\n\e[1;33m:: NyxMellow 动态 fcitx5 皮肤卸载\e[0m" ;;
+            fcitx_uninstall_done) echo -e "\e[1;32m[+] NyxMellow 皮肤已卸载，fcitx5 主题已还原。\e[0m" ;;
+            fcitx_registered) echo -e "\e[1;32m[+] Noctalia 模板已注册（$p1）\e[0m" ;;
+            fcitx_not_registered) echo -e "\e[1;33m[WARN] Noctalia 模板未注册（$p1）\e[0m" ;;
+
             # Deployment & Backup
             backing_up) echo -e "\n\e[1;34m:: 正在创建配置快照...\e[0m" ;;
             backup_done) echo -e "\e[1;32m[+] 快照创建成功！保存路径: $p1\e[0m" ;;
@@ -283,6 +297,20 @@ msg() {
             greeter_uninstall_nobackup) echo -e "\e[1;33m[!] No greetd config backup found; kept current config.\e[0m" ;;
             greeter_uninstall_polkit) echo -e "\e[1;32m[+] polkit rule removed.\e[0m" ;;
             greeter_uninstall_done) echo -e "\e[1;32m[+] Greeter uninstalled. To remove packages: paru -R noctalia-greeter greetd\e[0m" ;;
+
+            # Optional Fcitx5 Dynamic Theme Module
+            fcitx_install_title) echo -e "\n\e[1;35m[ Optional Module ] NyxMellow dynamic fcitx5 skin setup\e[0m" ;;
+            fcitx_skip_no_fcitx5) echo -e "\e[1;33m[!] fcitx5 not detected; skipped skin activation (theme templates still deployed; run nyxniri fcitx install after installing fcitx5).\e[0m" ;;
+            fcitx_templates_deployed) echo -e "\e[1;32m[+] Theme templates deployed: ~/.local/share/fcitx5/themes/nyxmellow/templates/\e[0m" ;;
+            fcitx_render_ok) echo -e "\e[1;32m[+] Noctalia rendered the nyxmellow skin with the current theme.\e[0m" ;;
+            fcitx_render_pending) echo -e "\e[1;33m[!] noctalia not running; templates will apply on the next theme change (or run nyxniri fcitx install).\e[0m" ;;
+            fcitx_theme_set) echo -e "\e[1;32m[+] fcitx5 switched to theme: nyxmellow ($p1)\e[0m" ;;
+            fcitx_restarted) echo -e "\e[1;32m[+] fcitx5 restarted to load the new skin.\e[0m" ;;
+            fcitx_status_title) echo -e "\n\e[1;36m:: NyxMellow dynamic fcitx5 skin status\e[0m" ;;
+            fcitx_uninstall_title) echo -e "\n\e[1;33m:: NyxMellow dynamic fcitx5 skin uninstall\e[0m" ;;
+            fcitx_uninstall_done) echo -e "\e[1;32m[+] NyxMellow skin uninstalled; fcitx5 theme reverted.\e[0m" ;;
+            fcitx_registered) echo -e "\e[1;32m[+] Noctalia templates registered ($p1)\e[0m" ;;
+            fcitx_not_registered) echo -e "\e[1;33m[WARN] Noctalia templates not registered ($p1)\e[0m" ;;
 
             # System Doctor
             running_doctor) echo -e "\n\e[1;35mRunning System Doctor for diagnostics...\e[0m" ;;
