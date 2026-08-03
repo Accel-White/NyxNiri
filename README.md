@@ -7,8 +7,7 @@
 
 # 𝑁𝑦𝑥𝑁𝑖𝑟𝑖
 
-A Material You desktop configuration based on Niri and Noctalia V5 for Arch /
-CachyOS.
+> A Material You desktop for Arch / CachyOS, built on Niri and Noctalia V5.
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-GPLv3-89B4FA?style=flat-square&logo=gnu" alt="License" />
@@ -16,81 +15,135 @@ CachyOS.
   <img src="https://img.shields.io/badge/CLI-nyxniri-A6E3A1?style=flat-square&logo=gnu-bash&logoColor=black" alt="CLI" />
   <img src="https://img.shields.io/badge/OS-Arch%20%7C%20CachyOS-1793D1?style=flat-square&logo=arch-linux&logoColor=white" alt="OS" />
   <img src="https://img.shields.io/badge/WM-Niri-89B4FA?style=flat-square&logo=wayland&logoColor=white" alt="WM" />
-  <img src="https://img.shields.io/badge/Shell-Fish%20%2B%20Starship-F9E2AF?style=flat-square&logo=fish&logoColor=black" alt="Shell" />
-  <img src="https://img.shields.io/badge/UI-Noctalia%20V5-F5C2E7?style=flat-square&logo=material-design&logoColor=black" alt="UI" />
 </p>
 
-<img src="./preview.webp" alt="Preview" width="92%" />
+<img src="./preview/preview.webp" alt="Preview" width="92%" />
 
 [Video preview on Bilibili](https://www.bilibili.com/video/BV1Dig16rEZ7/)
 
 </div>
 
-## Overview
+## Preview / 预览
 
-NyxNiri is a desktop configuration bundle for Arch Linux and CachyOS. It is
-built around the Niri scroll-tiling window manager and the Noctalia V5 shell,
-providing dynamic theming, basic system synchronization, and terminal
-enhancements.
+<p align="center">
+  <img src="./preview/light_skin.png" alt="NyxMellow skin (light)" width="372" />
+  <img src="./preview/dark_skin.png" alt="NyxMellow skin (dark)" width="372" />
+</p>
+
+*The NyxMellow fcitx5 skin — colors follow the Noctalia palette in light and
+dark mode.*
 
 ## Features
 
-- **Material You Extraction**: Noctalia V5 natively generates color palettes
-  from wallpapers. Custom Lua hooks bridge `mpvpaper` video wallpapers into
-  this pipeline by extracting frame thumbnails via `ffmpeg`.
-- **Theme Synchronization**: A background script keeps GSettings and GTK
-  configurations in sync when switching between light and dark modes.
-- **Focus Mode (`Super+N`)**: Adjusts color temperature, disables window blur,
-  and forces opaque backgrounds to reduce eye strain during long sessions.
-- **Shell & Terminal Tweaks**: Includes Fish shell aliases for proxy management
-  and cache cleaning, plus Kitty configurations for cursor trails and
-  Windows-like shortcuts.
+- **Material You colors** — extracted from your wallpaper by Noctalia V5; an
+  `mpvpaper` hook sends video-wallpaper frames through `ffmpeg` so they theme too.
+- **Light/dark sync** — GSettings and GTK follow Noctalia automatically.
+- **Focus Mode (`Super+N`)** — warm color temperature, no window blur, opaque
+  backgrounds for long sessions.
+- **Terminal & shell** — Fish aliases for proxy and cache, Kitty cursor trails
+  and Windows-style shortcuts.
+- **Dynamic fcitx5 skin** — NyxMellow: mellow shape, Noctalia colors.
 
-## Stack
+## Requirements
 
-| Component      | Choice                           |
-| -------------- | -------------------------------- |
-| Window Manager | Niri                             |
-| Desktop Shell  | Noctalia V5                      |
-| Wallpaper      | mpvpaper                         |
-| Terminal       | Kitty                            |
-| Shell          | Fish + Starship                  |
-| Fonts          | JetBrains Mono, Noto Sans CJK SC |
+- Arch Linux / CachyOS
+- [Niri](https://github.com/YaLTeR/niri) (Wayland compositor)
+- [Noctalia V5](https://noctalia.app) (desktop shell, AUR)
+- `mpvpaper` (AUR), Kitty, Fish, Starship
 
-## Directory Structure
+## Install
+
+### Standalone (online)
+
+```bash
+curl -sL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+```
+
+### From a git checkout (recommended)
+
+```bash
+git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
+cd ~/NyxNiri && ./install.sh
+```
+
+<details>
+<summary>Mirrors for China (gh-proxy / CDN)</summary>
+
+```bash
+# Standalone via gh-proxy.org
+curl -sL --connect-timeout 10 https://gh-proxy.org/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+
+# Standalone via ghproxy.net
+curl -sL --connect-timeout 10 https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+
+# git clone via gh-proxy.org
+git clone https://gh-proxy.org/https://github.com/ech678/NyxNiri.git ~/NyxNiri
+cd ~/NyxNiri && ./install.sh
+```
+
+`install.sh` falls back through Official → jsDelivr CDN → gh-proxy automatically.
+</details>
+
+> `install full` bootstraps `paru` when no AUR helper is available (`noctalia`
+> and `mpvpaper` are AUR packages). Existing configs can be backed up to
+> `~/.config/NyxNiri/backups/` before deploy. The legacy DMS setup lives on the
+> `archive/v1-dms` branch.
+
+## Included Configs
 
 ```text
 NyxNiri
-├── install.sh                  # Installation script (backup, dependency check)
-├── lib/                        # Core modules (deploy, backup, network, doctor, i18n…)
-├── Wallpapers/                 # Wallpaper library
-└── v2/                         # Noctalia V5 configurations
-    ├── niri/                   # Window manager config
-    ├── noctalia/               # Widgets and theme sync
-    ├── kitty/                  # Terminal config
-    ├── fish/                   # Shell aliases and functions
-    ├── fastfetch/              # System info display
-    ├── zed/                    # Zed editor config
-    └── starship.toml           # Prompt theme
+├── install.sh                  # installer (backup + dependency check)
+├── lib/                        # deploy, backup, network, doctor, i18n…
+├── Wallpapers/                 # wallpaper library
+├── fcitx5/                     # NyxMellow fcitx5 skin templates
+└── v2/
+    ├── niri/                   # window manager
+    ├── noctalia/               # shell + theme sync
+    ├── kitty/                  # terminal
+    ├── fish/                   # aliases + functions
+    ├── fastfetch/              # system info
+    ├── zed/                    # editor
+    └── starship.toml           # prompt
 ```
 
-> [!TIP]
-> **Customization (Dunder Mechanism)**
-> NyxNiri updates atomically replace configuration directories. To preserve your personal modifications across updates:
-> - **Custom Files**: Any file matching `*__custom__*` (e.g., `__custom__.kdl`, `01__custom__.fish`, `__custom__env`) will be securely preserved across updates (supports number prefixes for controlling load order).
-> - **Custom Namespace**: You can create any `*__custom__*` folder inside any config directory (e.g., `~/.config/niri/__custom__/`, `~/.config/niri/01__custom__/`) to store your own scripts or assets. The entire folder and all its contents are immune to updates.
+> Configs are replaced atomically on update. To keep personal tweaks:
+> - files matching `*__custom__*` (e.g. `__custom__.kdl`, `01__custom__.fish`)
+>   are preserved — number prefixes control load order
+> - any `*__custom__*` folder (e.g. `~/.config/niri/__custom__/`) is kept as-is
 
-> [!NOTE]
-> The installation process offers an optional backup prompt to save existing configurations to
-> `~/.config/NyxNiri/backups/` before deployment.
+## Tooling
 
-> [!WARNING]
-> The legacy Dank Material Shell (DMS) configuration has been moved to the
-> `archive/v1-dms` branch. The `main` branch only maintains the V2 architecture.
+`nyxniri` manages install, snapshots and diagnostics:
+
+| Command | Description |
+| --- | --- |
+| `nyxniri` | Interactive menu |
+| `nyxniri install [full\|config]` | Deploy everything, or sync configs only |
+| `nyxniri update [--force]` | Update repo, optionally overwrite configs |
+| `nyxniri snapshot [note]` | Save the current config state |
+| `nyxniri rollback [index]` | Restore a snapshot |
+| `nyxniri list` | List snapshots |
+| `nyxniri uninstall` | Remove NyxNiri, restore previous configs |
+| `nyxniri purge` | Remove configs, cache and wallpapers |
+| `nyxniri doctor` | Dependency + system health check |
+| `nyxniri fcitx [install\|status\|uninstall]` | NyxMellow fcitx5 skin |
+| `nyxniri greeter [install\|status\|uninstall]` | Noctalia Greeter (login screen) |
+
+`nyxhelp` is a fzf-based cheatsheet:
+
+| Command | Description |
+| --- | --- |
+| `nyxhelp` | Interactive dual-panel cheatsheet |
+| `nyxhelp keys` | Niri keybindings |
+| `nyxhelp proxy` | Proxy controls (`proxy_on [port]`, `proxy_off`, `proxy_status`) |
+| `nyxhelp pkg` | Package shortcuts (`up`, `in`, `se`, `un`, `clean`) |
+| `nyxhelp all` | Full cheatsheet |
 
 ## Keybindings
 
-**Window Management**
+<details>
+<summary>Window management</summary>
 
 | Shortcut | Action |
 | :--- | :--- |
@@ -103,16 +156,16 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>Z</kbd> | Focus left |
 | <kbd>Super</kbd> + <kbd>C</kbd> | Focus right |
 | <kbd>Super</kbd> + <kbd>J</kbd> / <kbd>K</kbd> | Focus down/up |
-| <kbd>Super</kbd> + <kbd>Arrows</kbd> | Smart focus (Column/Monitor/Workspace) |
-| <kbd>Super</kbd> + <kbd>Ctrl</kbd> + <kbd>Arrows</kbd> | Smart move (Column/Monitor/Workspace) |
+| <kbd>Super</kbd> + <kbd>Arrows</kbd> | Smart focus (column/monitor/workspace) |
+| <kbd>Super</kbd> + <kbd>Ctrl</kbd> + <kbd>Arrows</kbd> | Smart move (column/monitor/workspace) |
 | <kbd>Super</kbd> + <kbd>D</kbd> / <kbd>U</kbd> | Workspace down/up |
 | <kbd>Super</kbd> + <kbd>Space</kbd> | Switch preset column widths |
-| <kbd>Super</kbd> + <kbd>-</kbd> / <kbd>=</kbd> | Decrease/Increase column width |
+| <kbd>Super</kbd> + <kbd>-</kbd> / <kbd>=</kbd> | Decrease/increase column width |
 
-> For the complete interactive keybinding reference, run `nyxhelp keys` or
-> press <kbd>Super</kbd> + <kbd>/</kbd> in Niri.
+</details>
 
-**System & Components**
+<details>
+<summary>System & components</summary>
 
 | Shortcut | Action |
 | :--- | :--- |
@@ -129,159 +182,40 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | Reload Niri |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd> | Quit Niri |
 
-## Installation
-
-NyxNiri supports two installation modes:
-
-- **Standalone Mode (Online Pipeline)** — `curl ... | bash` caches the
-  repository to `~/.cache/NyxNiri` and deploys automatically without creating a
-  local workspace repo.
-- **Repository Mode (Local / Development — Recommended)** — `git clone ... &&
-  ./install.sh` runs directly inside the local repo directory for easy
-  customization and version control.
-
-### Mode 1: Quick Standalone Install
-
-```bash
-curl -sL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
-```
-
-### Mode 2: Git Repository Install (Recommended)
-
-```bash
-git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
-cd ~/NyxNiri && ./install.sh
-```
-
-<details>
-<summary>Mirror for China (gh-proxy / CDN Acceleration)</summary>
-
-#### Standalone Online Mirror Install
-```bash
-# Option 1: gh-proxy.org
-curl -sL --connect-timeout 10 https://gh-proxy.org/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
-
-# Option 2: ghproxy.net
-curl -sL --connect-timeout 10 https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
-```
-
-#### Git Repository Mirror Clone
-```bash
-# Clone via gh-proxy.org
-git clone https://gh-proxy.org/https://github.com/ech678/NyxNiri.git ~/NyxNiri
-cd ~/NyxNiri && ./install.sh
-```
-
-*Note: `install.sh` automatically includes a built-in 3-tier fallback engine (Official -> jsDelivr CDN -> gh-proxy) with real-time latency logs.*
-
 </details>
 
-> [!NOTE]
-> **AUR Dependencies**
-> `noctalia` and `mpvpaper` are AUR packages. When running `install full` on a
-> system without a usable AUR helper (paru/yay), the installer bootstraps `paru`
-> automatically (requires `base-devel`, `git`, and `sudo`) — it prefers the
-> official repos when available, otherwise builds the AUR source package on your
-> machine (avoiding prebuilt `-bin` ABI mismatches).
+> Full reference: `nyxhelp keys`, or press <kbd>Super</kbd> + <kbd>/</kbd> in Niri.
 
-## CLI Tool (`nyxniri`)
+## Optional Modules
 
-A lightweight utility to manage configurations and diagnose issues.
+**NyxMellow fcitx5 skin** — a mellow-shaped skin whose colors follow the
+Noctalia palette (light/dark auto-switch). Run `nyxniri fcitx install`: it
+registers a Noctalia template and re-renders on every wallpaper / mode change.
 
-| Command                    | Description                                                  |
-| -------------------------- | ------------------------------------------------------------ |
-| `nyxniri`                  | Open the interactive TUI menu.                               |
-| `nyxniri install [full\|config]` | Deploy full environment (`full`) or sync configs only (`config`). |
-| `nyxniri update [--force]` | Check for updates and optionally overwrite configurations.   |
-| `nyxniri snapshot [note]`  | Save the current configuration state.                        |
-| `nyxniri rollback [index]` | Revert to a previous snapshot (auto-backs up current state). |
-| `nyxniri list`             | Show available snapshots.                                    |
-| `nyxniri uninstall`        | Remove NyxNiri and restore previous configs.                 |
-| `nyxniri purge`            | Delete all NyxNiri configs, caches, and wallpapers.          |
-| `nyxniri doctor`           | Check dependencies and system health.                        |
-| `nyxniri greeter [install\|status\|uninstall]` | Optional Noctalia Greeter (greetd login screen) setup.       |
-| `nyxniri fcitx [install\|status\|uninstall]` | Optional NyxMellow dynamic fcitx5 skin (Noctalia Material You colors). |
-
-> [!NOTE]
-> **Optional: NyxMellow Dynamic Fcitx5 Skin**
-> NyxNiri ships a fcitx5 skin that keeps the mellow rounded shape while its
-> colors follow the Noctalia Material You palette (light/dark auto-switching).
-> To activate it:
->
-> ```bash
-> nyxniri fcitx install
-> ```
->
-> This deploys the theme templates, registers them as Noctalia user templates,
-> switches fcitx5 to the `nyxmellow` theme, and re-renders on every wallpaper /
-> light-dark change. Run `nyxniri fcitx status` to inspect, and
-> `nyxniri fcitx uninstall` to restore your previous fcitx5 theme.
-> Fcitx5 is not required at deploy time; if it is missing the templates are
-> staged and you can enable the skin later once fcitx5 is installed.
-
-> [!NOTE]
-> **Optional: Noctalia Greeter (Login Screen)**
-> NyxNiri does not configure a display manager by default. To install and
-> configure [Noctalia Greeter](https://github.com/noctalia-dev/noctalia-greeter)
-> (a greetd login screen that matches the Noctalia theme), run:
->
-> ```bash
-> nyxniri greeter install
-> ```
->
-> This installs `greetd` + `noctalia-greeter` (AUR), backs up and writes
-> `/etc/greetd/config.toml`, enables the `greetd` service (takes effect after
-> reboot), writes a Polkit rule for passwordless theme sync, and prints a notice
-> if another display manager is detected (it never disables anything itself).
-> If a display manager is already running, use `nyxniri greeter status` to review
-> the state before proceeding. Use `nyxniri greeter uninstall` to disable greetd
-> and restore the previous `/etc/greetd/config.toml`.
-
-## Cheatsheet TUI (`nyxhelp`)
-
-An interactive terminal cheatsheet powered by `fzf` for quick navigation of shortcuts and commands.
-
-| Command         | Description                                                    |
-| --------------- | -------------------------------------------------------------- |
-| `nyxhelp`       | Open the interactive dual-panel cheatsheet menu.               |
-| `nyxhelp keys`  | Display Niri keybindings section.                             |
-| `nyxhelp proxy` | Display proxy controls (`proxy_on [port]`, `proxy_off`, `proxy_status`). |
-| `nyxhelp pkg`   | Display package management shortcuts (`up`, `in`, `se`, `un`, `clean`). |
-| `nyxhelp all`   | Print the full cheatsheet guide.                               |
+**Noctalia Greeter** — a greetd login screen matching the Noctalia theme. Run
+`nyxniri greeter install` (installs `greetd` + `noctalia-greeter` from AUR,
+backs up `/etc/greetd/config.toml`, writes a Polkit rule). It never disables an
+existing display manager.
 
 ## Troubleshooting
 
-**Noctalia hangs on startup**
-
-This is usually caused by `ddcutil` scanning the I2C bus for monitor brightness
-controls, which can timeout on certain hardware (especially NVIDIA).
-
-_Fix_: Disable DDC/CI in `~/.config/noctalia/noctalia-config.toml`:
+**Noctalia hangs on startup** — `ddcutil` scanning the I2C bus can time out,
+especially on NVIDIA. Disable it in `~/.config/noctalia/noctalia-config.toml`:
 
 ```toml
 [brightness]
 enable_ddcutil = false
 ```
 
-**Plugin repository corruption**
-
-If Noctalia hangs while checking out plugins on startup, the local git cache
-might be corrupted.
-
-_Fix_: Reset the plugin directories:
+**Plugin repo corrupted** — Noctalia stuck while checking out plugins:
 
 ```bash
 git -C ~/.local/state/noctalia/plugins/sources/community/repo reset --hard HEAD
 git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 ```
 
-**Password prompt appears when syncing theme to Greeter**
-
-Noctalia uses `pkexec` to apply the greeter theme. To avoid entering your password every time, you can add a Polkit exemption rule.
-
-> `nyxniri greeter install` writes this rule automatically. The manual steps below are only needed when you configure the greeter yourself.
-
-_Fix_: Run the following command to create a Polkit rule (requires `sudo`):
+**Greeter sync asks for a password** — add a Polkit rule (`nyxniri greeter
+install` does this for you):
 
 ```bash
 sudo bash -c 'cat > /etc/polkit-1/rules.d/50-noctalia-greeter.rules << EOF
@@ -294,90 +228,147 @@ polkit.addRule(function(action, subject) {
 EOF'
 ```
 
-## Community & Acknowledgments
+## Credits & License
 
-**Contact & Support**
+Contact: QQ `2040244628` · Telegram [@Echoes678](https://t.me/Echoes678) ·
+Linux Ricing Group `631425889` · [Sponsor](https://afdian.com/a/Echoes678) ·
+[Report a bug](https://github.com/ech678/NyxNiri/issues)
 
-- QQ: `2040244628`
-- Telegram: [@Echoes678](https://t.me/Echoes678)
-- Linux Ricing Group: `631425889`
-- Bug Reports: Run the `Generate Bug Report` option in `install.sh` or open an
-  [Issue](https://github.com/ech678/NyxNiri/issues).
-- Sponsorship: [afdian.com/a/Echoes678](https://afdian.com/a/Echoes678)
+Thanks to:
 
-**Acknowledgments**
+- [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri)
+- [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri)
+- [sanweiya/fcitx5-mellow-themes](https://github.com/sanweiya/fcitx5-mellow-themes) —
+  the mellow shape behind the NyxMellow skin
+- [StarWhiteIsBusy/Round-Simple-Fcitx5-Skin](https://github.com/StarWhiteIsBusy/Round-Simple-Fcitx5-Skin) —
+  the Noctalia color-sync pattern used by the NyxMellow skin
 
-- [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) - Blur settings
-  reference
-- [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri) - A lot
+Recommended:
 
-**Recommended Projects**
+- [h465855hgg/noctalia-lyrics](https://github.com/h465855hgg/noctalia-lyrics) —
+  desktop lyrics widget
+- [Ocfeather/chrome-niri-opacity](https://github.com/Ocfeather/chrome-niri-opacity) —
+  browser opacity script
 
-- [h465855hgg/noctalia-lyrics](https://github.com/h465855hgg/noctalia-lyrics) -
-  Desktop lyrics widget
-- [Ocfeather/chrome-niri-opacity](https://github.com/Ocfeather/chrome-niri-opacity) -
-  Browser opacity script
+GPL-3.0 · see [LICENSE](./LICENSE) · changelog in [CHANGELOG.md](./CHANGELOG.md)
 
 ---
 
 <div align="center">
 <a id="chinese"></a>
+
+# 𝑁𝑦𝑥𝑁𝑖𝑟𝑖
+
+> 基于 Niri 与 Noctalia V5 的 Material You 桌面，适用于 Arch / CachyOS。
+
 </div>
-
-## 项目概述
-
-NyxNiri 是一套针对 Arch Linux 和 CachyOS 的桌面配置集。核心基于 Niri 滚动平铺窗口管理器与 Noctalia V5，主要提供动态主题同步、基础系统联动以及终端环境的预设配置。
 
 ## 核心特性
 
-- **Material You 取色**：Noctalia V5 原生支持从壁纸提取配色方案。自定义 Lua 钩子将 `mpvpaper` 视频壁纸桥接到此管线，通过 `ffmpeg` 提取帧缩略图供 Noctalia 取色。
-- **主题同步**：包含一个后台脚本用于同步 GSettings 和 GTK 配置，方便切换明暗模式。
-- **护眼模式 (`Super+N`)**：开启后会调整色温，关闭窗口模糊效果，并将透明度设为不透明，以降低长时间阅读的视觉疲劳。
-- **终端与 Shell 配置**：预设了 Fish shell 的代理切换别名和缓存清理命令；Kitty 终端开启了光标轨迹，并映射了部分常用的 Windows 快捷键。
+- **Material You 取色** — 由 Noctalia V5 从壁纸提取；`mpvpaper` 钩子把视频壁纸帧经 `ffmpeg` 送进取色管线，动态壁纸同样参与取色。
+- **明暗同步** — GSettings 与 GTK 自动跟随 Noctalia 切换。
+- **护眼模式（`Super+N`）** — 调暖色温、关闭模糊、强制不透明背景，适合长时间阅读。
+- **终端与 Shell** — Fish 代理/缓存别名，Kitty 光标轨迹与 Windows 风格快捷键。
+- **动态 fcitx5 皮肤** — NyxMellow：mellow 圆角形状 + Noctalia 自动取色。
 
-## 技术栈
+## 环境要求
 
-| 组件       | 选择                             |
-| ---------- | -------------------------------- |
-| 窗口管理器 | Niri                             |
-| 桌面组件   | Noctalia V5                      |
-| 壁纸引擎   | mpvpaper                         |
-| 终端       | Kitty                            |
-| Shell      | Fish + Starship                  |
-| 字体       | JetBrains Mono, Noto Sans CJK SC |
+- Arch Linux / CachyOS
+- [Niri](https://github.com/YaLTeR/niri)（Wayland 合成器）
+- [Noctalia V5](https://noctalia.app)（桌面 Shell，AUR）
+- `mpvpaper`（AUR）、Kitty、Fish、Starship
 
-## 目录结构
+## 安装部署
+
+### 模式一：独立一键安装（在线）
+
+```bash
+curl -sL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+```
+
+### 模式二：Git 仓库部署（推荐）
+
+```bash
+git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
+cd ~/NyxNiri && ./install.sh
+```
+
+<details>
+<summary>国内网络加速（gh-proxy / CDN 镜像）</summary>
+
+```bash
+# 通过 gh-proxy.org 独立安装
+curl -sL --connect-timeout 10 https://gh-proxy.org/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+
+# 通过 ghproxy.net 独立安装
+curl -sL --connect-timeout 10 https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+
+# 通过 gh-proxy.org 克隆仓库
+git clone https://gh-proxy.org/https://github.com/ech678/NyxNiri.git ~/NyxNiri
+cd ~/NyxNiri && ./install.sh
+```
+
+`install.sh` 内置三级自动降级（官方直连 → jsDelivr CDN → gh-proxy）。
+</details>
+
+> `install full` 在缺少 AUR helper 时会自动自举 `paru`（`noctalia` 与
+> `mpvpaper` 均为 AUR 包）。部署前可先将现有配置备份至
+> `~/.config/NyxNiri/backups/`。旧版 DMS 配置位于 `archive/v1-dms` 分支。
+
+## 配置一览
 
 ```text
 NyxNiri
-├── install.sh                  # 安装脚本（包含依赖检测与配置备份）
-├── lib/                        # 核心功能模块（部署、备份、网络、诊断、国际化…）
+├── install.sh                  # 安装脚本（含依赖检测与配置备份）
+├── lib/                        # 部署、备份、网络、诊断、国际化等模块
 ├── Wallpapers/                 # 壁纸库
-└── v2/                         # Noctalia V5 配置
-    ├── niri/                   # 窗口管理器配置
-    ├── noctalia/               # 桌面组件与主题同步
-    ├── kitty/                  # 终端配置
-    ├── fish/                   # Shell 别名与函数
-    ├── fastfetch/              # 系统信息展示
-    ├── zed/                    # Zed 编辑器配置
-    └── starship.toml           # 提示符主题
+├── fcitx5/                     # NyxMellow fcitx5 皮肤模板
+└── v2/
+    ├── niri/                   # 窗口管理器
+    ├── noctalia/               # 桌面 Shell 与主题同步
+    ├── kitty/                  # 终端
+    ├── fish/                   # 别名与函数
+    ├── fastfetch/              # 系统信息
+    ├── zed/                    # 编辑器
+    └── starship.toml           # 提示符
 ```
 
-> [!TIP]
-> **自定义配置 (Dunder 机制)**
-> NyxNiri 更新时会原子覆盖配置目录。为保证你的私人配置在更新时安全保留：
-> - **自定义文件**：任何命名匹配 `*__custom__*` 的文件（如 `__custom__.kdl`, `01__custom__.fish`, `__custom__env`）都会被完整继承，免于覆盖（支持添加前缀数字调控加载与执行顺序）。
-> - **私有命名空间**：你可以在配置目录下建立任何 `*__custom__*` 文件夹（如 `~/.config/niri/__custom__/`, `~/.config/niri/01__custom__/`），在里面自由存放及命名个人脚本与素材，整个文件夹及其内部所有文件在更新时将被连根完整保留。
+> 更新时配置目录会被原子替换。个人改动可通过以下方式保留：
+> - 文件名含 `*__custom__*` 的文件（如 `__custom__.kdl`、`01__custom__.fish`）会被保留，数字前缀控制加载顺序
+> - 任何 `*__custom__*` 文件夹（如 `~/.config/niri/__custom__/`）整体保留
 
-> [!NOTE]
-> 安装过程提供可选的备份提示，允许你在部署前将现有配置备份至 `~/.config/NyxNiri/backups/`。
+## 工具
 
-> [!WARNING]
-> 旧版 Dank Material Shell (DMS) 配置已移至 `archive/v1-dms` 分支。`main` 分支仅维护当前的 V2 架构。
+`nyxniri` 统一管理安装、快照与诊断：
+
+| 指令 | 作用 |
+| --- | --- |
+| `nyxniri` | 交互式菜单 |
+| `nyxniri install [full\|config]` | 全量部署，或仅同步配置 |
+| `nyxniri update [--force]` | 更新仓库，可选覆盖配置 |
+| `nyxniri snapshot [备注]` | 保存当前配置状态 |
+| `nyxniri rollback [序号]` | 恢复历史快照 |
+| `nyxniri list` | 查看快照列表 |
+| `nyxniri uninstall` | 卸载并复原配置 |
+| `nyxniri purge` | 清除配置、缓存与壁纸 |
+| `nyxniri doctor` | 依赖与系统健康检查 |
+| `nyxniri fcitx [install\|status\|uninstall]` | NyxMellow fcitx5 皮肤 |
+| `nyxniri greeter [install\|status\|uninstall]` | Noctalia Greeter（登录界面） |
+
+`nyxhelp` 是基于 `fzf` 的速查手册：
+
+| 指令 | 作用 |
+| --- | --- |
+| `nyxhelp` | 双栏交互式速查菜单 |
+| `nyxhelp keys` | Niri 快捷键 |
+| `nyxhelp proxy` | 代理控制（`proxy_on [port]`、`proxy_off`、`proxy_status`） |
+| `nyxhelp pkg` | 包管理快捷指令（`up`、`in`、`se`、`un`、`clean`） |
+| `nyxhelp all` | 完整速查手册 |
 
 ## 快捷键
 
-**窗口控制**
+<details>
+<summary>窗口控制</summary>
 
 | 快捷键 | 动作 |
 | :--- | :--- |
@@ -396,9 +387,10 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>Space</kbd> | 切换预设列宽比例 |
 | <kbd>Super</kbd> + <kbd>-</kbd> / <kbd>=</kbd> | 收缩/拉伸列宽 |
 
-> 完整快捷键列表请运行 `nyxhelp keys` 或按 <kbd>Super</kbd> + <kbd>/</kbd>。
+</details>
 
-**系统与组件**
+<details>
+<summary>系统与组件</summary>
 
 | 快捷键 | 动作 |
 | :--- | :--- |
@@ -415,136 +407,33 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | 重载 Niri |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd> | 退出 Niri |
 
-## 安装部署
-
-NyxNiri 支持两种不同的安装与运行模式：
-
-- **独立安装模式（在线管道）** — 运行 `curl ... | bash`，脚本会自动将配置仓库缓存至
-  `~/.cache/NyxNiri` 并完成部署，无需在本地保留源码目录。
-- **仓库部署模式（本地离线/开发 — 推荐）** — 运行 `git clone ... && ./install.sh`，
-  直接在本地仓库中运行，方便进行个人配置定制、Git 版本管理与后续一键 `git pull` 更新。
-
-### 模式 1：独立一键安装
-
-```bash
-curl -sL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
-```
-
-### 模式 2：Git 仓库部署（推荐）
-
-```bash
-git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
-cd ~/NyxNiri && ./install.sh
-```
-
-<details>
-<summary>国内网络加速 (gh-proxy / CDN 镜像)</summary>
-
-#### 1. 独立一键镜像安装
-```bash
-# 方案 1: gh-proxy.org
-curl -sL --connect-timeout 10 https://gh-proxy.org/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
-
-# 方案 2: ghproxy.net
-curl -sL --connect-timeout 10 https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
-```
-
-#### 2. Git 仓库镜像克隆
-```bash
-# 通过 gh-proxy.org 镜像克隆仓库
-git clone https://gh-proxy.org/https://github.com/ech678/NyxNiri.git ~/NyxNiri
-cd ~/NyxNiri && ./install.sh
-```
-
-*提示：`install.sh` 脚本内置三级自动降级引擎（官方直连 → jsDelivr CDN → gh-proxy）与实时耗时 Log。*
-
 </details>
 
-> [!NOTE]
-> **AUR 依赖**
-> `noctalia` 与 `mpvpaper` 为 AUR 包。执行 `install full` 时若系统没有可用的
-> AUR helper（paru/yay），安装器会自动自举安装 `paru`（需 `base-devel`、`git`
-> 与 `sudo`）——优先官方软件源，否则在本机编译 AUR 源码包（规避预编译
-> `-bin` 包的 ABI 不匹配问题）。
+> 完整参考：`nyxhelp keys`，或在 Niri 中按 <kbd>Super</kbd> + <kbd>/</kbd>。
 
-## CLI 工具 (`nyxniri`)
+## 可选模块
 
-用于管理配置快照和系统诊断。
+**NyxMellow fcitx5 皮肤** — 圆角 mellow 形状，颜色随 Noctalia 主题自动取色（明暗自动切换）。运行 `nyxniri fcitx install`：注册 Noctalia 模板，并在每次换壁纸/切换明暗时自动重渲染。
 
-| 指令                      | 作用                                   |
-| ------------------------- | -------------------------------------- |
-| `nyxniri`                 | 打开交互式菜单                         |
-| `nyxniri install [full\|config]` | 全量安装（`full`）或仅同步配置文件（`config`）  |
-| `nyxniri update [--force]` | 检查仓库更新与可选覆盖升级             |
-| `nyxniri snapshot [备注]` | 保存当前配置状态                       |
-| `nyxniri rollback [序号]` | 恢复历史快照（恢复前自动备份当前状态） |
-| `nyxniri list`            | 查看可用快照                           |
-| `nyxniri uninstall`       | 卸载并复原配置                         |
-| `nyxniri purge`           | 清除所有相关配置、缓存与壁纸           |
-| `nyxniri doctor`          | 检查依赖与系统状态                     |
-| `nyxniri greeter [install\|status\|uninstall]` | 可选 Noctalia Greeter（greetd 登录界面）配置 |
-
-> [!NOTE]
-> **可选：Noctalia Greeter（登录启动器）**
-> NyxNiri 默认不配置显示管理器。如需安装并配置
-> [Noctalia Greeter](https://github.com/noctalia-dev/noctalia-greeter)
-> （与 Noctalia 主题一致的 greetd 登录界面），运行：
->
-> ```bash
-> nyxniri greeter install
-> ```
->
-> 该命令会安装 `greetd` + `noctalia-greeter`（AUR），备份并写入
-> `/etc/greetd/config.toml`，启用 `greetd` 服务（重启后生效），写入
-> Greeter 主题免密同步所需的 Polkit 规则，并在检测到其他显示管理器时给出
-> 一行提示（**绝不会自动禁用任何管理器**）。若已在使用其他显示管理器，请先
-> 用 `nyxniri greeter status` 查看状态再决定。使用 `nyxniri greeter uninstall`
-> 可停用 greetd 并还原原有的 `/etc/greetd/config.toml`。
-
-## 终端速查手册 (`nyxhelp`)
-
-依托 `fzf` 构建的双栏 TUI 交互式快捷指令与快捷键速查终端。
-
-| 指令            | 作用                                                           |
-| --------------- | -------------------------------------------------------------- |
-| `nyxhelp`       | 打开双栏 TUI 交互式速查菜单                                    |
-| `nyxhelp keys`  | 快速展示 Niri 桌面核心快捷键                                   |
-| `nyxhelp proxy` | 展示网络代理控制指令（支持 `proxy_on 10808` 动态端口）          |
-| `nyxhelp pkg`   | 展示包管理与缓存清理指令 (`up`, `in`, `se`, `un`, `clean`)     |
-| `nyxhelp all`   | 静态打印完整速查手册                                           |
+**Noctalia Greeter** — 与 Noctalia 主题一致的 greetd 登录界面。运行 `nyxniri greeter install`（安装 `greetd` + `noctalia-greeter`（AUR），备份 `/etc/greetd/config.toml`，写入 Polkit 免密规则）。不会禁用任何已有显示管理器。
 
 ## 故障排除
 
-**Noctalia 启动卡死**
-
-通常是因为 `ddcutil` 在扫描 I2C 总线获取显示器亮度控制时超时（在 NVIDIA
-硬件上较常见）。
-
-_修复_：在 `~/.config/noctalia/noctalia-config.toml` 中禁用 DDC/CI：
+**Noctalia 启动卡死** — 多为 `ddcutil` 扫描 I2C 总线超时（NVIDIA 常见）。在 `~/.config/noctalia/noctalia-config.toml` 中禁用：
 
 ```toml
 [brightness]
 enable_ddcutil = false
 ```
 
-**插件仓库损坏**
-
-如果 Noctalia 在启动时拉取插件卡死，可能是本地 git 缓存损坏。
-
-_修复_：重置插件目录：
+**插件仓库损坏** — Noctalia 拉取插件卡住：
 
 ```bash
 git -C ~/.local/state/noctalia/plugins/sources/community/repo reset --hard HEAD
 git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 ```
 
-**每次同步 Greeter 外观都需要输入密码**
-
-Noctalia 依靠 `pkexec` 来应用 Greeter 主题。为了实现免密静默同步，可以添加一条 Polkit 豁免规则。
-
-> `nyxniri greeter install` 会自动写入该规则。以下手动步骤仅在你自行配置 Greeter 时使用。
-
-_修复_：运行以下命令创建免密规则（需要 `sudo` 权限）：
+**Greeter 同步需要输密码** — 添加 Polkit 免密规则（`nyxniri greeter install` 会自动写入）：
 
 ```bash
 sudo bash -c 'cat > /etc/polkit-1/rules.d/50-noctalia-greeter.rules << EOF
@@ -557,28 +446,29 @@ polkit.addRule(function(action, subject) {
 EOF'
 ```
 
-## 社区与致谢
+## 致谢与许可
 
-**交流与反馈**
+联系：QQ `2040244628` · Telegram [@Echoes678](https://t.me/Echoes678) ·
+Linux Ricing 交流群 `631425889` · [赞助支持](https://afdian.com/a/Echoes678) ·
+[提交 Bug](https://github.com/ech678/NyxNiri/issues)
 
-- QQ：`2040244628`
-- Telegram：[@Echoes678](https://t.me/Echoes678)
-- Linux Ricing 交流群：`631425889`
-- 提交 Bug：运行 `install.sh` 中的 `生成 Bug Report` 选项，或在 GitHub 提交
-  [Issue](https://github.com/ech678/NyxNiri/issues)。
-- 赞助支持：[爱发电](https://afdian.com/a/Echoes678)
+致谢：
 
-**致谢**
+- [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri)
+- [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri)
+- [sanweiya/fcitx5-mellow-themes](https://github.com/sanweiya/fcitx5-mellow-themes) —
+  NyxMellow 皮肤圆角形状的来源
+- [StarWhiteIsBusy/Round-Simple-Fcitx5-Skin](https://github.com/StarWhiteIsBusy/Round-Simple-Fcitx5-Skin) —
+  NyxMellow 皮肤所采用的 Noctalia 取色联动方案参考
 
-- [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) - 模糊效果设置参考
-- [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri) - 参考了很多!
+推荐项目：
 
-**推荐项目**
-
-- [h465855hgg/noctalia-lyrics](https://github.com/h465855hgg/noctalia-lyrics) -
+- [h465855hgg/noctalia-lyrics](https://github.com/h465855hgg/noctalia-lyrics) —
   桌面歌词组件
-- [Ocfeather/chrome-niri-opacity](https://github.com/Ocfeather/chrome-niri-opacity) -
+- [Ocfeather/chrome-niri-opacity](https://github.com/Ocfeather/chrome-niri-opacity) —
   浏览器透明度脚本
+
+GPL-3.0 · 见 [LICENSE](./LICENSE) · 更新日志见 [CHANGELOG.md](./CHANGELOG.md)
 
 ---
 
