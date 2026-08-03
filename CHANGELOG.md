@@ -15,6 +15,12 @@
 
 - **fcitx 模块 REPO_DIR 加载时序缺陷 (Fcitx Module REPO_DIR Source-Time Resolution Fix)**: 修复 `lib/fcitx.sh` 在模块加载时（`main.sh` 于 `init_environment_paths` 之前 source）即展开 `FCITX_SOURCE_DIR="${REPO_DIR:-.}/..."`，导致 `REPO_DIR` 尚未赋值而回退为当前工作目录、从非仓库目录运行（如 `nyxniri` 软链/standalone 缓存模式）时模板源码路径失效、皮肤步骤被跳过的缺陷；改为 `fcitx_source_dir()` 调用时解析。
 
+### Changed
+
+- **README 重构与皮肤预览 (README Restructure & Skin Preview)**: 重写 `README.md`（595 → 477 行），保留中英双语锚点结构并精简为「预览 / 特性 / 环境要求 / 安装 / 配置一览 / 工具 / 快捷键 / 可选模块 / 故障排除 / 致谢许可」紧凑布局：
+  - 快捷键表折叠进 `<details>`，`nyxniri` 与 `nyxhelp` 合并为 Tooling 一节；badges 8→5，admonition 块 7→2；全文去除模板化/AI 腔表述，新增 Requirements、Included Configs、Optional Modules、License 区块，链接 `LICENSE` 与 `CHANGELOG.md`。
+  - 新增 `preview/` 目录：`preview.webp`（桌面总览）由仓库根目录移入（Git 识别为 rename，blob 不重复存储），并新增 `light_skin.png`/`dark_skin.png`（NyxMellow 皮肤浅/深色展示图）；README 新增 `Preview / 预览` 画廊区块，修正图片引用路径。
+
 ## [v2.1.16] - 2026-08-02
 
 ### Changed
