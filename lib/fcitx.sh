@@ -65,12 +65,7 @@ fcitx_consent_ask() {
         fcitx_enabled
         return $?
     fi
-    local choice=""
-    read -p "$(msg ask_fcitx_install)" choice < /dev/tty || choice="n"
-    if [[ "$choice" =~ ^[Yy]$ ]]; then
-        return 0
-    fi
-    return 1
+    prompt_confirm ask_fcitx_install "n"
 }
 
 fcitx_templates_registered() {

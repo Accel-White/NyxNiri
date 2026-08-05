@@ -103,8 +103,16 @@ run_dep_menu_loop() {
             break
         fi
 
-        if [ -z "$choice" ]; then
+        if [ -z "$choice" ] || [[ "$choice" =~ ^[Ii]$ ]] || [ "$choice" = "0" ]; then
             break
+        fi
+
+        if [[ "$choice" =~ ^[Aa]$ ]]; then
+            for i in "${!DEPS[@]}"; do DEP_SELECT[$i]=1; done
+            continue
+        elif [[ "$choice" =~ ^[Nn]$ ]]; then
+            for i in "${!DEPS[@]}"; do DEP_SELECT[$i]=0; done
+            continue
         fi
 
         for num in $choice; do
@@ -151,11 +159,7 @@ ensure_aur_helper() {
         return 0
     fi
 
-    local choice="y"
-    if [ -t 0 ] && [ -c /dev/tty ]; then
-        read -p "$(msg aur_bootstrap_prompt)" choice < /dev/tty || choice="y"
-    fi
-    if [[ ! "$choice" =~ ^[Yy]$ ]]; then
+    if ! prompt_confirm aur_bootstrap_prompt "y"; then
         msg aur_bootstrap_skip
         return 1
     fi
@@ -326,10 +330,7 @@ check_mpvpaper_version() {
     else
         msg mpvpaper_leak_warn "$version"
         local choice=""
-        if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -p "$(msg mpvpaper_upgrade_prompt)" choice < /dev/tty || choice="n"
-        fi
-        if [[ "$choice" =~ ^[Yy]$ ]]; then
+        if prompt_confirm mpvpaper_upgrade_prompt "n"; then
             local mgr=""
             if ! mgr=$(aur_helper_usable); then
                 ensure_aur_helper || {
@@ -341,9 +342,11 @@ check_mpvpaper_version() {
                     return
                 }
             fi
-            $mgr -S --noconfirm mpvpaper-git && msg mpvpaper_upgrade_done || {
+            if $mgr -S --noconfirm mpvpaper-git; then
+                msg mpvpaper_upgrade_done
+            else
                 echo -e "\e[1;31m[-] Failed to install mpvpaper-git.\e[0m"
-            }
+            fi
         else
             msg mpvpaper_upgrade_skip
         fi

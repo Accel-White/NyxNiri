@@ -22,6 +22,15 @@
 - **开发者实机测试命令 `nyxniri test` (Test Deploy Command)**: 强制「不备份 + 保留 `monitor.kdl`（不询问）+ 跳过可选模块与依赖 + 零提示」的幂等重放，供维护者在实机快速验证部署。新增 `NYXNIRI_KEEP_MONITOR=1` 环境开关供 `deploy_selected_configs` 跳过显示器配置询问。
 - **System Doctor 健康检查增强 (Doctor Health Checks)**: `nyxniri doctor` 新增三项容错检查：`xdg-desktop-portal-gtk` 后端缺失告警、`$HOME` 磁盘剩余空间低于 10 GiB 告警、NyxMellow fcitx5 皮肤启用态检测；`generate_bug_report` 同步收录（新增第 6 节 "NyxNiri Health Checks"）。
 
+- **monitor.kdl 保留问询前置与无打断部署 (Uninterrupted Deploy Execution)**: 将 `monitor.kdl` 的显示器配置保留问询移至【前置集中配置卡片】阶段完成，彻底删除了物理复制过程中途突兀弹出的二次询问。部署执行零打断、一气呵成。
+- **可选模块规范化扩展架构 (Modular Options Registry Protocol)**: 建立了统一的可选模块规范接口 (`OPTIONAL_MODULES` 及 `module_is_available`/`module_get_name`/`module_get_status`/`module_deploy`)：
+  - **前置标准化卡片 (Pre-flight Setup Card)**：渲染结构化卡片，清晰呈现 Core、Hardware 以及各个可选模块的实时检测状态。
+  - **子菜单与完成卡片统一**：配合 CJK 感知对齐函数 `_disp_pad`，具备高扩展性，方便未来无缝添加新可选模块。
+- **在线管道 Standalone 模式代码时效性保障 (Online Bootstrap Freshness)**: `install.sh` 在 Standalone 模式下，当 `$CACHE_DIR/.git` 已经存在时，自动尝试 `git pull --ff-only`（带超时与降级），确保在线管道一键安装始终运行最新的 `main` 分支代码。
+- **依赖管理菜单快捷热键 (Dep Menu Hotkeys)**: `lib/deps.sh` 依赖勾选菜单支持快捷热键 `a` (全选)、`n` (全取消)、`i` (立即安装)，双语提示同步美化。
+- **DRY 交互助手与零语言磁盘文件 (DRY Confirm Helper & Zero Language Disk Artifacts)**: 抽象出 `prompt_confirm` 确认助手函数，精简 50+ 行重复交互代码；取消语言选择磁盘持久化，保证 `$HOME` 绝对纯净。
+- **README 极简排版与去 AI 味纯净润色 (De-AI README & Markdown Standard)**: 彻底扫除 README 中的机器感与膨胀修饰词，保持干净自然的 GitHub `##` 标题下方边框分隔；更正致谢与推荐项目描述（`glassy-niri` 标注参考 blur 效果，`shorin-niri` 标注“抄了很多！”，`noctalia-lyrics` 更正为状态栏歌词组件），修正折叠块内 HTML/Markdown 兼容性。
+
 ### Changed
 
 - `lib/i18n.sh` 的 `msg()` 保留 `$p1`/`$p2` 双参数支持（供 `delete_done` 等多值提示）；主菜单与全部子菜单文案重排，中英文同步更新。

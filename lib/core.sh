@@ -16,6 +16,7 @@ register_temp_path() {
 # Cleanup trap handler for unexpected signals or interruptions
 cleanup() {
     local exit_code=$?
+    release_lock
     local p
     if [ ${#CLEANUP_TEMP_PATHS[@]} -gt 0 ]; then
         for p in "${CLEANUP_TEMP_PATHS[@]:-}"; do
@@ -27,6 +28,33 @@ cleanup() {
     fi
 }
 trap cleanup EXIT INT TERM
+
+# Lightweight PID single-instance lock to prevent concurrent write collisions
+NYXNIRI_LOCK_FILE=""
+acquire_lock() {
+    mkdir -p "$LOG_DIR" 2>/dev/null || true
+    NYXNIRI_LOCK_FILE="$LOG_DIR/nyxniri.lock"
+    if [ -f "$NYXNIRI_LOCK_FILE" ]; then
+        local lock_pid
+        lock_pid=$(cat "$NYXNIRI_LOCK_FILE" 2>/dev/null || echo "")
+        if [ -n "$lock_pid" ] && kill -0 "$lock_pid" 2>/dev/null; then
+            echo -e "\n\e[1;33m[!] Another NyxNiri instance (PID: $lock_pid) is already running.\e[0m"
+            echo "    Aborting to prevent concurrent config modification."
+            exit 1
+        fi
+    fi
+    echo "$$" > "$NYXNIRI_LOCK_FILE" 2>/dev/null || true
+}
+
+release_lock() {
+    if [ -n "${NYXNIRI_LOCK_FILE:-}" ] && [ -f "$NYXNIRI_LOCK_FILE" ]; then
+        local pid
+        pid=$(cat "$NYXNIRI_LOCK_FILE" 2>/dev/null || echo "")
+        if [ "$pid" = "$$" ]; then
+            rm -f "$NYXNIRI_LOCK_FILE" 2>/dev/null || true
+        fi
+    fi
+}
 
 # Global Variables & Paths
 LANG_MODE="en"

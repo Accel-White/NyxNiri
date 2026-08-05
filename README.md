@@ -25,15 +25,11 @@
 
 ## Features
 
-- Noctalia V5 pulls the colors straight from your wallpaper; an `mpvpaper` hook
-  pushes video-wallpaper frames through `ffmpeg` so live wallpapers get themed
-  too.
-- Light/dark sync — GSettings and GTK follow Noctalia on their own.
-- Eye Care Mode (`Super+N`) for long sessions: warmer colors, no blur, opaque
-  windows.
-- Terminal & shell — Fish aliases for proxy and cache, Kitty cursor trails,
-  Windows-style shortcuts.
-- NyxMellow — a dynamic fcitx5 skin: mellow shapes, Noctalia colors.
+- Noctalia V5 pulls colors directly from your wallpaper; an `mpvpaper` hook extracts video frames via `ffmpeg` so live wallpapers generate palettes too.
+- Light/dark sync — GSettings and GTK follow Noctalia theme modes automatically.
+- Eye Care Mode (`Super+N`) for reading sessions: warmer color temperature, zero blur, solid opaque windows.
+- Shell & Terminal — Fish aliases for proxy/cache management, Kitty cursor trails, Windows-style shortcuts.
+- NyxMellow — a dynamic fcitx5 skin: mellow rounded geometry with Noctalia Material You color palette.
 
 ## Requirements
 
@@ -76,16 +72,13 @@ cd ~/NyxNiri && ./install.sh
 </details>
 
 > [!NOTE]
-> `install full` boots `paru` if you lack an AUR helper (`noctalia` and
-> `mpvpaper` come from AUR). Existing configs are backed up to
-> `~/.config/NyxNiri/backups/` before deploy. The legacy DMS setup lives on
-> `archive/v1-dms`.
+> `install full` boots `paru` if you lack an AUR helper (`noctalia` and `mpvpaper` come from AUR). Existing configs are backed up to `~/.config/NyxNiri/backups/` before deployment. Legacy DMS setup lives on `archive/v1-dms`.
 
 ## Included Configs
 
 ```text
 NyxNiri
-├── install.sh                  # installer (backup + dependency check)
+├── install.sh                  # installer & CLI entrypoint
 ├── lib/                        # deploy, backup, network, doctor, i18n…
 ├── Wallpapers/                 # wallpaper library
 ├── fcitx5/                     # NyxMellow fcitx5 skin templates
@@ -101,8 +94,7 @@ NyxNiri
 
 > [!NOTE]
 > Configs are replaced atomically on update. To keep personal tweaks:
-> - files matching `*__custom__*` (e.g. `__custom__.kdl`, `01__custom__.fish`)
->   are preserved — number prefixes control load order
+> - files matching `*__custom__*` (e.g. `__custom__.kdl`, `01__custom__.fish`) are preserved — number prefixes control load order
 > - any `*__custom__*` folder (e.g. `~/.config/niri/__custom__/`) is kept as-is
 
 ## Tooling
@@ -114,15 +106,15 @@ NyxNiri
 | `nyxniri` | Interactive menu |
 | `nyxniri install [full\|config]` | Deploy everything, or sync configs only |
 | `nyxniri update [--force]` | Update repo, optionally overwrite configs |
-| `nyxniri snapshot [note]` | Save the current config state |
+| `nyxniri snapshot [note]` | Save current config state |
 | `nyxniri snapshot delete [idx]` | Delete a snapshot (interactive if no index) |
 | `nyxniri rollback [index]` | Restore a snapshot |
 | `nyxniri list` | List snapshots |
 | `nyxniri uninstall` | Remove NyxNiri, restore previous configs |
 | `nyxniri purge` | Remove configs, cache and wallpapers |
 | `nyxniri doctor` | Dependency + system health check |
-| `nyxniri deps` | Open the dependency check & install menu |
-| `nyxniri bug` / `nyxniri report` | Generate a diagnostic bug report |
+| `nyxniri deps` | Open dependency check & install menu |
+| `nyxniri bug` / `nyxniri report` | Generate diagnostic bug report |
 | `nyxniri test` | Developer test deploy (no backup, keep monitor.kdl) |
 | `nyxniri fcitx [install\|status\|uninstall]` | NyxMellow fcitx5 skin |
 | `nyxniri greeter [install\|status\|uninstall]` | Noctalia Greeter (login screen) |
@@ -186,10 +178,7 @@ NyxNiri
 
 ## Optional Modules
 
-**NyxMellow fcitx5 skin:** rounded mellow shapes, colors track the Noctalia
-palette (auto light/dark). `nyxniri fcitx install` registers it as a Noctalia
-template and re-renders it on each wallpaper or theme change. The skin is
-opt-in — it is never auto-enabled without consent.
+**NyxMellow fcitx5 skin:** mellow rounded shape with colors matching the Noctalia palette (auto light/dark switch). `nyxniri fcitx install` registers it as a Noctalia user template and re-renders it on wallpaper or theme changes. The skin is opt-in — it is never auto-enabled without consent.
 
 <p align="center">
   <img src="./preview/light_skin.png" alt="NyxMellow skin (light)" width="372" />
@@ -198,19 +187,14 @@ opt-in — it is never auto-enabled without consent.
 
 *NyxMellow skin in light and dark mode.*
 
-**Noctalia Greeter:** a greetd login screen matching the Noctalia theme.
-`nyxniri greeter install` pulls `greetd` + `noctalia-greeter` from AUR, backs
-up `/etc/greetd/config.toml`, and writes a Polkit rule. It won't disable an
-existing display manager.
+**Noctalia Greeter:** a greetd login screen matching Noctalia style. `nyxniri greeter install` pulls `greetd` + `noctalia-greeter` from AUR, backs up `/etc/greetd/config.toml`, and writes a Polkit rule. It does not disable pre-existing display managers.
 
 ## Troubleshooting
 
 <details>
-<summary><b>Noctalia hangs on startup</b> — <code>ddcutil</code> can time out
-scanning the I2C bus (common on NVIDIA).</summary>
+<summary><b>Noctalia hangs on startup</b> — <code>ddcutil</code> can time out scanning the I2C bus (common on NVIDIA).</summary>
 
-> [!WARNING]
-> Disable it in `~/.config/noctalia/noctalia-config.toml`:
+**Warning:** Disable `ddcutil` in `~/.config/noctalia/noctalia-config.toml`:
 
 ```toml
 [brightness]
@@ -220,8 +204,9 @@ enable_ddcutil = false
 </details>
 
 <details>
-<summary><b>Plugin repo corrupted</b> — Noctalia hangs while checking out
-plugins.</summary>
+<summary><b>Plugin repo corrupted</b> — Noctalia hangs while checking out plugins.</summary>
+
+Run the following commands to reset the plugin repos:
 
 ```bash
 git -C ~/.local/state/noctalia/plugins/sources/community/repo reset --hard HEAD
@@ -231,11 +216,9 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 </details>
 
 <details>
-<summary><b>Greeter sync asks for a password</b> — add a Polkit rule
-(<code>nyxniri greeter install</code> does this for you).</summary>
+<summary><b>Greeter sync asks for a password</b> — add a Polkit rule (<code>nyxniri greeter install</code> does this for you).</summary>
 
-> [!TIP]
-> Run this to install it manually:
+**Tip:** Run this to install the Polkit rule manually if needed:
 
 ```bash
 sudo bash -c 'cat > /etc/polkit-1/rules.d/50-noctalia-greeter.rules << EOF
@@ -262,19 +245,15 @@ EOF'
 
 **Thanks to:**
 
-- [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri)
-- [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri)
-- [sanweiya/fcitx5-mellow-themes](https://github.com/sanweiya/fcitx5-mellow-themes) —
-  the mellow shape behind the NyxMellow skin
-- [StarWhiteIsBusy/Round-Simple-Fcitx5-Skin](https://github.com/StarWhiteIsBusy/Round-Simple-Fcitx5-Skin) —
-  the Noctalia color-sync pattern used by the NyxMellow skin
+- [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) — blur effects reference
+- [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri) — heavily referenced
+- [sanweiya/fcitx5-mellow-themes](https://github.com/sanweiya/fcitx5-mellow-themes) — mellow shape source for NyxMellow skin
+- [StarWhiteIsBusy/Round-Simple-Fcitx5-Skin](https://github.com/StarWhiteIsBusy/Round-Simple-Fcitx5-Skin) — Noctalia color-sync pattern reference
 
 **Recommended:**
 
-- [h465855hgg/noctalia-lyrics](https://github.com/h465855hgg/noctalia-lyrics) —
-  desktop lyrics widget
-- [Ocfeather/chrome-niri-opacity](https://github.com/Ocfeather/chrome-niri-opacity) —
-  browser opacity script
+- [h465855hgg/noctalia-lyrics](https://github.com/h465855hgg/noctalia-lyrics) — status bar lyrics widget
+- [Ocfeather/chrome-niri-opacity](https://github.com/Ocfeather/chrome-niri-opacity) — browser opacity script
 
 ---
 
@@ -290,10 +269,10 @@ EOF'
 ## 核心特性
 
 - Noctalia V5 直接从壁纸取色；`mpvpaper` 钩子把视频壁纸帧经 `ffmpeg` 送进取色管线，动态壁纸同样参与取色。
-- 明暗同步 — GSettings 与 GTK 自动跟随 Noctalia 切换。
+- 明暗模式同步 — GSettings 与 GTK 自动跟随 Noctalia 切换。
 - 护眼模式（Eye Care Mode，`Super+N`）适合长时间阅读：调暖色温、关闭模糊、强制不透明背景。
 - 终端与 Shell：Fish 代理/缓存别名，Kitty 光标轨迹，Windows 风格快捷键。
-- NyxMellow 动态 fcitx5 皮肤 — mellow 圆角形状，Noctalia 自动取色。
+- NyxMellow 动态 fcitx5 皮肤：mellow 圆角形状，随 Noctalia 自动取色。
 
 ## 环境要求
 
@@ -336,9 +315,7 @@ cd ~/NyxNiri && ./install.sh
 </details>
 
 > [!NOTE]
-> `install full` 在缺少 AUR helper 时会自动自举 `paru`（`noctalia` 与
-> `mpvpaper` 均为 AUR 包）。部署前可先将现有配置备份至
-> `~/.config/NyxNiri/backups/`。旧版 DMS 配置位于 `archive/v1-dms` 分支。
+> `install full` 在缺少 AUR helper 时会自动自举 `paru`（`noctalia` 与 `mpvpaper` 均为 AUR 包）。部署前可先将现有配置备份至 `~/.config/NyxNiri/backups/`。旧版 DMS 配置位于 `archive/v1-dms` 分支。
 
 ## 配置一览
 
@@ -460,8 +437,7 @@ NyxNiri
 <details>
 <summary><b>Noctalia 启动卡死</b> — 多为 <code>ddcutil</code> 扫描 I2C 总线超时（NVIDIA 常见）。</summary>
 
-> [!WARNING]
-> 在 `~/.config/noctalia/noctalia-config.toml` 中禁用：
+**警告：** 在 `~/.config/noctalia/noctalia-config.toml` 中禁用：
 
 ```toml
 [brightness]
@@ -473,6 +449,8 @@ enable_ddcutil = false
 <details>
 <summary><b>插件仓库损坏</b> — Noctalia 拉取插件卡住。</summary>
 
+运行以下命令重置插件仓库：
+
 ```bash
 git -C ~/.local/state/noctalia/plugins/sources/community/repo reset --hard HEAD
 git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
@@ -483,8 +461,7 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 <details>
 <summary><b>Greeter 同步需要输密码</b> — 添加 Polkit 免密规则（<code>nyxniri greeter install</code> 会自动写入）。</summary>
 
-> [!TIP]
-> 手动安装：
+**提示：** 手动安装 Polkit 规则：
 
 ```bash
 sudo bash -c 'cat > /etc/polkit-1/rules.d/50-noctalia-greeter.rules << EOF
@@ -511,19 +488,15 @@ EOF'
 
 **致谢：**
 
-- [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri)
-- [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri)
-- [sanweiya/fcitx5-mellow-themes](https://github.com/sanweiya/fcitx5-mellow-themes) —
-  NyxMellow 皮肤圆角形状的来源
-- [StarWhiteIsBusy/Round-Simple-Fcitx5-Skin](https://github.com/StarWhiteIsBusy/Round-Simple-Fcitx5-Skin) —
-  NyxMellow 皮肤所采用的 Noctalia 取色联动方案参考
+- [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) — 参考了 blur 效果
+- [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri) — 抄了很多！
+- [sanweiya/fcitx5-mellow-themes](https://github.com/sanweiya/fcitx5-mellow-themes) — NyxMellow 皮肤圆角形状的来源
+- [StarWhiteIsBusy/Round-Simple-Fcitx5-Skin](https://github.com/StarWhiteIsBusy/Round-Simple-Fcitx5-Skin) — NyxMellow 皮肤所采用的 Noctalia 取色联动方案参考
 
 **推荐项目：**
 
-- [h465855hgg/noctalia-lyrics](https://github.com/h465855hgg/noctalia-lyrics) —
-  桌面歌词组件
-- [Ocfeather/chrome-niri-opacity](https://github.com/Ocfeather/chrome-niri-opacity) —
-  浏览器透明度脚本
+- [h465855hgg/noctalia-lyrics](https://github.com/h465855hgg/noctalia-lyrics) — 状态栏歌词组件
+- [Ocfeather/chrome-niri-opacity](https://github.com/Ocfeather/chrome-niri-opacity) — 浏览器透明度脚本
 
 ---
 

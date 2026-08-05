@@ -134,7 +134,8 @@ greeter_apply_greetd_config() {
         return 0
     fi
 
-    local bak="${GREETER_ETC_CFG}.nyxniri.bak.$(date +%Y%m%d_%H%M%S)"
+    local bak
+    bak="${GREETER_ETC_CFG}.nyxniri.bak.$(date +%Y%m%d_%H%M%S)"
     if [ -f "$GREETER_ETC_CFG" ]; then
         sudo cp -a "$GREETER_ETC_CFG" "$bak" 2>/dev/null || true
     fi

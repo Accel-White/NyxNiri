@@ -78,6 +78,9 @@ main() {
 
     if [ ! -d "$CACHE_DIR/.git" ]; then
         clone_repo_bootstrap "$CACHE_DIR" || exit 1
+    else
+        echo -e "\e[1;34m:: [Bootstrapper] 正在更新缓存中的 NyxNiri 仓库... \e[0m" >&2
+        git -C "$CACHE_DIR" pull --ff-only --quiet 2>/dev/null || true
     fi
 
     if [ -f "$CACHE_DIR/lib/main.sh" ]; then

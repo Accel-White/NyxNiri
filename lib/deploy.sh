@@ -86,11 +86,7 @@ deploy_selected_configs() {
         if [ -e "$src" ]; then
             local temp_monitor=""
             if [ "$item" = "niri" ] && [ -f "$dest/monitor.kdl" ]; then
-                local mon_choice="y"
-                if [ "${NYXNIRI_KEEP_MONITOR:-0}" != "1" ] && [ -t 0 ] && [ -c /dev/tty ]; then
-                    read -p "$(msg ask_keep_monitor)" mon_choice < /dev/tty || mon_choice="y"
-                fi
-                if [[ "$mon_choice" =~ ^[Yy]$ || -z "$mon_choice" ]]; then
+                if [ "${KEEP_MONITOR:-1}" = "1" ] || [ "${NYXNIRI_KEEP_MONITOR:-0}" = "1" ]; then
                     temp_monitor=$(mktemp)
                     register_temp_path "$temp_monitor"
                     cp "$dest/monitor.kdl" "$temp_monitor"
@@ -143,7 +139,7 @@ deploy_selected_configs() {
         sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/niri/config.kdl"
         local rel_pics_dir esc_rel_pics_dir
         if [[ "$pics_dir" == "$HOME"* ]]; then
-            rel_pics_dir="~${pics_dir#$HOME}"
+            rel_pics_dir="~${pics_dir#"$HOME"}"
         else
             rel_pics_dir="$pics_dir"
         fi
@@ -368,34 +364,46 @@ install_configs() {
     local do_backup="nobackup"
     local do_fcitx="n"
     local do_greeter="n"
+    export KEEP_MONITOR=1
+
     local fcitx_available=false
     if fcitx5_installed; then
         fcitx_available=true
     fi
 
     # ------------------------------------------------------------------
-    # Phase 0: Pre-flight checklist (interactive). Optional modules are
-    # chosen UP FRONT — nothing is silently auto-enabled. fcitx5 is always
-    # re-asked when present, since updates may ship skin changes.
+    # Phase 0: Pre-flight checklist (interactive & standardized card)
     # ------------------------------------------------------------------
     if [ -t 0 ] && [ -c /dev/tty ]; then
-        msg install_plan_header
-        msg install_plan_configs
-        msg install_plan_wallpapers
-        [ "$mode" = "full" ] && msg install_plan_deps
-        [ "$fcitx_available" = true ] && msg install_plan_fcitx
-        [ "$mode" = "full" ] && msg install_plan_greeter
-        echo ""
+        echo -e "\n=================================================="
+        echo -e " \e[1;36m[ NyxNiri Setup — Pre-flight Configuration ]\e[0m"
+        echo -e "=================================================="
+        echo -e "  · \e[1m[Core]\e[0m Configuration Files & Wallpaper Library"
+        if [ -f "$HOME/.config/niri/monitor.kdl" ]; then
+            echo -e "  · \e[1m[Hardware]\e[0m Personal Monitor Settings (~/.config/niri/monitor.kdl)"
+        fi
+        if [ "$fcitx_available" = true ]; then
+            echo -e "  · \e[1m[Module]\e[0m NyxMellow fcitx5 skin ($(fcitx_status_label))"
+        fi
+        if [ "$mode" = "full" ]; then
+            echo -e "  · \e[1m[Module]\e[0m Noctalia Greeter ($(greeter_status_label))"
+        fi
+        echo -e "==================================================\n"
 
-        local choice=""
-        read -p "$(msg ask_backup_before_deploy)" choice < /dev/tty || choice="n"
-        if [[ "$choice" =~ ^[Yy]$ ]]; then
+        if [ -f "$HOME/.config/niri/monitor.kdl" ]; then
+            if prompt_confirm ask_keep_monitor "y"; then
+                export KEEP_MONITOR=1
+            else
+                export KEEP_MONITOR=0
+            fi
+        fi
+
+        if prompt_confirm ask_backup_before_deploy "n"; then
             do_backup="backup"
         fi
 
         if [ "$fcitx_available" = true ]; then
-            read -p "$(msg ask_fcitx_install)" choice < /dev/tty || choice="n"
-            if [[ "$choice" =~ ^[Yy]$ ]]; then
+            if prompt_confirm ask_fcitx_install "n"; then
                 do_fcitx="y"
             fi
         else
@@ -403,21 +411,19 @@ install_configs() {
         fi
 
         if [ "$mode" = "full" ]; then
-            read -p "$(msg greeter_ask)" choice < /dev/tty || choice="n"
-            if [[ "$choice" =~ ^[Yy]$ ]]; then
+            if prompt_confirm greeter_ask "n"; then
                 do_greeter="y"
             fi
         fi
 
-        read -p "$(msg install_confirm)" choice < /dev/tty || choice="y"
-        if [[ ! "$choice" =~ ^[Yy]$ ]]; then
+        if ! prompt_confirm install_confirm "y"; then
             msg install_cancelled
             return 0
         fi
     fi
 
     # ------------------------------------------------------------------
-    # Numbered steps
+    # Numbered steps (Uninterrupted Execution Phase)
     # ------------------------------------------------------------------
     local step_total=2
     [ "$mode" = "full" ] && step_total=$((step_total + 1))

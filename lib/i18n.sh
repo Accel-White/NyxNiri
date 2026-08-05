@@ -187,7 +187,7 @@ msg() {
 
             # Dependency Menu
             dep_menu_title) echo -e "\n\e[1;33m:: 请选择要安装的依赖（输入数字切换，直接回车开始安装）：\e[0m" ;;
-            dep_menu_hint) echo -e "输入空格分隔的序列号（如 1 3 5）来勾选/取消，直接回车开始安装选中包：" ;;
+            dep_menu_hint) echo -e "输入数字勾选/取消，或使用热键 [\e[1;32ma\e[0m]全选 [\e[1;32mn\e[0m]全取消 [\e[1;32mi\e[0m/回车]开始安装: " ;;
             installing_selected) echo -e "\n\e[1;34m:: 正在通过包管理器安装选中的依赖...\e[0m" ;;
 
             # Optional Greeter Module
@@ -429,7 +429,7 @@ msg() {
 
             # Dependency Menu
             dep_menu_title) echo -e "\n\e[1;33m:: Select dependencies to install (type numbers to toggle, press Enter to confirm):\e[0m" ;;
-            dep_menu_hint) echo -e "Type space-separated numbers (e.g. 1 3 5) to toggle, then press Enter to install:" ;;
+            dep_menu_hint) echo -e "Type numbers to toggle, or hotkeys [\e[1;32ma\e[0m]All [\e[1;32mn\e[0m]None [\e[1;32mi\e[0m/Enter]Install: " ;;
             copy_done) echo -e "\e[1;32mConfigurations deployed and copied successfully!\e[0m" ;;
 
             # Optional Greeter Module
@@ -543,4 +543,17 @@ select_language() {
     else
         LANG_MODE="zh"
     fi
+}
+
+# General bilingual prompt confirmation helper.
+# Returns 0 for Yes (y/Y), 1 for No.
+prompt_confirm() {
+    local msg_key="$1" default="${2:-n}"
+    [ "${NYXNIRI_AUTO_YES:-0}" = "1" ] && return 0
+    if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
+        [[ "$default" =~ ^[Yy]$ ]] && return 0 || return 1
+    fi
+    local choice=""
+    read -r -p "$(msg "$msg_key")" choice < /dev/tty || choice="$default"
+    [[ "$choice" =~ ^[Yy]$ ]]
 }

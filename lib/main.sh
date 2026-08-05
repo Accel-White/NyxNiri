@@ -250,6 +250,7 @@ main() {
         exit 1
     fi
 
+    acquire_lock
     init_logger
     log_msg "INFO" "NyxNiri CLI launched in $RUN_MODE mode ($MODE_LABEL)"
     ensure_nyxniri_symlink
@@ -327,7 +328,6 @@ main() {
                         exit $?
                         ;;
                 esac
-                exit 0
                 ;;
             fcitx)
                 shift
@@ -349,7 +349,6 @@ main() {
                         exit 0
                         ;;
                 esac
-                exit 0
                 ;;
             update)
                 shift

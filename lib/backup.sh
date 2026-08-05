@@ -28,27 +28,29 @@ discover_config_items() {
 
 backup_configs() {
     local note="${1:-}"
-    local interactive_mode=true
-    if [ -n "${2:-}" ] || [ ! -t 0 ]; then
-        interactive_mode=false
-    fi
 
     msg backing_up
     local timestamp
     timestamp=$(date +%Y%m%d_%H%M%S)
     local backup_dir="$BACKUP_BASE_DIR/snapshot_$timestamp"
-    mkdir -p "$backup_dir"
+
+    local tmp_snap
+    tmp_snap=$(mktemp -d) || return 1
+    register_temp_path "$tmp_snap"
 
     for item in "${CONFIG_ITEMS[@]}"; do
         if [ -e "$HOME/.config/$item" ]; then
-            cp -rP "$HOME/.config/$item" "$backup_dir/"
+            cp -rP "$HOME/.config/$item" "$tmp_snap/"
             echo "  Backed up: ~/.config/$item"
         fi
     done
 
     if [ -n "$note" ]; then
-        echo "$note" > "$backup_dir/note.txt"
+        echo "$note" > "$tmp_snap/note.txt"
     fi
+
+    mkdir -p "$BACKUP_BASE_DIR"
+    mv "$tmp_snap" "$backup_dir"
 
     msg backup_done "$backup_dir"
 }
@@ -132,13 +134,17 @@ rollback_configs() {
     local pre_ts
     pre_ts=$(date +%Y%m%d_%H%M%S)
     local pre_dir="$BACKUP_BASE_DIR/pre_rollback_$pre_ts"
-    mkdir -p "$pre_dir"
+    local pre_tmp
+    pre_tmp=$(mktemp -d) || return 1
+    register_temp_path "$pre_tmp"
     for item in "${CONFIG_ITEMS[@]}"; do
         if [ -e "$HOME/.config/$item" ]; then
-            cp -rP "$HOME/.config/$item" "$pre_dir/"
+            cp -rP "$HOME/.config/$item" "$pre_tmp/"
         fi
     done
-    echo "pre-rollback safety snapshot" > "$pre_dir/note.txt"
+    echo "pre-rollback safety snapshot" > "$pre_tmp/note.txt"
+    mkdir -p "$BACKUP_BASE_DIR"
+    mv "$pre_tmp" "$pre_dir"
     msg pre_rollback_backup "$pre_dir"
 
     msg rolling_back "$selected_bname"
