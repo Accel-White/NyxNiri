@@ -115,11 +115,15 @@ NyxNiri
 | `nyxniri install [full\|config]` | Deploy everything, or sync configs only |
 | `nyxniri update [--force]` | Update repo, optionally overwrite configs |
 | `nyxniri snapshot [note]` | Save the current config state |
+| `nyxniri snapshot delete [idx]` | Delete a snapshot (interactive if no index) |
 | `nyxniri rollback [index]` | Restore a snapshot |
 | `nyxniri list` | List snapshots |
 | `nyxniri uninstall` | Remove NyxNiri, restore previous configs |
 | `nyxniri purge` | Remove configs, cache and wallpapers |
 | `nyxniri doctor` | Dependency + system health check |
+| `nyxniri deps` | Open the dependency check & install menu |
+| `nyxniri bug` / `nyxniri report` | Generate a diagnostic bug report |
+| `nyxniri test` | Developer test deploy (no backup, keep monitor.kdl) |
 | `nyxniri fcitx [install\|status\|uninstall]` | NyxMellow fcitx5 skin |
 | `nyxniri greeter [install\|status\|uninstall]` | Noctalia Greeter (login screen) |
 
@@ -184,7 +188,8 @@ NyxNiri
 
 **NyxMellow fcitx5 skin:** rounded mellow shapes, colors track the Noctalia
 palette (auto light/dark). `nyxniri fcitx install` registers it as a Noctalia
-template and re-renders it on each wallpaper or theme change.
+template and re-renders it on each wallpaper or theme change. The skin is
+opt-in — it is never auto-enabled without consent.
 
 <p align="center">
   <img src="./preview/light_skin.png" alt="NyxMellow skin (light)" width="372" />
@@ -368,11 +373,15 @@ NyxNiri
 | `nyxniri install [full\|config]` | 全量部署，或仅同步配置 |
 | `nyxniri update [--force]` | 更新仓库，可选覆盖配置 |
 | `nyxniri snapshot [备注]` | 保存当前配置状态 |
+| `nyxniri snapshot delete [序号]` | 删除指定快照（无参时交互选择） |
 | `nyxniri rollback [序号]` | 恢复历史快照 |
 | `nyxniri list` | 查看快照列表 |
 | `nyxniri uninstall` | 卸载并复原配置 |
 | `nyxniri purge` | 清除配置、缓存与壁纸 |
 | `nyxniri doctor` | 依赖与系统健康检查 |
+| `nyxniri deps` | 打开依赖检查与安装菜单 |
+| `nyxniri bug` / `nyxniri report` | 生成诊断 Bug Report |
+| `nyxniri test` | 开发者实机测试部署（不备份、保留 monitor.kdl） |
 | `nyxniri fcitx [install\|status\|uninstall]` | NyxMellow fcitx5 皮肤 |
 | `nyxniri greeter [install\|status\|uninstall]` | Noctalia Greeter（登录界面） |
 
@@ -435,7 +444,7 @@ NyxNiri
 
 ## 可选模块
 
-**NyxMellow fcitx5 皮肤：** 圆角 mellow 形状，颜色随 Noctalia 主题自动取色（明暗自动切换）。运行 `nyxniri fcitx install` 注册为 Noctalia 模板，每次换壁纸/切换明暗时自动重渲染。
+**NyxMellow fcitx5 皮肤：** 圆角 mellow 形状，颜色随 Noctalia 主题自动取色（明暗自动切换）。运行 `nyxniri fcitx install` 注册为 Noctalia 模板，每次换壁纸/切换明暗时自动重渲染。皮肤为显式勾选制，不会被静默启用。
 
 <p align="center">
   <img src="./preview/light_skin.png" alt="NyxMellow 皮肤（亮色）" width="372" />

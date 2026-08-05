@@ -16,6 +16,10 @@ FCITX_TEMPLATE_DIR="$FCITX_THEME_DIR/templates"
 FCITX_CLASSICUI_CONF="$HOME/.config/fcitx5/conf/classicui.conf"
 FCITX_NOCTALIA_CONFIG="$HOME/.config/noctalia/noctalia-config.toml"
 FCITX_STATE_FILE="$HOME/.local/state/NyxNiri/fcitx-$FCITX_THEME-theme.prev"
+# Consent marker: touched only when the user explicitly opts into the skin
+# (via `nyxniri fcitx install` or an install/update consent prompt). Automation
+# (non-interactive deploys) refreshes the skin only when this marker exists.
+FCITX_ENABLED_MARKER="$HOME/.local/state/NyxNiri/fcitx-$FCITX_THEME.enabled"
 FCITX_TEMPLATE_PREFIX="theme.templates.user.nyxmellow_"
 
 # Resolve the repo source dir at call time: REPO_DIR is set by
@@ -31,6 +35,42 @@ fcitx5_installed() {
 
 noctalia_available() {
     command -v noctalia >/dev/null 2>&1
+}
+
+# Compact status label for menus (bilingual via i18n).
+fcitx_status_label() {
+    if ! fcitx5_installed; then
+        msg status_fcitx5_missing
+    elif fcitx_enabled; then
+        msg status_enabled
+    else
+        msg status_disabled
+    fi
+}
+
+fcitx_enabled() {
+    [ -f "$FCITX_ENABLED_MARKER" ]
+}
+
+# Consent gate for applying/refreshing the NyxMellow skin. Always asks when
+# fcitx5 is installed (updates may ship skin changes); non-interactive only
+# auto-refreshes when the user previously opted in (marker present). Returns
+# 0 to apply, 1 to skip.
+fcitx_consent_ask() {
+    if ! fcitx5_installed; then
+        msg fcitx_skipped_not_installed
+        return 1
+    fi
+    if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
+        fcitx_enabled
+        return $?
+    fi
+    local choice=""
+    read -p "$(msg ask_fcitx_install)" choice < /dev/tty || choice="n"
+    if [[ "$choice" =~ ^[Yy]$ ]]; then
+        return 0
+    fi
+    return 1
 }
 
 fcitx_templates_registered() {
@@ -115,16 +155,22 @@ fcitx_install() {
     fi
     if fcitx5_installed; then
         fcitx_set_theme_conf
+        fcitx_trigger_render
+        fcitx_restart
+        mkdir -p "$(dirname "$FCITX_ENABLED_MARKER")"
+        touch "$FCITX_ENABLED_MARKER"
     else
         msg fcitx_skip_no_fcitx5
     fi
-    fcitx_trigger_render
-    fcitx_restart
 }
 
-# Failure-tolerant entry used by the main deploy flow (never aborts set -e).
+# Failure-tolerant entry used by the update flow (never aborts set -e).
+# Consent-gated: never auto-enables an unregistered skin. fcitx5 must be
+# present; interactive runs always re-ask, since updates may ship skin changes.
 deploy_fcitx_theme() {
-    fcitx_install || true
+    if fcitx_consent_ask; then
+        fcitx_install || true
+    fi
 }
 
 fcitx_status() {
@@ -202,6 +248,8 @@ fcitx_uninstall() {
         fi
         rm -f "$FCITX_STATE_FILE"
     fi
+
+    rm -f "$FCITX_ENABLED_MARKER" 2>/dev/null || true
 
     fcitx_restart
     msg fcitx_uninstall_done

@@ -1,5 +1,33 @@
 # Changelog
 
+## [v2.1.18] - 2026-08-05
+
+### Added
+
+- **快照手动删除 (Snapshot Delete)**: 新增 `nyxniri snapshot delete [序号]` 子命令，替代初版 `snapshot prune` 自动保留策略（快照体积小，保留策略属过度设计）：
+  - `lib/backup.sh` 新增 `delete_backup()`：无参时交互列出快照供选择、有参直接校验，删除前强制二次确认（最旧快照可能承载安装前状态，`uninstall 原路复原` 依赖它），删除后显示剩余数量。
+  - `get_all_backups()` 显式时间排序（ISO 时间戳字典序即时间序）；回滚前的安全备份统一收纳至 `~/.config/NyxNiri/backups/pre_rollback_*`，不再散落在 `~/.config` 根目录（旧版 `dotfiles_backup_*` 目录仍兼容识别）。
+- **菜单 / CLI 全量对齐 + 模块状态显示 (Menu↔CLI Parity & Status Labels)**: 交互式菜单重构为 9 项主菜单 + 子菜单，功能与 CLI 完全等价：
+  - 新增「快照管理」子菜单（创建/列表/删除/回滚）、「可选模块」子菜单（Noctalia Greeter / NyxMellow fcitx5 皮肤 / 深度清除，各带 install/status/uninstall 嵌套菜单）。
+  - 可选模块子菜单实时显示安装状态标签（`[已安装+已启用]`/`[已安装]`/`[未安装]`/`[已启用]`/`[未启用]`/`[fcitx5 未装]`），由新增 `greeter_status_label()`/`fcitx_status_label()` 计算。
+  - CLI 新增 `deps`（依赖菜单）、`bug`/`report`（Bug Report 导出）、`snapshot delete`，并同步更新 `help` 与 fish 补全（`v2/fish/completions/nyxniri.fish`）。
+- **安装流程重构：前置清单 + 编号步骤 + 完成汇总 (Install Flow Redesign)**: `install_configs` 彻底重构，解决"可选模块无前置选择权、部署中静默启用、步骤无反馈"的问题：
+  - **前置清单**：交互安装开始时打印"即将执行"计划，随后依次询问部署前备份、NyxMellow fcitx5 皮肤（检测到 fcitx5 时**每次必问**，因更新可能带来皮肤改动）、Noctalia Greeter（仅 full）、确认开始。
+  - **编号步骤**：`[1/5] 部署配置 → [2/5] 壁纸 → [3/5] 可选模块 → [4/5] 依赖 → [5/5] Greeter`（config 模式自适应）。
+  - **完成汇总**：逐项 ✓/跳过状态 + 保留自定义项报告（见下），安装结果一目了然。
+- **NyxMellow 皮肤改为显式勾选制 (Skin Opt-in Consent)**: 修复部署时皮肤被无提示自动启用的问题：
+  - 新增 `fcitx_consent_ask()` 与持久化启用标记 `~/.local/state/NyxNiri/fcitx-nyxmellow.enabled`：交互时始终询问；非交互自动化仅在用户此前已明确启用（标记存在）时才刷新皮肤，未启用一律跳过。
+  - `deploy_fcitx_theme`（更新流程入口）改为先征询再应用，不再无条件自动启用；`nyxniri fcitx install` 成功写入标记、`uninstall` 清除标记。
+- **Customizations Preserved 移入安装汇总 (Custom-Preserved Report in Summary)**: 提取 `print_custom_preserved()`，`deploy_selected_configs` 不再中途输出大色块，改由安装/更新流程尾部的完成汇总统一呈现。
+- **开发者实机测试命令 `nyxniri test` (Test Deploy Command)**: 强制「不备份 + 保留 `monitor.kdl`（不询问）+ 跳过可选模块与依赖 + 零提示」的幂等重放，供维护者在实机快速验证部署。新增 `NYXNIRI_KEEP_MONITOR=1` 环境开关供 `deploy_selected_configs` 跳过显示器配置询问。
+- **System Doctor 健康检查增强 (Doctor Health Checks)**: `nyxniri doctor` 新增三项容错检查：`xdg-desktop-portal-gtk` 后端缺失告警、`$HOME` 磁盘剩余空间低于 10 GiB 告警、NyxMellow fcitx5 皮肤启用态检测；`generate_bug_report` 同步收录（新增第 6 节 "NyxNiri Health Checks"）。
+
+### Changed
+
+- `lib/i18n.sh` 的 `msg()` 保留 `$p1`/`$p2` 双参数支持（供 `delete_done` 等多值提示）；主菜单与全部子菜单文案重排，中英文同步更新。
+- **菜单视觉统一 (Menu Visual Unification)**: 统一屏幕标题为 `=== 标题 ===`（安装汇总原 `═══` 并入），删除主菜单与 logo 重复的 `welcome` 欢迎行；`9) 可选模块` 配色由黄转绿（破坏=红 / 退出=灰语义不变）；`按任意键返回主菜单` 文案修正为 `按任意键继续`（子菜单通用）；新增 CJK 感知补白函数 `_disp_pad()` 使「可选模块」菜单的安装状态列中英文右对齐；语言选择屏改为青色标题 + 绿色编号，与主菜单风格一致。
+- README 更新 Tooling 表（`snapshot delete`/`deps`/`bug`/`test`）、安装流程说明（前置清单 + 步骤 + 汇总）与可选模块说明（皮肤显式勾选制）。
+
 ## [v2.1.17] - 2026-08-03
 
 ### Added

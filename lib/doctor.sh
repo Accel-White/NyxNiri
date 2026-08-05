@@ -118,6 +118,35 @@ run_doctor() {
         msg doctor_warn "Desktop Portal: xdg-desktop-portal is not active."
     fi
 
+    # GTK portal backend (file dialogs / screen capture in GTK apps)
+    if command -v pacman >/dev/null 2>&1 && pacman -Qq xdg-desktop-portal-gtk >/dev/null 2>&1; then
+        msg doctor_ok "Desktop Portal: xdg-desktop-portal-gtk backend is installed."
+    elif command -v pacman >/dev/null 2>&1; then
+        msg doctor_warn "Desktop Portal: xdg-desktop-portal-gtk is missing. (GTK apps may lack native file dialogs; install with: paru -S xdg-desktop-portal-gtk)"
+    fi
+
+    # Free disk space on $HOME (10 GiB threshold)
+    local disk_free_kb=""
+    disk_free_kb=$(df -k --output=avail "$HOME" 2>/dev/null | awk 'NR==2{print $1}' || true)
+    if [ -n "${disk_free_kb:-}" ]; then
+        if [ "$disk_free_kb" -lt $((10 * 1024 * 1024)) ]; then
+            local free_human
+            free_human=$(awk -v k="$disk_free_kb" 'BEGIN{ if (k >= 1048576) printf "%.1f GiB", k/1048576; else if (k >= 1024) printf "%.1f MiB", k/1024; else printf "%d KiB", k }')
+            msg doctor_warn "Disk Space: only $free_human free on $HOME. (Try: clean-cache or nyxniri snapshot prune)"
+        else
+            msg doctor_ok "Disk Space: sufficient free space on $HOME."
+        fi
+    fi
+
+    # NyxMellow fcitx5 skin enabled state (only relevant when fcitx5 is around)
+    if command -v fcitx5 >/dev/null 2>&1 || [ -f "$HOME/.config/fcitx5/conf/classicui.conf" ]; then
+        if fcitx_enabled; then
+            msg doctor_ok "Fcitx5: NyxMellow skin is enabled (will auto-refresh on update)."
+        else
+            msg doctor_warn "Fcitx5: NyxMellow skin not enabled. (Run: nyxniri fcitx install)"
+        fi
+    fi
+
     # Virtual Machine Check
     if command -v lspci >/dev/null 2>&1 && lspci | grep -i -q "VMware\|VirtualBox\|QEMU\|Virtio"; then
         msg doctor_warn "Virtual Machine detected (VMware/VirtualBox/QEMU). Ensure 'Accelerate 3D Graphics' is enabled in VM settings to avoid black screen in Niri Wayland!"
@@ -194,7 +223,22 @@ generate_bug_report() {
         systemctl --user status xdg-desktop-portal 2>/dev/null | head -n 10 || echo "xdg-desktop-portal service check failed"
         echo '```'
         echo ""
-        echo "## 6. Noctalia Hook Log (Last 20 Lines)"
+        echo "## 6. NyxNiri Health Checks"
+        echo '```text'
+        if command -v pacman >/dev/null 2>&1; then
+            echo "xdg-desktop-portal-gtk: $(pacman -Qq xdg-desktop-portal-gtk 2>/dev/null || echo 'NOT INSTALLED')"
+        fi
+        df -h "$HOME" 2>/dev/null | awk 'NR==2{print "home free space:", $4}'
+        if command -v fcitx5 >/dev/null 2>&1 || [ -f "$HOME/.config/fcitx5/conf/classicui.conf" ]; then
+            if fcitx_enabled; then
+                echo "fcitx5 nyxmellow: enabled"
+            else
+                echo "fcitx5 nyxmellow: NOT enabled"
+            fi
+        fi
+        echo '```'
+        echo ""
+        echo "## 7. Noctalia Hook Log (Last 20 Lines)"
         echo '```text'
         local hook_log="${XDG_STATE_HOME:-$HOME/.local/state}/noctalia/hook.log"
         if [ -f "$hook_log" ]; then
@@ -204,12 +248,12 @@ generate_bug_report() {
         fi
         echo '```'
         echo ""
-        echo "## 7. Systemd User Journal Logs (Last 30 Lines)"
+        echo "## 8. Systemd User Journal Logs (Last 30 Lines)"
         echo '```text'
         journalctl --user -n 30 --no-pager 2>/dev/null || echo "journalctl log access unavailable"
         echo '```'
         echo ""
-        echo "## 8. NyxNiri Installer Log (Last 30 Lines)"
+        echo "## 9. NyxNiri Installer Log (Last 30 Lines)"
         echo '```text'
         if [ -f "${INSTALL_LOG:-}" ]; then
             tail -n 30 "$INSTALL_LOG"

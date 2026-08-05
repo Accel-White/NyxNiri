@@ -56,18 +56,20 @@ backup_configs() {
 declare -a ALL_BACKUPS=()
 get_all_backups() {
     ALL_BACKUPS=()
+    local -a raw=()
     if [ -d "$BACKUP_BASE_DIR" ]; then
         for d in "$BACKUP_BASE_DIR"/*; do
-            if [ -d "$d" ]; then
-                ALL_BACKUPS+=("$d")
-            fi
+            [ -d "$d" ] && raw+=("$d")
         done
     fi
+    # Backward-compatible legacy backup dirs left in ~/.config by older versions.
     for d in "$HOME/.config"/dotfiles_backup_*; do
-        if [ -d "$d" ]; then
-            ALL_BACKUPS+=("$d")
-        fi
+        [ -d "$d" ] && raw+=("$d")
     done
+    if [ ${#raw[@]} -gt 0 ]; then
+        # ISO timestamps sort lexicographically = chronologically.
+        mapfile -t ALL_BACKUPS < <(printf '%s\n' "${raw[@]}" | sort)
+    fi
 }
 
 list_backups() {
@@ -129,7 +131,7 @@ rollback_configs() {
     # Safety auto-backup before rollback
     local pre_ts
     pre_ts=$(date +%Y%m%d_%H%M%S)
-    local pre_dir="$HOME/.config/dotfiles_backup_pre_rollback_$pre_ts"
+    local pre_dir="$BACKUP_BASE_DIR/pre_rollback_$pre_ts"
     mkdir -p "$pre_dir"
     for item in "${CONFIG_ITEMS[@]}"; do
         if [ -e "$HOME/.config/$item" ]; then
@@ -148,6 +150,53 @@ rollback_configs() {
     done
 
     msg rollback_done "$selected_bname"
+}
+
+# Delete a single snapshot (by index, or interactive selection). The oldest
+# snapshot may hold the pre-install state that "uninstall --restore" depends
+# on, so deletion always requires explicit confirmation.
+delete_backup() {
+    local target_idx="${1:-}"
+    get_all_backups
+    if [ ${#ALL_BACKUPS[@]} -eq 0 ] || [ -z "${ALL_BACKUPS[0]:-}" ] || [ ! -d "${ALL_BACKUPS[0]}" ]; then
+        msg no_backups_found
+        return 1
+    fi
+
+    local valid_backups=()
+    for b in "${ALL_BACKUPS[@]}"; do
+        [ -d "$b" ] && valid_backups+=("$b")
+    done
+
+    if [ -z "$target_idx" ]; then
+        list_backups
+        echo ""
+        if [ -t 0 ] && [ -c /dev/tty ]; then
+            read -p "$(msg select_rollback_target)" target_idx < /dev/tty || target_idx=""
+        fi
+    fi
+
+    if [[ ! "$target_idx" =~ ^[0-9]+$ ]] || [ "$target_idx" -lt 1 ] || [ "$target_idx" -gt "${#valid_backups[@]}" ]; then
+        msg delete_invalid_num
+        return 1
+    fi
+
+    local selected="${valid_backups[$((target_idx-1))]}"
+    local selected_name
+    selected_name=$(basename "$selected")
+
+    msg delete_confirm "$selected_name"
+    local confirm=""
+    if [ -t 0 ] && [ -c /dev/tty ]; then
+        read -p "$(msg delete_prompt)" confirm < /dev/tty || confirm="n"
+    fi
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        msg delete_cancelled
+        return 0
+    fi
+
+    rm -rf "$selected" 2>/dev/null || true
+    msg delete_done "$selected_name" "$(( ${#valid_backups[@]} - 1 ))"
 }
 
 uninstall_nyxniri() {

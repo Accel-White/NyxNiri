@@ -20,15 +20,34 @@ show_logo() {
     echo -e "       \e[1;33mMode: ${MODE_LABEL:-Local Path} (${REPO_DIR:-.})\e[0m\n"
 }
 
+# Pad a string to a target display width, counting wide (CJK) characters as
+# two columns so mixed zh/en labels right-align cleanly in menus.
+_disp_pad() {
+    local s="$1" width="${2:-20}"
+    local len=0 i c cp
+    for ((i = 0; i < ${#s}; i++)); do
+        c="${s:i:1}"
+        cp=$(printf '%d' "'$c")
+        if [ "$cp" -ge $((0x4e00)) ] && [ "$cp" -le $((0x9fff)) ]; then
+            len=$((len + 2))
+        else
+            len=$((len + 1))
+        fi
+    done
+    local pad=$((width - len))
+    [ "$pad" -lt 0 ] && pad=0
+    printf '%s%*s' "$s" "$pad" ""
+}
+
 msg() {
     local key="$1"
     shift || true
     local p1="${1:-}"
+    local p2="${2:-}"
 
     if [ "${LANG_MODE:-en}" = "zh" ]; then
         case "$key" in
-            welcome) echo -e "\e[1;36m:: 欢迎使用 $PROJECT_NAME Dotfiles 桌面工具箱\e[0m" ;;
-            lang_select) echo -e "请选择语言 / Select Language:" ;;
+            lang_select) echo -e "\n\e[1;36m:: 请选择语言 / Select Language:\e[0m" ;;
             checking_dep) echo -e "\n\e[1;34m:: 正在检查系统依赖项...\e[0m" ;;
             installed) echo -e "\e[1;32m[已安装]\e[0m" ;;
             missing) echo -e "\e[1;31m[未安装]\e[0m" ;;
@@ -36,26 +55,92 @@ msg() {
             # Main Menu
             menu_title) echo -e "\n\e[1;35m=== $PROJECT_NAME 控制面板与工具箱 ===\e[0m" ;;
             menu_group_deploy) echo -e "  \e[1;36m[ 部署与安装 ]\e[0m" ;;
-            menu_opt1) echo -e "  \e[1;32m1)\e[0m 一键完整部署 (依赖 + 配置)" ;;
-            menu_opt2) echo -e "  \e[1;32m2)\e[0m 检查与安装依赖项" ;;
-            menu_opt3) echo -e "  \e[1;32m3)\e[0m 仅部署配置文件" ;;
+            menu_opt1) echo -e "  \e[1;32m1)\e[0m 一键完整安装 (依赖 + 配置 + 可选模块)" ;;
+            menu_opt2) echo -e "  \e[1;32m2)\e[0m 仅部署配置文件" ;;
+            menu_opt3) echo -e "  \e[1;32m3)\e[0m 检查与安装依赖项" ;;
 
-            menu_group_backup) echo -e "\n  \e[1;36m[ 备份与恢复 ]\e[0m" ;;
-            menu_opt4) echo -e "  \e[1;32m4)\e[0m 创建配置安全快照" ;;
-            menu_opt5) echo -e "  \e[1;32m5)\e[0m 一键回滚配置" ;;
+            menu_group_backup) echo -e "\n  \e[1;36m[ 快照与恢复 ]\e[0m" ;;
+            menu_opt4) echo -e "  \e[1;32m4)\e[0m 快照管理" ;;
 
             menu_group_maint) echo -e "\n  \e[1;36m[ 运维与诊断 ]\e[0m" ;;
-            menu_opt6) echo -e "  \e[1;32m6)\e[0m 检查更新与可选覆盖" ;;
-            menu_opt7) echo -e "  \e[1;32m7)\e[0m 运行 System Doctor 健康诊断" ;;
-            menu_opt8) echo -e "  \e[1;32m8)\e[0m 生成 Bug Report 诊断报告" ;;
+            menu_opt5) echo -e "  \e[1;32m5)\e[0m 检查更新与可选覆盖" ;;
+            menu_opt6) echo -e "  \e[1;32m6)\e[0m System Doctor 健康诊断" ;;
+            menu_opt7) echo -e "  \e[1;32m7)\e[0m 生成 Bug Report 诊断报告" ;;
 
             menu_group_system) echo -e "\n  \e[1;36m[ 系统管理 ]\e[0m" ;;
-            menu_opt9) echo -e "  \e[1;31m9)\e[0m 卸载与复原环境" ;;
+            menu_opt8) echo -e "  \e[1;31m8)\e[0m 卸载与复原环境" ;;
+            menu_opt9) echo -e "  \e[1;32m9)\e[0m 可选模块 (Greeter / fcitx5 / 深度清除)" ;;
             menu_opt0) echo -e "  \e[1;30m0)\e[0m 退出" ;;
+
+            # Snapshot Management Submenu
+            snapshot_menu_title) echo -e "\n\e[1;35m=== 快照管理 ===\e[0m" ;;
+            snapshot_sub_create) echo -e "  \e[1;32m1)\e[0m 创建快照" ;;
+            snapshot_sub_list) echo -e "  \e[1;32m2)\e[0m 查看快照列表" ;;
+            snapshot_sub_delete) echo -e "  \e[1;31m3)\e[0m 删除快照" ;;
+            snapshot_sub_rollback) echo -e "  \e[1;32m4)\e[0m 回滚快照" ;;
+            snapshot_sub_back) echo -e "  \e[1;30m0)\e[0m 返回主菜单" ;;
+
+            # Optional Modules Submenu
+            optmod_menu_title) echo -e "\n\e[1;35m=== 可选模块 ===\e[0m" ;;
+            optmod_purge) echo -e "  \e[1;31m3)\e[0m 深度清除 (彻底粉碎配置/快照/缓存/壁纸)" ;;
+            optmod_back) echo -e "  \e[1;30m0)\e[0m 返回主菜单" ;;
+
+            # Greeter Submenu
+            greeter_menu_title) echo -e "\n\e[1;35m=== Noctalia Greeter ===\e[0m" ;;
+            greeter_sub_install) echo -e "  \e[1;32m1)\e[0m 安装与配置" ;;
+            greeter_sub_status) echo -e "  \e[1;32m2)\e[0m 查看状态" ;;
+            greeter_sub_uninstall) echo -e "  \e[1;31m3)\e[0m 卸载配置" ;;
+            greeter_sub_back) echo -e "  \e[1;30m0)\e[0m 返回" ;;
+
+            # Fcitx Submenu
+            fcitx_menu_title) echo -e "\n\e[1;35m=== NyxMellow fcitx5 皮肤 ===\e[0m" ;;
+            fcitx_sub_install) echo -e "  \e[1;32m1)\e[0m 安装皮肤" ;;
+            fcitx_sub_status) echo -e "  \e[1;32m2)\e[0m 查看状态" ;;
+            fcitx_sub_uninstall) echo -e "  \e[1;31m3)\e[0m 卸载皮肤" ;;
+            fcitx_sub_back) echo -e "  \e[1;30m0)\e[0m 返回" ;;
+
+            # Module Status Labels
+            status_installed_enabled) echo -e "\e[1;32m[已安装+已启用]\e[0m" ;;
+            status_installed) echo -e "\e[1;33m[已安装]\e[0m" ;;
+            status_not_installed) echo -e "\e[1;31m[未安装]\e[0m" ;;
+            status_enabled) echo -e "\e[1;32m[已启用]\e[0m" ;;
+            status_disabled) echo -e "\e[1;33m[未启用]\e[0m" ;;
+            status_fcitx5_missing) echo -e "\e[1;31m[fcitx5 未装]\e[0m" ;;
+
+            # Install Flow
+            install_plan_header) echo -e "\n\e[1;36m:: 即将执行以下安装步骤:\e[0m" ;;
+            install_plan_configs) echo -e "  · 部署配置文件 (fish/kitty/niri/noctalia/starship/...)" ;;
+            install_plan_wallpapers) echo -e "  · 同步壁纸库" ;;
+            install_plan_deps) echo -e "  · 依赖检查与安装" ;;
+            install_plan_fcitx) echo -e "  · 可选: NyxMellow fcitx5 皮肤" ;;
+            install_plan_greeter) echo -e "  · 可选: Noctalia Greeter" ;;
+            ask_fcitx_install) echo -e "\n:: 检测到 fcitx5。应用/刷新 NyxMellow fcitx5 皮肤？[y/N]: " ;;
+            fcitx_skipped_not_installed) echo -e "\e[1;33m  [skip]\e[0m 未检测到 fcitx5，跳过 NyxMellow 皮肤 (安装 fcitx5 后可用: nyxniri fcitx install)" ;;
+            install_confirm) echo -e ":: 确认开始安装？[Y/n]: " ;;
+            install_cancelled) echo -e "\e[1;34m已取消安装。\e[0m" ;;
+            install_step_configs) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 部署配置文件...\e[0m" ;;
+            install_step_wallpapers) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 同步壁纸库...\e[0m" ;;
+            install_step_deps) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 依赖检查与安装...\e[0m" ;;
+            install_step_fcitx) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 可选模块 · NyxMellow fcitx5 皮肤...\e[0m" ;;
+            install_step_greeter) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 可选模块 · Noctalia Greeter...\e[0m" ;;
+            install_summary_title) echo -e "\n\e[1;35m=== 安装汇总 (Install Summary) ===\e[0m" ;;
+            summary_configs) echo -e "  \e[1;32m✓\e[0m 配置文件: 已部署" ;;
+            summary_wallpapers) echo -e "  \e[1;32m✓\e[0m 壁纸: 已同步" ;;
+            summary_deps_ok) echo -e "  \e[1;32m✓\e[0m 依赖: 已就绪" ;;
+            summary_deps_skip) echo -e "  \e[1;33m·\e[0m 依赖: 已跳过 (可稍后运行: nyxniri deps)" ;;
+            summary_fcitx_on) echo -e "  \e[1;32m✓\e[0m NyxMellow fcitx5 皮肤: 已应用" ;;
+            summary_fcitx_off) echo -e "  \e[1;33m·\e[0m NyxMellow fcitx5 皮肤: 已跳过" ;;
+            summary_greeter_on) echo -e "  \e[1;32m✓\e[0m Noctalia Greeter: 已配置" ;;
+            summary_greeter_off) echo -e "  \e[1;33m·\e[0m Noctalia Greeter: 已跳过" ;;
+            summary_customs_header) echo -e "  \e[1;36m·\e[0m 保留的自定义项 (NyxNiri Customizations Preserved):" ;;
+
+            # Test Deploy
+            test_start) echo -e "\n\e[1;34m:: [test] 幂等重放配置 (不备份 / 保留 monitor.kdl / 跳过可选模块与依赖)...\e[0m" ;;
+            test_done) echo -e "\n\e[1;32m[+] 测试部署完成。\e[0m" ;;
 
             menu_prompt) echo -e ":: 请选择操作 [0-9]: " ;;
             invalid_opt) echo -e "\e[1;31m[-] 无效的选项，请重新选择。\e[0m" ;;
-            press_any_key) echo -e "\n按任意键返回主菜单..." ;;
+            press_any_key) echo -e "\n按任意键继续..." ;;
             generating_report) echo -e "\n\e[1;34m:: 正在收集系统诊断数据并生成 Bug Report 报告...\e[0m" ;;
             report_done) echo -e "\e[1;32m[+] Bug Report 报告已成功导出至:\e[0m $p1\n\e[1;36m提示: 提交 Issue 时请直接附上该文件或其内容！\nQQ 交流群: 631425889 | 开发者 QQ: 2040244628 | Telegram: @Echoes678\e[0m" ;;
 
@@ -92,6 +177,13 @@ msg() {
             pre_rollback_backup) echo -e "\e[1;30m[安全防护] 回滚前已自动为当前配置创建安全快照: $p1\e[0m" ;;
             rollback_done) echo -e "\e[1;32m[+] 配置回滚成功！已恢复至快照: $p1\e[0m" ;;
             snapshot_note_prompt) echo -e ":: 请输入快照备注 (直接回车跳过): " ;;
+
+            # Snapshot Delete Strings
+            delete_confirm) echo -e "\n\e[1;31m[!] 即将删除快照: $p1。删除后无法恢复！\e[0m" ;;
+            delete_prompt) echo -e ":: 确认删除该快照？[y/N]: " ;;
+            delete_cancelled) echo -e "\e[1;34m已取消删除。\e[0m" ;;
+            delete_done) echo -e "\e[1;32m[+] 已删除快照 [$p1]，剩余 $p2 个快照。\e[0m" ;;
+            delete_invalid_num) echo -e "\e[1;31m[-] 无效的序号，取消删除操作。\e[0m" ;;
 
             # Dependency Menu
             dep_menu_title) echo -e "\n\e[1;33m:: 请选择要安装的依赖（输入数字切换，直接回车开始安装）：\e[0m" ;;
@@ -197,8 +289,7 @@ msg() {
         esac
     else
         case "$key" in
-            welcome) echo -e "\e[1;36m:: Welcome to $PROJECT_NAME Dotfiles Toolbox\e[0m" ;;
-            lang_select) echo -e "Select Language / 请选择语言:" ;;
+            lang_select) echo -e "\n\e[1;36m:: Select Language / 请选择语言:\e[0m" ;;
             checking_dep) echo -e "\n\e[1;34m:: Checking system dependencies...\e[0m" ;;
             installed) echo -e "\e[1;32m[Installed]\e[0m" ;;
             missing) echo -e "\e[1;31m[Missing]\e[0m" ;;
@@ -206,26 +297,92 @@ msg() {
             # Main Menu
             menu_title) echo -e "\n\e[1;35m=== $PROJECT_NAME Control Panel & Toolbox ===\e[0m" ;;
             menu_group_deploy) echo -e "  \e[1;36m[ Deployment & Setup ]\e[0m" ;;
-            menu_opt1) echo -e "  \e[1;32m1)\e[0m Full Setup (Install Dependencies + Deploy Configs)" ;;
-            menu_opt2) echo -e "  \e[1;32m2)\e[0m Check & Install Dependencies Only" ;;
-            menu_opt3) echo -e "  \e[1;32m3)\e[0m Deploy Configurations Only" ;;
+            menu_opt1) echo -e "  \e[1;32m1)\e[0m Full Install (Deps + Configs + Optional)" ;;
+            menu_opt2) echo -e "  \e[1;32m2)\e[0m Deploy Configurations Only" ;;
+            menu_opt3) echo -e "  \e[1;32m3)\e[0m Check & Install Dependencies Only" ;;
 
             menu_group_backup) echo -e "\n  \e[1;36m[ Snapshots & Recovery ]\e[0m" ;;
-            menu_opt4) echo -e "  \e[1;32m4)\e[0m Snapshot Configurations" ;;
-            menu_opt5) echo -e "  \e[1;32m5)\e[0m Rollback Configurations" ;;
+            menu_opt4) echo -e "  \e[1;32m4)\e[0m Snapshot Management" ;;
 
             menu_group_maint) echo -e "\n  \e[1;36m[ Maintenance & Diagnostics ]\e[0m" ;;
-            menu_opt6) echo -e "  \e[1;32m6)\e[0m Update Repo & Optional Overwrite" ;;
-            menu_opt7) echo -e "  \e[1;32m7)\e[0m Run System Doctor Diagnostics" ;;
-            menu_opt8) echo -e "  \e[1;32m8)\e[0m Generate Bug Report" ;;
+            menu_opt5) echo -e "  \e[1;32m5)\e[0m Update Repo & Optional Overwrite" ;;
+            menu_opt6) echo -e "  \e[1;32m6)\e[0m Run System Doctor Diagnostics" ;;
+            menu_opt7) echo -e "  \e[1;32m7)\e[0m Generate Bug Report" ;;
 
             menu_group_system) echo -e "\n  \e[1;36m[ System Management ]\e[0m" ;;
-            menu_opt9) echo -e "  \e[1;31m9)\e[0m Uninstall NyxNiri" ;;
+            menu_opt8) echo -e "  \e[1;31m8)\e[0m Uninstall NyxNiri" ;;
+            menu_opt9) echo -e "  \e[1;32m9)\e[0m Optional Modules (Greeter / fcitx5 / Purge)" ;;
             menu_opt0) echo -e "  \e[1;30m0)\e[0m Exit" ;;
+
+            # Snapshot Management Submenu
+            snapshot_menu_title) echo -e "\n\e[1;35m=== Snapshot Management ===\e[0m" ;;
+            snapshot_sub_create) echo -e "  \e[1;32m1)\e[0m Create Snapshot" ;;
+            snapshot_sub_list) echo -e "  \e[1;32m2)\e[0m List Snapshots" ;;
+            snapshot_sub_delete) echo -e "  \e[1;31m3)\e[0m Delete Snapshot" ;;
+            snapshot_sub_rollback) echo -e "  \e[1;32m4)\e[0m Rollback Snapshot" ;;
+            snapshot_sub_back) echo -e "  \e[1;30m0)\e[0m Back to Main Menu" ;;
+
+            # Optional Modules Submenu
+            optmod_menu_title) echo -e "\n\e[1;35m=== Optional Modules ===\e[0m" ;;
+            optmod_purge) echo -e "  \e[1;31m3)\e[0m Deep Purge (configs / snapshots / cache / wallpapers)" ;;
+            optmod_back) echo -e "  \e[1;30m0)\e[0m Back to Main Menu" ;;
+
+            # Greeter Submenu
+            greeter_menu_title) echo -e "\n\e[1;35m=== Noctalia Greeter ===\e[0m" ;;
+            greeter_sub_install) echo -e "  \e[1;32m1)\e[0m Install & Configure" ;;
+            greeter_sub_status) echo -e "  \e[1;32m2)\e[0m Show Status" ;;
+            greeter_sub_uninstall) echo -e "  \e[1;31m3)\e[0m Uninstall Config" ;;
+            greeter_sub_back) echo -e "  \e[1;30m0)\e[0m Back" ;;
+
+            # Fcitx Submenu
+            fcitx_menu_title) echo -e "\n\e[1;35m=== NyxMellow fcitx5 Skin ===\e[0m" ;;
+            fcitx_sub_install) echo -e "  \e[1;32m1)\e[0m Install Skin" ;;
+            fcitx_sub_status) echo -e "  \e[1;32m2)\e[0m Show Status" ;;
+            fcitx_sub_uninstall) echo -e "  \e[1;31m3)\e[0m Uninstall Skin" ;;
+            fcitx_sub_back) echo -e "  \e[1;30m0)\e[0m Back" ;;
+
+            # Module Status Labels
+            status_installed_enabled) echo -e "\e[1;32m[Installed + Enabled]\e[0m" ;;
+            status_installed) echo -e "\e[1;33m[Installed]\e[0m" ;;
+            status_not_installed) echo -e "\e[1;31m[Not Installed]\e[0m" ;;
+            status_enabled) echo -e "\e[1;32m[Enabled]\e[0m" ;;
+            status_disabled) echo -e "\e[1;33m[Not Enabled]\e[0m" ;;
+            status_fcitx5_missing) echo -e "\e[1;31m[fcitx5 Missing]\e[0m" ;;
+
+            # Install Flow
+            install_plan_header) echo -e "\n\e[1;36m:: The following steps will be performed:\e[0m" ;;
+            install_plan_configs) echo -e "  · Deploy config files (fish/kitty/niri/noctalia/starship/...)" ;;
+            install_plan_wallpapers) echo -e "  · Sync wallpaper library" ;;
+            install_plan_deps) echo -e "  · Check & install dependencies" ;;
+            install_plan_fcitx) echo -e "  · Optional: NyxMellow fcitx5 skin" ;;
+            install_plan_greeter) echo -e "  · Optional: Noctalia Greeter" ;;
+            ask_fcitx_install) echo -e "\n:: fcitx5 detected. Apply/refresh the NyxMellow fcitx5 skin? [y/N]: " ;;
+            fcitx_skipped_not_installed) echo -e "\e[1;33m  [skip]\e[0m fcitx5 not detected; skipping NyxMellow skin (after installing fcitx5: nyxniri fcitx install)" ;;
+            install_confirm) echo -e ":: Confirm to start installation? [Y/n]: " ;;
+            install_cancelled) echo -e "\e[1;34mInstallation cancelled.\e[0m" ;;
+            install_step_configs) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Deploying config files...\e[0m" ;;
+            install_step_wallpapers) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Syncing wallpapers...\e[0m" ;;
+            install_step_deps) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Checking & installing dependencies...\e[0m" ;;
+            install_step_fcitx) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Optional · NyxMellow fcitx5 skin...\e[0m" ;;
+            install_step_greeter) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Optional · Noctalia Greeter...\e[0m" ;;
+            install_summary_title) echo -e "\n\e[1;35m=== Install Summary ===\e[0m" ;;
+            summary_configs) echo -e "  \e[1;32m✓\e[0m Config files: deployed" ;;
+            summary_wallpapers) echo -e "  \e[1;32m✓\e[0m Wallpapers: synced" ;;
+            summary_deps_ok) echo -e "  \e[1;32m✓\e[0m Dependencies: ready" ;;
+            summary_deps_skip) echo -e "  \e[1;33m·\e[0m Dependencies: skipped (run later: nyxniri deps)" ;;
+            summary_fcitx_on) echo -e "  \e[1;32m✓\e[0m NyxMellow fcitx5 skin: applied" ;;
+            summary_fcitx_off) echo -e "  \e[1;33m·\e[0m NyxMellow fcitx5 skin: skipped" ;;
+            summary_greeter_on) echo -e "  \e[1;32m✓\e[0m Noctalia Greeter: configured" ;;
+            summary_greeter_off) echo -e "  \e[1;33m·\e[0m Noctalia Greeter: skipped" ;;
+            summary_customs_header) echo -e "  \e[1;36m·\e[0m Preserved customizations (NyxNiri Customizations Preserved):" ;;
+
+            # Test Deploy
+            test_start) echo -e "\n\e[1;34m:: [test] Idempotent re-deploy (no backup / keep monitor.kdl / skip optional & deps)...\e[0m" ;;
+            test_done) echo -e "\n\e[1;32m[+] Test deploy complete.\e[0m" ;;
 
             menu_prompt) echo -e ":: Please select an option [0-9]: " ;;
             invalid_opt) echo -e "\e[1;31m[-] Invalid option, please try again.\e[0m" ;;
-            press_any_key) echo -e "\nPress any key to return to main menu..." ;;
+            press_any_key) echo -e "\nPress any key to continue..." ;;
             generating_report) echo -e "\n\e[1;34m:: Collecting system diagnostic data and generating Bug Report...\e[0m" ;;
             report_done) echo -e "\e[1;32m[+] Bug Report successfully exported to:\e[0m $p1\n\e[1;36mHint: Please attach this file when opening a GitHub Issue!\nQQ Group: 631425889 | Developer QQ: 2040244628 | Telegram: @Echoes678\e[0m" ;;
 
@@ -262,6 +419,13 @@ msg() {
             pre_rollback_backup) echo -e "\e[1;30m[Safety] Auto-saved pre-rollback snapshot of current configs: $p1\e[0m" ;;
             rollback_done) echo -e "\e[1;32m[+] Rollback complete! Restored to snapshot: $p1\e[0m" ;;
             snapshot_note_prompt) echo -e ":: Enter snapshot note (press Enter to skip): " ;;
+
+            # Snapshot Delete Strings
+            delete_confirm) echo -e "\n\e[1;31m[!] This will permanently delete snapshot: $p1.\e[0m" ;;
+            delete_prompt) echo -e ":: Confirm deleting this snapshot? [y/N]: " ;;
+            delete_cancelled) echo -e "\e[1;34mDeletion cancelled.\e[0m" ;;
+            delete_done) echo -e "\e[1;32m[+] Deleted snapshot [$p1], $p2 snapshot(s) remaining.\e[0m" ;;
+            delete_invalid_num) echo -e "\e[1;31m[-] Invalid selection, deletion cancelled.\e[0m" ;;
 
             # Dependency Menu
             dep_menu_title) echo -e "\n\e[1;33m:: Select dependencies to install (type numbers to toggle, press Enter to confirm):\e[0m" ;;
@@ -366,8 +530,9 @@ select_language() {
     clear 2>/dev/null || true
     show_logo
     echo ""
-    echo "  1) English"
-    echo "  2) 简体中文 (Simplified Chinese)"
+    msg lang_select
+    echo -e "  \e[1;32m1)\e[0m English"
+    echo -e "  \e[1;32m2)\e[0m 简体中文 (Simplified Chinese)"
     echo ""
     local lang_choice=""
     if [ -t 0 ] && [ -c /dev/tty ]; then

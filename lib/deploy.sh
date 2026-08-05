@@ -87,7 +87,7 @@ deploy_selected_configs() {
             local temp_monitor=""
             if [ "$item" = "niri" ] && [ -f "$dest/monitor.kdl" ]; then
                 local mon_choice="y"
-                if [ -t 0 ] && [ -c /dev/tty ]; then
+                if [ "${NYXNIRI_KEEP_MONITOR:-0}" != "1" ] && [ -t 0 ] && [ -c /dev/tty ]; then
                     read -p "$(msg ask_keep_monitor)" mon_choice < /dev/tty || mon_choice="y"
                 fi
                 if [[ "$mon_choice" =~ ^[Yy]$ || -z "$mon_choice" ]]; then
@@ -205,15 +205,21 @@ deploy_selected_configs() {
     fi
 
     msg copy_done
+}
 
+# Print the custom-preserved report collected during deploy. Callers render it
+# in their completion summary (install flow / update flow).
+print_custom_preserved() {
     if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ] && [ -s "$NYXNIRI_CUSTOM_LOG" ]; then
         echo -e "\n\e[1;36m==================================================\e[0m"
         echo -e "\e[1;36m[ NyxNiri Customizations Preserved ]\e[0m"
         cat "$NYXNIRI_CUSTOM_LOG"
         echo -e "\e[1;36m==================================================\e[0m\n"
     fi
-    [ -n "${NYXNIRI_CUSTOM_LOG:-}" ] && rm -f "$NYXNIRI_CUSTOM_LOG" 2>/dev/null || true
-    unset NYXNIRI_CUSTOM_LOG || true
+    if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ]; then
+        rm -f "$NYXNIRI_CUSTOM_LOG" 2>/dev/null || true
+        unset NYXNIRI_CUSTOM_LOG
+    fi
 }
 
 deploy_wallpapers() {
@@ -286,6 +292,7 @@ run_selective_upgrade_menu() {
     if [ ${#chosen_items[@]} -gt 0 ]; then
         msg upgrading_selected
         deploy_selected_configs "nobackup" "${chosen_items[@]}"
+        print_custom_preserved
         msg overwrite_done
     else
         echo "No components selected."
@@ -298,6 +305,7 @@ offer_overwrite_upgrade() {
         deploy_selected_configs "nobackup"
         deploy_wallpapers
         deploy_fcitx_theme
+        print_custom_preserved
         return 0
     elif [ "$flag" = "--no-deploy" ]; then
         return 0
@@ -307,6 +315,7 @@ offer_overwrite_upgrade() {
         deploy_selected_configs "nobackup"
         deploy_wallpapers
         deploy_fcitx_theme
+        print_custom_preserved
         return 0
     fi
 
@@ -327,12 +336,14 @@ offer_overwrite_upgrade() {
             deploy_selected_configs "nobackup"
             deploy_wallpapers
             deploy_fcitx_theme
+            print_custom_preserved
             msg overwrite_done
             ;;
         2)
             deploy_selected_configs "backup"
             deploy_wallpapers
             deploy_fcitx_theme
+            print_custom_preserved
             msg overwrite_done
             ;;
         3)
@@ -345,6 +356,7 @@ offer_overwrite_upgrade() {
             deploy_selected_configs "nobackup"
             deploy_wallpapers
             deploy_fcitx_theme
+            print_custom_preserved
             msg overwrite_done
             ;;
     esac
@@ -353,20 +365,85 @@ offer_overwrite_upgrade() {
 install_configs() {
     local mode="${1:-full}"
 
-    local choice=""
-    if [ -t 0 ] && [ -c /dev/tty ]; then
-        read -p "$(msg ask_backup_before_deploy)" choice < /dev/tty || choice="n"
-    fi
     local do_backup="nobackup"
-    if [[ "$choice" =~ ^[Yy]$ ]]; then
-        do_backup="backup"
+    local do_fcitx="n"
+    local do_greeter="n"
+    local fcitx_available=false
+    if fcitx5_installed; then
+        fcitx_available=true
     fi
 
+    # ------------------------------------------------------------------
+    # Phase 0: Pre-flight checklist (interactive). Optional modules are
+    # chosen UP FRONT — nothing is silently auto-enabled. fcitx5 is always
+    # re-asked when present, since updates may ship skin changes.
+    # ------------------------------------------------------------------
+    if [ -t 0 ] && [ -c /dev/tty ]; then
+        msg install_plan_header
+        msg install_plan_configs
+        msg install_plan_wallpapers
+        [ "$mode" = "full" ] && msg install_plan_deps
+        [ "$fcitx_available" = true ] && msg install_plan_fcitx
+        [ "$mode" = "full" ] && msg install_plan_greeter
+        echo ""
+
+        local choice=""
+        read -p "$(msg ask_backup_before_deploy)" choice < /dev/tty || choice="n"
+        if [[ "$choice" =~ ^[Yy]$ ]]; then
+            do_backup="backup"
+        fi
+
+        if [ "$fcitx_available" = true ]; then
+            read -p "$(msg ask_fcitx_install)" choice < /dev/tty || choice="n"
+            if [[ "$choice" =~ ^[Yy]$ ]]; then
+                do_fcitx="y"
+            fi
+        else
+            msg fcitx_skipped_not_installed
+        fi
+
+        if [ "$mode" = "full" ]; then
+            read -p "$(msg greeter_ask)" choice < /dev/tty || choice="n"
+            if [[ "$choice" =~ ^[Yy]$ ]]; then
+                do_greeter="y"
+            fi
+        fi
+
+        read -p "$(msg install_confirm)" choice < /dev/tty || choice="y"
+        if [[ ! "$choice" =~ ^[Yy]$ ]]; then
+            msg install_cancelled
+            return 0
+        fi
+    fi
+
+    # ------------------------------------------------------------------
+    # Numbered steps
+    # ------------------------------------------------------------------
+    local step_total=2
+    [ "$mode" = "full" ] && step_total=$((step_total + 1))
+    [ "$fcitx_available" = true ] && step_total=$((step_total + 1))
+    [ "$do_greeter" = "y" ] && step_total=$((step_total + 1))
+    local cur=0
+
+    cur=$((cur + 1))
+    msg install_step_configs "$cur/$step_total"
     deploy_selected_configs "$do_backup"
+
+    cur=$((cur + 1))
+    msg install_step_wallpapers "$cur/$step_total"
     deploy_wallpapers
-    deploy_fcitx_theme
+
+    if [ "$fcitx_available" = true ]; then
+        cur=$((cur + 1))
+        msg install_step_fcitx "$cur/$step_total"
+        if [ "$do_fcitx" = "y" ] || { [ "$do_fcitx" = "n" ] && fcitx_enabled && { [ ! -t 0 ] || [ ! -c /dev/tty ]; }; }; then
+            fcitx_install
+        fi
+    fi
 
     if [ "$mode" = "full" ]; then
+        cur=$((cur + 1))
+        msg install_step_deps "$cur/$step_total"
         check_all_deps
         local missing_count=0
         for stat in "${DEP_STATUS[@]:-}"; do
@@ -385,16 +462,59 @@ install_configs() {
                 run_dep_menu_loop
             fi
         fi
+    fi
 
-        # Optional: Noctalia Greeter login setup (interactive only, opt-in)
-        if [ -t 0 ] && [ -c /dev/tty ]; then
-            local g_choice=""
-            read -p "$(msg greeter_ask)" g_choice < /dev/tty || g_choice="n"
-            if [[ "$g_choice" =~ ^[Yy]$ ]]; then
-                greeter_install || true
-            fi
+    if [ "$do_greeter" = "y" ]; then
+        cur=$((cur + 1))
+        msg install_step_greeter "$cur/$step_total"
+        greeter_install || true
+    fi
+
+    # ------------------------------------------------------------------
+    # Completion summary
+    # ------------------------------------------------------------------
+    msg install_summary_title
+    msg summary_configs
+    msg summary_wallpapers
+    if [ "$fcitx_available" = true ]; then
+        if [ "$do_fcitx" = "y" ]; then
+            msg summary_fcitx_on
         else
-            msg greeter_noninteractive_skip
+            msg summary_fcitx_off
         fi
     fi
+    if [ "$mode" = "full" ]; then
+        check_all_deps
+        local left_missing=0
+        for stat in "${DEP_STATUS[@]:-}"; do
+            if [ "${stat:-0}" -eq 0 ]; then
+                left_missing=$((left_missing + 1))
+            fi
+        done
+        if [ "$left_missing" -eq 0 ]; then
+            msg summary_deps_ok
+        else
+            msg summary_deps_skip
+        fi
+    fi
+    if [ "$mode" = "full" ]; then
+        if [ "$do_greeter" = "y" ]; then
+            msg summary_greeter_on
+        else
+            msg summary_greeter_off
+        fi
+    fi
+    print_custom_preserved
+}
+
+# Developer test command: fast idempotent re-deploy on the real machine.
+# Forces no backup, keeps monitor.kdl without asking, and skips optional
+# modules / dependencies / every prompt.
+test_deploy() {
+    msg test_start
+    export NYXNIRI_KEEP_MONITOR=1
+    deploy_selected_configs "nobackup"
+    deploy_wallpapers
+    print_custom_preserved
+    msg test_done
 }

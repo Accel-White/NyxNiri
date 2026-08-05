@@ -21,6 +21,23 @@ greeter_installed() {
     command -v "$GREETER_SESSION_BIN" >/dev/null 2>&1
 }
 
+# Compact status label for menus (bilingual via i18n).
+greeter_status_label() {
+    if ! greeter_installed; then
+        msg status_not_installed
+        return 0
+    fi
+    local cfg_ok=false
+    if [ -f "$GREETER_ETC_CFG" ] && grep -q "noctalia-greeter-session" "$GREETER_ETC_CFG" 2>/dev/null; then
+        cfg_ok=true
+    fi
+    if command -v systemctl >/dev/null 2>&1 && systemctl is-enabled greetd >/dev/null 2>&1 && [ "$cfg_ok" = "true" ]; then
+        msg status_installed_enabled
+    else
+        msg status_installed
+    fi
+}
+
 greeter_session_path() {
     if command -v "$GREETER_SESSION_BIN" >/dev/null 2>&1; then
         command -v "$GREETER_SESSION_BIN"
