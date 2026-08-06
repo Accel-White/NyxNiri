@@ -7,6 +7,10 @@
 - **Fish Shell 自定义文件夹自动加载 (`__custom__/`)**:
   - 在 `v2/fish/conf.d/__custom__.fish` 中新增对 `conf.d/__custom__/*.fish` 及 `~/.config/fish/__custom__/*.fish` 的动态遍历与自动载入逻辑。
   - 补充中英双语注释与三重容错校验（目录存在性 `test -d`、通配符空扩展防护、文件有效性 `test -f`），允许用户通过私有子文件夹（如 `__custom__/`）灵活组织多个 `.fish` 脚本，完美履行 Dunder 协议的自动保留承诺。
+- **一键清理工具深度重构 (`clean-cache` powered by Maclean)**:
+  - 直接拉取并融合 CachyOS / Arch 社区顶级开源清理引擎 Maclean (`BSD-3`)，替换原版 `v2/fish/clean-cache` 逻辑。
+  - 引入 Maclean 核心物理安全锁算法 (`_mc_rm_safer`)，基于 `realpath` 规范化校验，彻底防御误删系统核心目录或跨符号链接擦除；
+  - 扩展 Shelly 包管理器孤立包与缓存清理支持 (`_mc_shelly`)，全面提升在 Arch / CachyOS / NyxNiri 下的清理效率与安全性；兼容 `-y`/`--yes`/`--auto` 命令行自动模式。
 
 ## [v2.1.18] - 2026-08-05
 
