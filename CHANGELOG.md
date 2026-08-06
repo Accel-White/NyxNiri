@@ -12,6 +12,19 @@
   - 引入 Maclean 核心物理安全锁算法 (`_mc_rm_safer`)，基于 `realpath` 规范化校验，彻底防御误删系统核心目录或跨符号链接擦除；
   - 扩展 Shelly 包管理器孤立包与缓存清理支持 (`_mc_shelly`)，全面提升在 Arch / CachyOS / NyxNiri 下的清理效率与安全性；兼容 `-y`/`--yes`/`--auto` 命令行自动模式。
 
+### Changed
+
+- **静态资源架构剥离 (Static Assets Decoupling)**: 彻底重构大体积壁纸分发逻辑，大幅提升主仓库克隆体验：
+  - 将庞大的动态视频与高清静态壁纸资源拆分迁移至独立的 `ech678/wallpaper-collection` 仓库。
+  - 主仓库仅保留一张轻量级壁纸 `lawson_fuji.webp` 作为默认极速保底，整体克隆体积缩减超过 90%，彻底解决弱网环境下由于大体积媒体文件导致的拉取失败、频繁断线等问题。
+  - README 克隆指令统一升级为 `git clone --depth 1` 浅克隆，安装仅需拉取最新快照（约 9MB）。
+- **壁纸按需镜像克隆 (On-Demand Mirrored Wallpaper Pull)**: 深度集成全套壁纸下载选项，并修复镜像重试机制：
+  - 在 `deploy.sh` 部署环节中新增询问 `是否下载全套精美壁纸与动态视频包？(约 100MB) [y/N]`；新增 CLI 子命令 `nyxniri wallpapers` 与「可选模块」菜单项（含 `[已下载]/[未下载]` 状态标签）。
+  - `download_wallpaper_pack` 内置镜像池（`Official`, `gh-proxy.org`），失败自动清理临时目录并轮转备用节点，拉取时强制 `GIT_TERMINAL_PROMPT=0` 避免代理失效引发的用户名密码卡死弹窗；克隆命令统一收敛至 `git_clone_timeout` 硬化助手（低带宽超时 + 禁交互）。
+- **防止二次更新盲目下载 (Smart Redownload Prevention)**: 优化体验痛点，以 `~/Pictures/Wallpapers/video/` 特征目录为判据——已全量安装即跳过、缺失则拉取。交互询问显示 `[y/N]` 默认跳过（回车不触发下载），非交互/自动化（`NYXNIRI_AUTO_YES`）模式同样自动判定，避免例行更新时一路回车白白浪费 100MB 流量。
+- **环境隔离守护 (Clean Copy Isolation)**: 移除外部克隆的临时仓库中的 `.git` 历史及演示动图 `preview.webp`、`README.md`，使用 `cp -an` 目录形式做绝对纯净的增量覆盖（不再退化为可覆盖用户文件的强拷贝），防止任何展示性质文件污染用户的个人图片文件夹。
+- **稳定性修复**: 全局移除了失效与频繁限流的 `ghproxy.net` 节点（`lib/network.sh` 的 `GIT_MIRROR_REGISTRY` / `RAW_MIRROR_TEMPLATES`、`install.sh` 引导程序及 README 安装命令），提高网络切换稳定性；壁纸下载路径补全 `log_msg` 日志与 `git` 存在性守卫，`install.sh` 引导与 `lib/network.sh` 的镜像节点列表统一为同源两节点；同步修改 `README.md` 与 `AGENTS.md`。
+
 ## [v2.1.18] - 2026-08-05
 
 ### Added

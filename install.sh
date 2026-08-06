@@ -13,8 +13,14 @@ REPO_URL="https://github.com/ech678/NyxNiri.git"
 GIT_MIRROR_REGISTRY=(
     "Official|https://github.com/ech678/NyxNiri.git"
     "gh-proxy.org|https://gh-proxy.org/https://github.com/ech678/NyxNiri.git"
-    "ghproxy.net|https://ghproxy.net/https://github.com/ech678/NyxNiri.git"
 )
+
+# Standalone bootstrap cannot source lib/network.sh, so keep a minimal local
+# copy of the hardened shallow-clone helper (mirrors lib/network.sh behavior).
+git_clone_timeout() {
+    local url="$1" target_dir="$2"
+    env GIT_TERMINAL_PROMPT=0 git clone -c http.lowSpeedTime=15 -c http.lowSpeedLimit=1000 --depth 1 "$url" "$target_dir"
+}
 
 clone_repo_bootstrap() {
     local target_dir="$1"
@@ -33,7 +39,7 @@ clone_repo_bootstrap() {
             rm -rf "$target_dir" 2>/dev/null || true
         fi
 
-        if git clone --depth 1 "$url" "$target_dir"; then
+        if git_clone_timeout "$url" "$target_dir"; then
             echo -e "\e[1;32m✓ 从 [$tag] 成功拉取仓库！\e[0m\n" >&2
             return 0
         fi

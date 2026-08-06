@@ -29,6 +29,20 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# Resolve the user's Pictures directory (XDG-aware with HOME fallback).
+# xdg-user-dir returns bare $HOME when the XDG user-dirs config is missing
+# (headless/minimal setups), which is never the intended wallpaper location —
+# remap it to the conventional $HOME/Pictures. Single source of truth shared
+# by deploy (wallpapers), backup (purge) and doctor (health check).
+get_pics_dir() {
+    local d
+    d=$(xdg-user-dir PICTURES 2>/dev/null || true)
+    if [ -z "$d" ] || [ "$d" = "$HOME" ]; then
+        d="$HOME/Pictures"
+    fi
+    printf '%s' "$d"
+}
+
 # Lightweight PID single-instance lock to prevent concurrent write collisions
 NYXNIRI_LOCK_FILE=""
 acquire_lock() {

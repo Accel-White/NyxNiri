@@ -32,7 +32,7 @@ run_doctor() {
     fi
 
     local doc_pics_dir
-    doc_pics_dir=$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")
+    doc_pics_dir="$(get_pics_dir)"
     if [ -d "$doc_pics_dir/Wallpapers" ]; then
         msg doctor_ok "Wallpapers: $doc_pics_dir/Wallpapers directory exists."
     else

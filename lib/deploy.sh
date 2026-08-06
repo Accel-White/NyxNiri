@@ -105,10 +105,8 @@ deploy_selected_configs() {
         fi
     done
 
-    local pics_dir
-    pics_dir=$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")
-    [ -z "$pics_dir" ] && pics_dir="$HOME/Pictures"
-    local wp_dest="$pics_dir/Wallpapers"
+    local wp_dest
+    wp_dest="$(get_pics_dir)/Wallpapers"
 
     # Ensure scripts are executable and initial effects symlink exists
     if [ -f "$HOME/.config/fish/clean-cache" ]; then
@@ -137,7 +135,8 @@ deploy_selected_configs() {
     fi
     if [ -f "$HOME/.config/niri/config.kdl" ]; then
         sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/niri/config.kdl"
-        local rel_pics_dir esc_rel_pics_dir
+        local pics_dir rel_pics_dir esc_rel_pics_dir
+        pics_dir="$(get_pics_dir)"
         if [[ "$pics_dir" == "$HOME"* ]]; then
             rel_pics_dir="~${pics_dir#"$HOME"}"
         else
@@ -218,19 +217,93 @@ print_custom_preserved() {
     fi
 }
 
-deploy_wallpapers() {
-    local pics_dir
-    pics_dir=$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")
-    [ -z "$pics_dir" ] && pics_dir="$HOME/Pictures"
-    local wp_src="${REPO_DIR:-.}/Wallpapers"
-    local wp_dest="$pics_dir/Wallpapers"
+# True when the full external wallpaper pack (the video/ marker directory) is
+# already deployed — used to skip redundant ~100MB re-downloads.
+wallpapers_pack_present() {
+    [ -d "$(get_pics_dir)/Wallpapers/video" ]
+}
 
-    if [ ! -d "$wp_src" ]; then
+# Compact menu status label for the wallpaper pack (bilingual via i18n).
+wallpapers_status_label() {
+    if wallpapers_pack_present; then
+        msg status_wallpapers_installed
+    else
+        msg status_wallpapers_missing
+    fi
+}
+
+# Scheduling entry point used by install/update/menu flows.
+# do_download="y" pulls the full external pack first; the lightweight
+# fallback shipped in this repo is always synced incrementally afterwards.
+deploy_wallpapers() {
+    local do_download="${1:-n}"
+    if [ "$do_download" = "y" ]; then
+        download_wallpaper_pack
+    fi
+    sync_wallpapers_fallback
+}
+
+# Download the full wallpaper & video pack from the external
+# ech678/wallpaper-collection repo, trying each mirror in order. The temp
+# clone is stripped of its .git history and preview material so only clean
+# assets land in ~/Pictures/Wallpapers. Never aborts the main flow on failure.
+WP_PACK_DEPLOYED=0
+download_wallpaper_pack() {
+    WP_PACK_DEPLOYED=0
+    msg msg_downloading_wallpapers
+    if ! command -v git >/dev/null 2>&1; then
+        msg msg_wallpapers_download_failed
+        log_msg WARN "Wallpaper pack download skipped: git not installed"
         return 0
     fi
 
+    local WP_MIRRORS=(
+        "Official|https://github.com/ech678/wallpaper-collection.git"
+        "gh-proxy.org|https://gh-proxy.org/https://github.com/ech678/wallpaper-collection.git"
+    )
+    local wp_dest
+    wp_dest="$(get_pics_dir)/Wallpapers"
+    local success=0
+    local idx=1
+    for item in "${WP_MIRRORS[@]}"; do
+        local tag="${item%%|*}"
+        local url="${item#*|}"
+        local wp_tmp
+        wp_tmp=$(mktemp -d) || { msg msg_wallpapers_download_failed; return 0; }
+        register_temp_path "$wp_tmp"
+        msg msg_downloading_wallpapers_node "$idx/${#WP_MIRRORS[@]}" "$tag"
+        if git_clone_timeout "$url" "$wp_tmp"; then
+            success=1
+            break
+        fi
+        rm -rf "$wp_tmp" 2>/dev/null || true
+        idx=$((idx + 1))
+    done
+
+    if [ "$success" -eq 1 ]; then
+        mkdir -p "$wp_dest"
+        rm -rf "$wp_tmp/.git" "$wp_tmp/preview.webp" "$wp_tmp/README.md" 2>/dev/null || true
+        cp -an "$wp_tmp"/. "$wp_dest"/ 2>/dev/null || true
+        WP_PACK_DEPLOYED=1
+        msg msg_wallpapers_download_success
+        log_msg INFO "Wallpaper pack deployed from [$tag] to $wp_dest"
+    else
+        msg msg_wallpapers_download_failed
+        log_msg WARN "Wallpaper pack download failed on all mirrors"
+    fi
+}
+
+# Incrementally sync the lightweight fallback wallpaper shipped in this repo
+# (never overwrites existing files). Requires no network.
+sync_wallpapers_fallback() {
+    local wp_src="${REPO_DIR:-.}/Wallpapers"
+    local wp_dest
+    wp_dest="$(get_pics_dir)/Wallpapers"
+    if [ ! -d "$wp_src" ]; then
+        return 0
+    fi
     mkdir -p "$wp_dest"
-    cp -an "$wp_src"/. "$wp_dest"/ 2>/dev/null || cp -a "$wp_src"/. "$wp_dest"/
+    cp -an "$wp_src"/. "$wp_dest"/ 2>/dev/null || true
     echo "  Deployed & Synced (incremental): $wp_dest"
 }
 
@@ -360,10 +433,12 @@ offer_overwrite_upgrade() {
 
 install_configs() {
     local mode="${1:-full}"
+    WP_PACK_DEPLOYED=0
 
     local do_backup="nobackup"
     local do_fcitx="n"
     local do_greeter="n"
+    local do_wallpapers="n"
     export KEEP_MONITOR=1
 
     local fcitx_available=false
@@ -379,6 +454,7 @@ install_configs() {
         echo -e " \e[1;36m[ NyxNiri Setup — Pre-flight Configuration ]\e[0m"
         echo -e "=================================================="
         echo -e "  · \e[1m[Core]\e[0m Configuration Files & Wallpaper Library"
+        echo -e "  · \e[1m[Module]\e[0m Full Wallpaper & Video Pack (on-demand ~100MB)"
         if [ -f "$HOME/.config/niri/monitor.kdl" ]; then
             echo -e "  · \e[1m[Hardware]\e[0m Personal Monitor Settings (~/.config/niri/monitor.kdl)"
         fi
@@ -402,6 +478,19 @@ install_configs() {
             do_backup="backup"
         fi
 
+        local wp_default="y"
+        if wallpapers_pack_present; then
+            wp_default="n"
+        fi
+
+        # Automation (auto-yes): apply the same smart rule — never re-fetch an
+        # already-deployed pack, download when missing.
+        if [ "${NYXNIRI_AUTO_YES:-0}" = "1" ]; then
+            do_wallpapers="$wp_default"
+        elif prompt_confirm ask_download_wallpapers "$wp_default"; then
+            do_wallpapers="y"
+        fi
+
         if [ "$fcitx_available" = true ]; then
             if prompt_confirm ask_fcitx_install "n"; then
                 do_fcitx="y"
@@ -420,6 +509,12 @@ install_configs() {
             msg install_cancelled
             return 0
         fi
+    else
+        # Non-interactive: same smart rule, decided automatically — skip when
+        # the pack is already present, otherwise pull the full pack.
+        if ! wallpapers_pack_present; then
+            do_wallpapers="y"
+        fi
     fi
 
     # ------------------------------------------------------------------
@@ -437,7 +532,7 @@ install_configs() {
 
     cur=$((cur + 1))
     msg install_step_wallpapers "$cur/$step_total"
-    deploy_wallpapers
+    deploy_wallpapers "$do_wallpapers"
 
     if [ "$fcitx_available" = true ]; then
         cur=$((cur + 1))
@@ -481,7 +576,11 @@ install_configs() {
     # ------------------------------------------------------------------
     msg install_summary_title
     msg summary_configs
-    msg summary_wallpapers
+    if [ "${WP_PACK_DEPLOYED:-0}" -eq 1 ]; then
+        msg summary_wallpapers_pack
+    else
+        msg summary_wallpapers
+    fi
     if [ "$fcitx_available" = true ]; then
         if [ "$do_fcitx" = "y" ]; then
             msg summary_fcitx_on

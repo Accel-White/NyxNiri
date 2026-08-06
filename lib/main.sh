@@ -142,7 +142,8 @@ optional_modules_menu() {
         show_logo
         msg optmod_menu_title
         printf "  \e[1;32m1)\e[0m %s %s\n" "$(_disp_pad "Noctalia Greeter" 22)" "$(greeter_status_label)"
-        printf "  \e[1;32m2)\e[0m %s %s\n" "$(_disp_pad "NyxMellow fcitx5 皮肤" 22)" "$(fcitx_status_label)"
+        printf "  \e[1;32m2)\e[0m %s %s\n" "$(_disp_pad "$(msg optmod_sub_fcitx)" 22)" "$(fcitx_status_label)"
+        printf "  \e[1;32m3)\e[0m %s %s\n" "$(_disp_pad "$(msg optmod_sub_wallpapers)" 22)" "$(wallpapers_status_label)"
         msg optmod_purge
         msg optmod_back
         echo ""
@@ -155,7 +156,8 @@ optional_modules_menu() {
         case "$opt" in
             1) greeter_menu ;;
             2) fcitx_menu ;;
-            3) discover_config_items; uninstall_nyxniri "purge" ;;
+            3) deploy_wallpapers "y"; press_any_key ;;
+            4) discover_config_items; uninstall_nyxniri "purge" ;;
             0|q) return 0 ;;
             *) msg invalid_opt; sleep 1 ;;
         esac
@@ -303,6 +305,10 @@ main() {
                 run_dep_menu_loop
                 exit 0
                 ;;
+            wallpapers|wp)
+                deploy_wallpapers "y"
+                exit 0
+                ;;
             bug|report)
                 generate_bug_report
                 exit 0
@@ -369,6 +375,7 @@ main() {
                 echo "  purge                Deep purge all NyxNiri configs, cache & wallpapers"
                 echo "  doctor               Run System Doctor diagnostics"
                 echo "  deps                 Open the dependency check & install menu"
+                echo "  wallpapers           Download the full wallpaper & video pack from the external repo"
                 echo "  bug|report           Generate a diagnostic bug report"
                 echo "  test                 Test deploy (no backup, keep monitor.kdl, idempotent)"
                 echo "  greeter [install|status|uninstall]  Optional Noctalia Greeter (greetd login) setup"

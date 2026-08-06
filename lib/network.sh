@@ -9,15 +9,22 @@ set -euo pipefail
 GIT_MIRROR_REGISTRY=(
     "Official|https://github.com/ech678/NyxNiri.git"
     "gh-proxy.org|https://gh-proxy.org/https://github.com/ech678/NyxNiri.git"
-    "ghproxy.net|https://ghproxy.net/https://github.com/ech678/NyxNiri.git"
 )
 
 RAW_MIRROR_TEMPLATES=(
     "Official|https://raw.githubusercontent.com/{USER_REPO}/{BRANCH}/{FILE_PATH}"
     "jsDelivr-CDN|https://fastly.jsdelivr.net/gh/{USER_REPO}@{BRANCH}/{FILE_PATH}"
     "gh-proxy.org|https://gh-proxy.org/https://raw.githubusercontent.com/{USER_REPO}/{BRANCH}/{FILE_PATH}"
-    "ghproxy.net|https://ghproxy.net/https://raw.githubusercontent.com/{USER_REPO}/{BRANCH}/{FILE_PATH}"
 )
+
+# Shallow clone with network hardening: never block on interactive credential
+# prompts (GIT_TERMINAL_PROMPT=0) and abort stalled transfers instead of hanging
+# forever (http.lowSpeedTime/Limit). The single canonical clone invocation so
+# all mirror-fallback paths share identical behavior.
+git_clone_timeout() {
+    local url="$1" target_dir="$2"
+    env GIT_TERMINAL_PROMPT=0 git clone -c http.lowSpeedTime=15 -c http.lowSpeedLimit=1000 --depth 1 "$url" "$target_dir"
+}
 
 # Select best working Git mirror url with explicit terminal logging
 clone_repo_with_fallback() {
@@ -33,7 +40,7 @@ clone_repo_with_fallback() {
         echo -e "\n  \e[1;36m[$idx/${#GIT_MIRROR_REGISTRY[@]}] 尝试从 [$tag] 节点拉取...\e[0m" >&2
         rm -rf "$target_dir" 2>/dev/null || true
 
-        if git clone --depth 1 "$url" "$target_dir"; then
+        if git_clone_timeout "$url" "$target_dir"; then
             echo -e "\e[1;32m:: [Network Selected] 已成功通过 [$tag] 节点完成仓库拉取。\e[0m\n" >&2
             log_msg INFO "Git clone [$tag] SUCCESS ($url)"
             return 0

@@ -82,7 +82,7 @@ msg() {
 
             # Optional Modules Submenu
             optmod_menu_title) echo -e "\n\e[1;35m=== 可选模块 ===\e[0m" ;;
-            optmod_purge) echo -e "  \e[1;31m3)\e[0m 深度清除 (彻底粉碎配置/快照/缓存/壁纸)" ;;
+            optmod_purge) echo -e "  \e[1;31m4)\e[0m 深度清除 (彻底粉碎配置/快照/缓存/壁纸)" ;;
             optmod_back) echo -e "  \e[1;30m0)\e[0m 返回主菜单" ;;
 
             # Greeter Submenu
@@ -106,6 +106,17 @@ msg() {
             status_enabled) echo -e "\e[1;32m[已启用]\e[0m" ;;
             status_disabled) echo -e "\e[1;33m[未启用]\e[0m" ;;
             status_fcitx5_missing) echo -e "\e[1;31m[fcitx5 未装]\e[0m" ;;
+            status_wallpapers_installed) echo -e "\e[1;32m[已下载]\e[0m" ;;
+            status_wallpapers_missing) echo -e "\e[1;33m[未下载]\e[0m" ;;
+
+            # Optional Modules Menu Labels & Wallpapers (External Pack)
+            optmod_sub_fcitx) echo -e "NyxMellow fcitx5 皮肤" ;;
+            optmod_sub_wallpapers) echo -e "下载全套壁纸 (约100MB)" ;;
+            ask_download_wallpapers) echo -e "\n:: 是否下载全套精美壁纸与动态视频包？(约 100MB) [y/N]: " ;;
+            msg_downloading_wallpapers) echo -e "\n\e[1;34m:: 正在从外部仓库拉取壁纸包...\e[0m" ;;
+            msg_downloading_wallpapers_node) echo -e "  [$p1] 尝试从 [$p2] 节点拉取壁纸仓库..." ;;
+            msg_wallpapers_download_success) echo -e "\e[1;32m[+] 壁纸包下载并部署成功！\e[0m" ;;
+            msg_wallpapers_download_failed) echo -e "\e[1;31m[-] 壁纸包下载失败，跳过。\e[0m" ;;
 
             # Install Flow
             install_plan_header) echo -e "\n\e[1;36m:: 即将执行以下安装步骤:\e[0m" ;;
@@ -126,6 +137,7 @@ msg() {
             install_summary_title) echo -e "\n\e[1;35m=== 安装汇总 (Install Summary) ===\e[0m" ;;
             summary_configs) echo -e "  \e[1;32m✓\e[0m 配置文件: 已部署" ;;
             summary_wallpapers) echo -e "  \e[1;32m✓\e[0m 壁纸: 已同步" ;;
+            summary_wallpapers_pack) echo -e "  \e[1;32m✓\e[0m 壁纸: 全套已同步 (含动态视频)" ;;
             summary_deps_ok) echo -e "  \e[1;32m✓\e[0m 依赖: 已就绪" ;;
             summary_deps_skip) echo -e "  \e[1;33m·\e[0m 依赖: 已跳过 (可稍后运行: nyxniri deps)" ;;
             summary_fcitx_on) echo -e "  \e[1;32m✓\e[0m NyxMellow fcitx5 皮肤: 已应用" ;;
@@ -324,7 +336,7 @@ msg() {
 
             # Optional Modules Submenu
             optmod_menu_title) echo -e "\n\e[1;35m=== Optional Modules ===\e[0m" ;;
-            optmod_purge) echo -e "  \e[1;31m3)\e[0m Deep Purge (configs / snapshots / cache / wallpapers)" ;;
+            optmod_purge) echo -e "  \e[1;31m4)\e[0m Deep Purge (configs / snapshots / cache / wallpapers)" ;;
             optmod_back) echo -e "  \e[1;30m0)\e[0m Back to Main Menu" ;;
 
             # Greeter Submenu
@@ -348,6 +360,17 @@ msg() {
             status_enabled) echo -e "\e[1;32m[Enabled]\e[0m" ;;
             status_disabled) echo -e "\e[1;33m[Not Enabled]\e[0m" ;;
             status_fcitx5_missing) echo -e "\e[1;31m[fcitx5 Missing]\e[0m" ;;
+            status_wallpapers_installed) echo -e "\e[1;32m[Downloaded]\e[0m" ;;
+            status_wallpapers_missing) echo -e "\e[1;33m[Not Downloaded]\e[0m" ;;
+
+            # Optional Modules Menu Labels & Wallpapers (External Pack)
+            optmod_sub_fcitx) echo -e "NyxMellow fcitx5 Skin" ;;
+            optmod_sub_wallpapers) echo -e "Wallpaper Pack (100MB)" ;;
+            ask_download_wallpapers) echo -e "\n:: Download the full wallpaper & video pack? (~100MB) [y/N]: " ;;
+            msg_downloading_wallpapers) echo -e "\n\e[1;34m:: Downloading wallpapers from external repository...\e[0m" ;;
+            msg_downloading_wallpapers_node) echo -e "  [$p1] Attempting to pull wallpapers from [$p2]..." ;;
+            msg_wallpapers_download_success) echo -e "\e[1;32m[+] Wallpapers downloaded and deployed successfully!\e[0m" ;;
+            msg_wallpapers_download_failed) echo -e "\e[1;31m[-] Failed to download wallpapers. Skipping.\e[0m" ;;
 
             # Install Flow
             install_plan_header) echo -e "\n\e[1;36m:: The following steps will be performed:\e[0m" ;;
@@ -368,6 +391,7 @@ msg() {
             install_summary_title) echo -e "\n\e[1;35m=== Install Summary ===\e[0m" ;;
             summary_configs) echo -e "  \e[1;32m✓\e[0m Config files: deployed" ;;
             summary_wallpapers) echo -e "  \e[1;32m✓\e[0m Wallpapers: synced" ;;
+            summary_wallpapers_pack) echo -e "  \e[1;32m✓\e[0m Wallpapers: full pack synced (with videos)" ;;
             summary_deps_ok) echo -e "  \e[1;32m✓\e[0m Dependencies: ready" ;;
             summary_deps_skip) echo -e "  \e[1;33m·\e[0m Dependencies: skipped (run later: nyxniri deps)" ;;
             summary_fcitx_on) echo -e "  \e[1;32m✓\e[0m NyxMellow fcitx5 skin: applied" ;;

@@ -276,7 +276,7 @@ uninstall_nyxniri() {
             [ -d "$HOME/.config/NyxNiri" ] && rm -rf "$HOME/.config/NyxNiri"
             fcitx_uninstall || true
             local pics_dir
-            pics_dir=$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")
+            pics_dir="$(get_pics_dir)"
             [ -d "$pics_dir/Wallpapers" ] && rm -rf "$pics_dir/Wallpapers"
             msg purge_done
             ;;

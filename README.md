@@ -49,7 +49,8 @@ curl -sL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/m
 ### From a git checkout (recommended)
 
 ```bash
-git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
+# shallow clone: latest snapshot only (~9MB); drop --depth 1 for full history
+git clone --depth 1 https://github.com/ech678/NyxNiri.git ~/NyxNiri
 cd ~/NyxNiri && ./install.sh
 ```
 
@@ -60,11 +61,9 @@ cd ~/NyxNiri && ./install.sh
 # Standalone via gh-proxy.org
 curl -sL --connect-timeout 10 https://gh-proxy.org/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 
-# Standalone via ghproxy.net
-curl -sL --connect-timeout 10 https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 
 # git clone via gh-proxy.org
-git clone https://gh-proxy.org/https://github.com/ech678/NyxNiri.git ~/NyxNiri
+git clone --depth 1 https://gh-proxy.org/https://github.com/ech678/NyxNiri.git ~/NyxNiri
 cd ~/NyxNiri && ./install.sh
 ```
 
@@ -114,6 +113,7 @@ NyxNiri
 | `nyxniri purge` | Remove configs, cache and wallpapers |
 | `nyxniri doctor` | Dependency + system health check |
 | `nyxniri deps` | Open dependency check & install menu |
+| `nyxniri wallpapers` | Download the full wallpaper & video pack from the external repo |
 | `nyxniri bug` / `nyxniri report` | Generate diagnostic bug report |
 | `nyxniri test` | Developer test deploy (no backup, keep monitor.kdl) |
 | `nyxniri fcitx [install\|status\|uninstall]` | NyxMellow fcitx5 skin |
@@ -186,6 +186,8 @@ NyxNiri
 </p>
 
 *NyxMellow skin in light and dark mode.*
+
+**Wallpaper & video pack:** the full high-res wallpaper and live-video collection (~100MB) lives in a separate [wallpaper-collection](https://github.com/ech678/wallpaper-collection) repo to keep this repo light. During `install`, you can opt in to pull it; `nyxniri wallpapers` fetches it on demand anytime. Once the pack is present (a `~/Pictures/Wallpapers/video/` marker), repeat installs skip the download automatically.
 
 **Noctalia Greeter:** a greetd login screen matching Noctalia style. `nyxniri greeter install` pulls `greetd` + `noctalia-greeter` from AUR, backs up `/etc/greetd/config.toml`, and writes a Polkit rule. It does not disable pre-existing display managers.
 
@@ -292,7 +294,8 @@ curl -sL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/m
 ### 模式二：Git 仓库部署（推荐）
 
 ```bash
-git clone https://github.com/ech678/NyxNiri.git ~/NyxNiri
+# 浅克隆：仅拉取最新快照（约 9MB）；如需完整历史去掉 --depth 1
+git clone --depth 1 https://github.com/ech678/NyxNiri.git ~/NyxNiri
 cd ~/NyxNiri && ./install.sh
 ```
 
@@ -303,11 +306,9 @@ cd ~/NyxNiri && ./install.sh
 # 通过 gh-proxy.org 独立安装
 curl -sL --connect-timeout 10 https://gh-proxy.org/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 
-# 通过 ghproxy.net 独立安装
-curl -sL --connect-timeout 10 https://ghproxy.net/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 
 # 通过 gh-proxy.org 克隆仓库
-git clone https://gh-proxy.org/https://github.com/ech678/NyxNiri.git ~/NyxNiri
+git clone --depth 1 https://gh-proxy.org/https://github.com/ech678/NyxNiri.git ~/NyxNiri
 cd ~/NyxNiri && ./install.sh
 ```
 
@@ -357,6 +358,7 @@ NyxNiri
 | `nyxniri purge` | 清除配置、缓存与壁纸 |
 | `nyxniri doctor` | 依赖与系统健康检查 |
 | `nyxniri deps` | 打开依赖检查与安装菜单 |
+| `nyxniri wallpapers` | 从外部仓库下载全套壁纸与动态视频包 |
 | `nyxniri bug` / `nyxniri report` | 生成诊断 Bug Report |
 | `nyxniri test` | 开发者实机测试部署（不备份、保留 monitor.kdl） |
 | `nyxniri fcitx [install\|status\|uninstall]` | NyxMellow fcitx5 皮肤 |
@@ -429,6 +431,8 @@ NyxNiri
 </p>
 
 *NyxMellow 皮肤亮色 / 暗色效果。*
+
+**壁纸与动态视频包：** 全套高清壁纸与动态视频合集（约 100MB）独立维护在 [wallpaper-collection](https://github.com/ech678/wallpaper-collection) 仓库，避免拖累本仓库克隆速度。`install` 时可选拉取，也可随时用 `nyxniri wallpapers` 按需下载；已检测到 `~/Pictures/Wallpapers/video/` 特征目录后，重复安装会自动跳过下载。
 
 **Noctalia Greeter：** 与 Noctalia 主题一致的 greetd 登录界面。运行 `nyxniri greeter install` 安装 `greetd` + `noctalia-greeter`（AUR），备份 `/etc/greetd/config.toml`，写入 Polkit 免密规则。不会禁用任何已有显示管理器。
 

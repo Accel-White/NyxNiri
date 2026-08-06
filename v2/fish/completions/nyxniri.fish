@@ -10,6 +10,7 @@ complete -c nyxniri -f -n "__fish_use_subcommand" -a uninstall -d "Safely uninst
 complete -c nyxniri -f -n "__fish_use_subcommand" -a purge     -d "Deep purge configs, cache & wallpapers"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a doctor    -d "Run System Doctor diagnostics"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a deps      -d "Open dependency check & install menu"
+complete -c nyxniri -f -n "__fish_use_subcommand" -a wallpapers -d "Download full wallpaper & video pack"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a bug       -d "Generate a diagnostic bug report"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a report    -d "Generate a diagnostic bug report"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a test      -d "Test deploy (no backup, keep monitor.kdl)"
