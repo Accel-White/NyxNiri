@@ -1,5 +1,13 @@
 # Changelog
 
+## [v2.1.19] - 2026-08-06
+
+### Added
+
+- **Fish Shell 自定义文件夹自动加载 (`__custom__/`)**:
+  - 在 `v2/fish/conf.d/__custom__.fish` 中新增对 `conf.d/__custom__/*.fish` 及 `~/.config/fish/__custom__/*.fish` 的动态遍历与自动载入逻辑。
+  - 补充中英双语注释与三重容错校验（目录存在性 `test -d`、通配符空扩展防护、文件有效性 `test -f`），允许用户通过私有子文件夹（如 `__custom__/`）灵活组织多个 `.fish` 脚本，完美履行 Dunder 协议的自动保留承诺。
+
 ## [v2.1.18] - 2026-08-05
 
 ### Added
