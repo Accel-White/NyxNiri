@@ -1,5 +1,20 @@
 # Changelog
 
+## [v2.1.20] - 2026-08-07
+
+### Fixed
+
+- **JetBrains Mono 字体在全新系统未生效 (JetBrains Mono Font Not Applied on Clean Installs)**:
+  - 依赖列表仅安装 `ttf-jetbrains-mono-nerd`，而其提供的家族名是 `JetBrainsMono Nerd Font`；`kitty.conf` / `zed/settings.json` / `noctalia-config.toml` 请求的家族名却是 `JetBrains Mono`（仅由 `ttf-jetbrains-mono` 提供），导致新机器部署后终端 / 编辑器回退到默认字体。
+  - 根因经全仓库排查（AGENTS.md 铁律 0）确认：修复前用宽泛关键字 `JetBrains` 检测字体安装态，一旦家族不吻合就永久判定「已安装」而漏装。`lib/deps.sh` 现新增 `ttf-jetbrains-mono` 依赖，并把两个字体包的状态检测分别收窄为精确匹配 `JetBrains Mono` / `JetBrains.*Nerd`，互相不再误判。
+- **护眼模式关闭时 Blur 无法复原 + 失效的 reload 命令 (EyeCare Blur Restore & Reload Command Fix)**:
+  - `niri msg action reload-config` 在 niri 26.04 中不存在（正确命令为 `load-config-file`），每次调用均静默失败（被 `|| true` 吞掉），特效切换长期仅靠 niri 对 include 文件的自动热重载兜底，并在或然期间触发了护眼模式关闭后 Blur 不恢复。
+  - 引入持久状态机：护眼模式的开/关改由 `effects.kdl` 符号链接的指向目标（`readlink`）判定，替代脆弱的 `pgrep wlsunset` 进程推断——wlsunset 未安装 / 崩溃会令每次 `Mod+N` 都误入 ON 分支并永远卡在护眼模式；现在 wlsunset 死活不再影响特效切换。
+  - `--sync` 对齐语义反转：按符号链接状态对齐 wlsunset（eyecare 则拉起、normal 则杀掉），并自愈缺失 / 损坏的 `effects.kdl`（重建为 Normal + 记录日志）；reload 失败不再静默，写入 `$XDG_RUNTIME_DIR/nyxniri-eyecare.log` 并延时重试一次；符号链接交换后以 `readlink` 校验。
+  - 注销 / 重登状态同步：`--sync` 改为确定性重建——无条件释放 Noctalia 残留 gamma 锁并清理上一会话遗留的孤儿 `wlsunset` 进程（其 gamma 连接已随旧 niri 失效，`pgrep` 仍可见但不再生效），随后依据持久化的 `effects.kdl` 符号链接状态为本会话拉起全新暖色引擎。避免护眼保持开启时注销重登出现「特效已护眼但暖色丢失」的错位。
+  - 终极并发防打架机制 (Flock Serialization & Noctalia Conflict Fix)：引入 `flock` 全局排他锁对切换脚本进行严格串行化，彻底解决手速过快连按 `Mod+N` 或开机自启带来的进程泄漏与竞态不同步；剔除原先为触发弹窗而错误调用的 `noctalia msg nightlight-force-toggle`（该调用会强制唤醒 Noctalia 夺取 Gamma 锁），换为无副作用的纯净 `notify-send`。这解决了笔记本上护眼模式关闭时模糊恢复但暖色不退的顽疾。
+  - 核心依赖补全：将 `wlsunset` 正式加入 `lib/deps.sh` 依赖列表，防止在缺少该依赖的机器上发生意外的“备胎”逻辑漂移。
+
 ## [v2.1.19] - 2026-08-06
 
 ### Added

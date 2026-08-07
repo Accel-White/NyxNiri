@@ -9,6 +9,7 @@ set -euo pipefail
 DEPS=(
     "niri"
     "noctalia"
+    "wlsunset"
     "fish"
     "starship"
     "kitty"
@@ -21,6 +22,7 @@ DEPS=(
     "fzf"
     "fd"
     "bat"
+    "ttf-jetbrains-mono"
     "ttf-jetbrains-mono-nerd"
     "noto-fonts-cjk"
 )
@@ -45,7 +47,9 @@ check_all_deps() {
             is_installed=1
         elif [ "$cmd" = "inotify-tools" ] && command -v inotifywait >/dev/null 2>&1; then
             is_installed=1
-        elif [ "$cmd" = "ttf-jetbrains-mono-nerd" ] && command -v fc-list >/dev/null 2>&1 && fc-list : family 2>/dev/null | grep -qi "JetBrains"; then
+        elif [ "$cmd" = "ttf-jetbrains-mono" ] && command -v fc-list >/dev/null 2>&1 && fc-list : family 2>/dev/null | grep -qi "JetBrains Mono"; then
+            is_installed=1
+        elif [ "$cmd" = "ttf-jetbrains-mono-nerd" ] && command -v fc-list >/dev/null 2>&1 && fc-list : family 2>/dev/null | grep -qi "JetBrains.*Nerd"; then
             is_installed=1
         elif [ "$cmd" = "noto-fonts-cjk" ] && command -v fc-list >/dev/null 2>&1 && fc-list : family 2>/dev/null | grep -qi "Noto.*CJK"; then
             is_installed=1
