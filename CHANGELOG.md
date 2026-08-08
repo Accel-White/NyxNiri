@@ -165,3 +165,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **包管理器兼容**: 针对纯 `pacman` 且无 AUR 的环境，优化了在线安装的兼容性和回退检测机制。
+
+## [v2.1.0] - 2026-07-20
+
+### Changed
+- **壁纸资源精简**: 大幅压缩高清壁纸与动图依赖，降低克隆体积。
+
+## [v2.0.0] - 2026-07-15
+
+### Added
+- **NyxNiri v2.0 重磅升级**: 基于 Niri 窗口管理器与 Noctalia V5 桌面组件打造全新 Material You 桌面生态。
+
