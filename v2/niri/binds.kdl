@@ -56,6 +56,7 @@ binds {
 
     // 切换护眼模式 (调暖色温并关闭透明度/毛玻璃) / Toggle eye-care mode (warmer temp & disable blur/transparency)
     Mod+N { spawn "~/.config/niri/toggle-eyecare.sh"; }
+    Mod+G { spawn "~/.config/niri/niri-scratch-toggle.sh"; }
 
     // -------------------------------------------------------------------------
     // 3. 焦点导航与窗口移动 / Focus Navigation & Window Movement

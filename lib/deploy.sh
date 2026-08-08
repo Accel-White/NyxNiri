@@ -115,6 +115,9 @@ deploy_selected_configs() {
     if [ -f "$HOME/.config/niri/toggle-eyecare.sh" ]; then
         chmod +x "$HOME/.config/niri/toggle-eyecare.sh"
     fi
+    if [ -f "$HOME/.config/niri/niri-scratch-toggle.sh" ]; then
+        chmod +x "$HOME/.config/niri/niri-scratch-toggle.sh"
+    fi
     if [ -f "$HOME/.config/niri/effects_normal.kdl" ] && [ ! -e "$HOME/.config/niri/effects.kdl" ]; then
         ln -sfn "$HOME/.config/niri/effects_normal.kdl" "$HOME/.config/niri/effects.kdl"
     fi

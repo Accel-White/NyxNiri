@@ -87,10 +87,27 @@ run_doctor() {
         fi
     fi
 
+    # Check niri-scratch-toggle.sh in niri config directory
+    local st_path="$HOME/.config/niri/niri-scratch-toggle.sh"
+    if [ -f "$st_path" ]; then
+        if [ -x "$st_path" ]; then
+            msg doctor_ok "Scripts: niri-scratch-toggle.sh is executable."
+        else
+            msg doctor_warn "Scripts: niri-scratch-toggle.sh is not executable. Fixing permissions..."
+            chmod +x "$st_path"
+        fi
+    fi
+
     if command -v wlsunset >/dev/null 2>&1; then
         msg doctor_ok "EyeCare Component: wlsunset is available for smooth warmth transition."
     else
         msg doctor_warn "EyeCare Component: wlsunset is missing (Night mode temperature ramp will be unavailable)."
+    fi
+
+    if command -v tmux >/dev/null 2>&1; then
+        msg doctor_ok "Scratchpad Component: tmux is available for persistent session support."
+    else
+        msg doctor_warn "Scratchpad Component: tmux is missing (Scratchpad will run in temporary fallback mode)."
     fi
 
     local curr_shell="${SHELL:-}"
