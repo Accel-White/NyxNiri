@@ -1,5 +1,13 @@
 # Changelog
 
+## [v2.2.1] - 2026-08-08
+
+### Fixed
+
+- **国际化字典死代码清理与全仓校验 (i18n Dictionary Dead Code Cleanup & Auditing)**:
+  - 彻底审计并清理 `lib/i18n.sh` 中遗留的 14 组未使用文案键值（包含 `checking_dep`、`install_plan_*`、`summary_customs_header`、`greeter_noninteractive_skip`、`mirror_fallback_confirm` 等）。
+  - 参照 `AGENTS.md` 铁律 0 完成全仓库静态依赖排查，确认 0 处外部引用，消除废弃文案残留，提升代码维护性。
+
 ## [v2.1.20] - 2026-08-07
 
 ### Fixed

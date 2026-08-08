@@ -48,7 +48,6 @@ msg() {
     if [ "${LANG_MODE:-en}" = "zh" ]; then
         case "$key" in
             lang_select) echo -e "\n\e[1;36m:: 请选择语言 / Select Language:\e[0m" ;;
-            checking_dep) echo -e "\n\e[1;34m:: 正在检查系统依赖项...\e[0m" ;;
             installed) echo -e "\e[1;32m[已安装]\e[0m" ;;
             missing) echo -e "\e[1;31m[未安装]\e[0m" ;;
 
@@ -119,12 +118,6 @@ msg() {
             msg_wallpapers_download_failed) echo -e "\e[1;31m[-] 壁纸包下载失败，跳过。\e[0m" ;;
 
             # Install Flow
-            install_plan_header) echo -e "\n\e[1;36m:: 即将执行以下安装步骤:\e[0m" ;;
-            install_plan_configs) echo -e "  · 部署配置文件 (fish/kitty/niri/noctalia/starship/...)" ;;
-            install_plan_wallpapers) echo -e "  · 同步壁纸库" ;;
-            install_plan_deps) echo -e "  · 依赖检查与安装" ;;
-            install_plan_fcitx) echo -e "  · 可选: NyxMellow fcitx5 皮肤" ;;
-            install_plan_greeter) echo -e "  · 可选: Noctalia Greeter" ;;
             ask_fcitx_install) echo -e "\n:: 检测到 fcitx5。应用/刷新 NyxMellow fcitx5 皮肤？[y/N]: " ;;
             fcitx_skipped_not_installed) echo -e "\e[1;33m  [skip]\e[0m 未检测到 fcitx5，跳过 NyxMellow 皮肤 (安装 fcitx5 后可用: nyxniri fcitx install)" ;;
             install_confirm) echo -e ":: 确认开始安装？[Y/n]: " ;;
@@ -144,7 +137,6 @@ msg() {
             summary_fcitx_off) echo -e "  \e[1;33m·\e[0m NyxMellow fcitx5 皮肤: 已跳过" ;;
             summary_greeter_on) echo -e "  \e[1;32m✓\e[0m Noctalia Greeter: 已配置" ;;
             summary_greeter_off) echo -e "  \e[1;33m·\e[0m Noctalia Greeter: 已跳过" ;;
-            summary_customs_header) echo -e "  \e[1;36m·\e[0m 保留的自定义项 (NyxNiri Customizations Preserved):" ;;
 
             # Test Deploy
             test_start) echo -e "\n\e[1;34m:: [test] 幂等重放配置 (不备份 / 保留 monitor.kdl / 跳过可选模块与依赖)...\e[0m" ;;
@@ -222,7 +214,6 @@ msg() {
             greeter_enable_failed) echo -e "\e[1;31m[!] 启用 greetd 服务失败，请手动执行: sudo systemctl enable greetd\e[0m" ;;
             greeter_reboot_hint) echo -e "\e[1;36m提示: 重启或注销后登录界面将变为 Noctalia Greeter。主题同步请在 Noctalia 设置 → 安全 → Noctalia Greeter → Sync Now。\e[0m" ;;
             greeter_ask) echo -e ":: 是否安装并配置 Noctalia Greeter 登录启动器（可选）？[y/N]: " ;;
-            greeter_noninteractive_skip) echo -e "  [skip] Noctalia Greeter（可选）— 非交互模式跳过，可运行 nyxniri greeter install 配置。" ;;
             greeter_status_title) echo -e "\n\e[1;36m:: Noctalia Greeter 状态检查\e[0m" ;;
             greeter_status_ok) echo -e "\e[1;32m[+] Greeter 已完整就绪！\e[0m" ;;
             greeter_status_hint) echo -e "\e[1;36m提示: 运行 nyxniri greeter install 完成安装与配置。\e[0m" ;;
@@ -266,12 +257,9 @@ msg() {
             checking_updates) echo -e "\n\e[1;34m:: 正在检查配置仓库及脚本更新...\e[0m" ;;
             updating_done) echo -e "\e[1;32m[+] 更新与重载成功！正在重新启动脚本...\e[0m" ;;
             updating_failed) echo -e "\e[1;31m[-] 更新失败，请检查您的网络连接或 Git 仓库状态。\e[0m" ;;
-            mirror_fallback_confirm) echo -e "\e[1;33m[!] 连接 github.com 失败，是否切换到国内镜像 (gh-proxy) 继续克隆? [Y/n] \e[0m" ;;
-            mirror_declined) echo -e "\e[1;31m[-] 已取消克隆（拒绝使用非官方镜像）。\e[0m" ;;
             dirty_tree_warn) echo -e "\e[1;33m[!] 检测到 $p1 中存在未提交的本地改动，继续更新将丢弃这些改动。\e[0m" ;;
             dirty_tree_confirm) echo -e ":: 是否继续并丢弃本地改动? [y/N] " ;;
             update_cancelled_dirty) echo -e "\e[1;34m已取消更新，本地改动已保留。\e[0m" ;;
-            syntax_check_failed) echo -e "\e[1;31m[-] 下载的新版本脚本语法校验失败，可能下载不完整，已中止自更新。\e[0m\n请手动检查: $p1" ;;
 
             # AUR & mpvpaper
             aur_skip) echo -e "\e[1;33m[!] AUR 包 ($p1) 需要 AUR helper (paru/yay)，跳过安装。\e[0m" ;;
@@ -294,15 +282,12 @@ msg() {
             # Alerts / Prompts
             warn_deps_missing) echo -e "\n\e[1;33m[!] 警告: 检测到你缺少一些运行所需的依赖组件！\e[0m" ;;
             ask_install_now) echo -e ":: 是否现在检查并进入依赖安装菜单？[Y/n]: " ;;
-            ask_backup_again) echo -e ":: 检测到今天已备份过配置，是否重新备份？[y/N]: " ;;
             ask_backup_before_deploy) echo -e ":: 是否在部署前备份当前配置？[y/N] (默认直接部署不备份): " ;;
             ask_keep_monitor) echo -e "\n\e[1;36m:: 检测到已存在显示配置 ~/.config/niri/monitor.kdl (包含针对您个人硬件的配置)。\e[0m\n:: 是否保留您当前的显示器配置？[Y/n]: " ;;
-            ask_keep_wallpapers) echo -e "\n\e[1;36m:: 检测到已存在壁纸目录。\e[0m\n:: 是否保留您当前的壁纸？（选择\"否\"将替换为 NyxNiri 默认壁纸）[Y/n]: " ;;
         esac
     else
         case "$key" in
             lang_select) echo -e "\n\e[1;36m:: Select Language / 请选择语言:\e[0m" ;;
-            checking_dep) echo -e "\n\e[1;34m:: Checking system dependencies...\e[0m" ;;
             installed) echo -e "\e[1;32m[Installed]\e[0m" ;;
             missing) echo -e "\e[1;31m[Missing]\e[0m" ;;
 
@@ -373,12 +358,6 @@ msg() {
             msg_wallpapers_download_failed) echo -e "\e[1;31m[-] Failed to download wallpapers. Skipping.\e[0m" ;;
 
             # Install Flow
-            install_plan_header) echo -e "\n\e[1;36m:: The following steps will be performed:\e[0m" ;;
-            install_plan_configs) echo -e "  · Deploy config files (fish/kitty/niri/noctalia/starship/...)" ;;
-            install_plan_wallpapers) echo -e "  · Sync wallpaper library" ;;
-            install_plan_deps) echo -e "  · Check & install dependencies" ;;
-            install_plan_fcitx) echo -e "  · Optional: NyxMellow fcitx5 skin" ;;
-            install_plan_greeter) echo -e "  · Optional: Noctalia Greeter" ;;
             ask_fcitx_install) echo -e "\n:: fcitx5 detected. Apply/refresh the NyxMellow fcitx5 skin? [y/N]: " ;;
             fcitx_skipped_not_installed) echo -e "\e[1;33m  [skip]\e[0m fcitx5 not detected; skipping NyxMellow skin (after installing fcitx5: nyxniri fcitx install)" ;;
             install_confirm) echo -e ":: Confirm to start installation? [Y/n]: " ;;
@@ -398,7 +377,6 @@ msg() {
             summary_fcitx_off) echo -e "  \e[1;33m·\e[0m NyxMellow fcitx5 skin: skipped" ;;
             summary_greeter_on) echo -e "  \e[1;32m✓\e[0m Noctalia Greeter: configured" ;;
             summary_greeter_off) echo -e "  \e[1;33m·\e[0m Noctalia Greeter: skipped" ;;
-            summary_customs_header) echo -e "  \e[1;36m·\e[0m Preserved customizations (NyxNiri Customizations Preserved):" ;;
 
             # Test Deploy
             test_start) echo -e "\n\e[1;34m:: [test] Idempotent re-deploy (no backup / keep monitor.kdl / skip optional & deps)...\e[0m" ;;
@@ -476,7 +454,6 @@ msg() {
             greeter_enable_failed) echo -e "\e[1;31m[!] Failed to enable greetd. Run manually: sudo systemctl enable greetd\e[0m" ;;
             greeter_reboot_hint) echo -e "\e[1;36mHint: After reboot/logout the login screen becomes Noctalia Greeter. Sync theme via Noctalia Settings → Security → Noctalia Greeter → Sync Now.\e[0m" ;;
             greeter_ask) echo -e ":: Install & configure Noctalia Greeter login (optional)? [y/N]: " ;;
-            greeter_noninteractive_skip) echo -e "  [skip] Noctalia Greeter (optional) — skipped in non-interactive mode; run nyxniri greeter install to set up." ;;
             greeter_status_title) echo -e "\n\e[1;36m:: Noctalia Greeter status\e[0m" ;;
             greeter_status_ok) echo -e "\e[1;32m[+] Greeter fully ready!\e[0m" ;;
             greeter_status_hint) echo -e "\e[1;36mHint: run nyxniri greeter install to set up.\e[0m" ;;
@@ -514,12 +491,9 @@ msg() {
             checking_updates) echo -e "\n\e[1;34m:: Checking for repository and script updates...\e[0m" ;;
             updating_done) echo -e "\e[1;32m[+] Update and reload successful! Restarting script...\e[0m" ;;
             updating_failed) echo -e "\e[1;31m[-] Update failed. Please check your network connection or git status.\e[0m" ;;
-            mirror_fallback_confirm) echo -e "\e[1;33m[!] Connection to github.com failed. Switch to the domestic mirror (gh-proxy) and continue cloning? [Y/n] \e[0m" ;;
-            mirror_declined) echo -e "\e[1;31m[-] Clone cancelled (declined the unofficial mirror).\e[0m" ;;
             dirty_tree_warn) echo -e "\e[1;33m[!] Uncommitted local changes detected in $p1; continuing will discard them.\e[0m" ;;
             dirty_tree_confirm) echo -e ":: Continue and discard local changes? [y/N] " ;;
             update_cancelled_dirty) echo -e "\e[1;34mUpdate cancelled; local changes preserved.\e[0m" ;;
-            syntax_check_failed) echo -e "\e[1;31m[-] Syntax check failed on the downloaded script; the download may be incomplete. Self-update aborted.\e[0m\nPlease check manually: $p1" ;;
 
             # AUR & mpvpaper
             aur_skip) echo -e "\e[1;33m[!] AUR packages ($p1) require an AUR helper (paru/yay). Skipping.\e[0m" ;;
@@ -542,10 +516,8 @@ msg() {
             # Alerts / Prompts
             warn_deps_missing) echo -e "\n\e[1;33m[!] Warning: Some required dependencies are missing on your system!\e[0m" ;;
             ask_install_now) echo -e ":: Would you like to check and install missing dependencies now? [Y/n]: " ;;
-            ask_backup_again) echo -e ":: A backup has already been made today. Do you want to back up again? [y/N]: " ;;
             ask_backup_before_deploy) echo -e ":: Do you want to back up current configs before deploying? [y/N] (Default direct deploy without backup): " ;;
             ask_keep_monitor) echo -e "\n\e[1;36m:: Existing monitor config ~/.config/niri/monitor.kdl detected (contains resolution/layout settings specific to your personal hardware).\e[0m\n:: Preserve your current monitor settings? [Y/n]: " ;;
-            ask_keep_wallpapers) echo -e "\n\e[1;36m:: Existing wallpaper directory detected.\e[0m\n:: Keep your current wallpapers? (Choosing \"No\" will replace with NyxNiri defaults) [Y/n]: " ;;
         esac
     fi
 }
