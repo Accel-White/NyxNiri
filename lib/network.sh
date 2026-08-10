@@ -78,7 +78,7 @@ fetch_raw_with_fallback() {
 
         echo -n "  [$idx/${#RAW_MIRROR_TEMPLATES[@]}] [$tag] $url ... "
         local tmp_file
-        tmp_file=$(mktemp)
+        tmp_file=$(mktemp) || continue
         register_temp_path "$tmp_file"
 
         local start_t
@@ -180,36 +180,25 @@ update_repo_and_script() {
 
     msg checking_updates
     if [ "${RUN_MODE:-standalone}" = "repo" ]; then
-        if safe_pull_or_reset "$REPO_DIR"; then
-            show_release_notes "$REPO_DIR/CHANGELOG.md"
-            discover_config_items
-            offer_overwrite_upgrade "$flag"
-            msg updating_done
-            if [ -t 0 ] && [ -c /dev/tty ]; then
-                local k=""
-                read -p "$(msg press_any_key)" -n 1 k < /dev/tty || sleep 1.5
-            else
-                sleep 1.5
-            fi
-            exec bash "$REPO_DIR/lib/main.sh" "$@"
-        else
-            msg updating_failed
-        fi
+        target_dir="$REPO_DIR"
     else
-        if safe_pull_or_reset "$CACHE_DIR"; then
-            show_release_notes "$CACHE_DIR/CHANGELOG.md"
-            discover_config_items
-            offer_overwrite_upgrade "$flag"
-            msg updating_done
-            if [ -t 0 ] && [ -c /dev/tty ]; then
-                local k=""
-                read -p "$(msg press_any_key)" -n 1 k < /dev/tty || sleep 1.5
-            else
-                sleep 1.5
-            fi
-            exec bash "$CACHE_DIR/lib/main.sh" "$@"
+        target_dir="$CACHE_DIR"
+    fi
+
+    if safe_pull_or_reset "$target_dir"; then
+        show_release_notes "$target_dir/CHANGELOG.md"
+        discover_config_items
+        offer_overwrite_upgrade "$flag"
+        msg updating_done
+        if [ -t 0 ] && [ -c /dev/tty ]; then
+            local k=""
+            read -p "$(msg press_any_key)" -n 1 k < /dev/tty || sleep 1.5
         else
-            msg updating_failed
+            sleep 1.5
         fi
+        release_lock
+        exec bash "$target_dir/lib/main.sh" "$@"
+    else
+        msg updating_failed
     fi
 }

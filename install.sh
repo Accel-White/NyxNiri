@@ -50,6 +50,17 @@ clone_repo_bootstrap() {
     return 1
 }
 
+exec_main() {
+    local target_dir="$1"
+    shift
+    chmod +x "$target_dir/lib/main.sh" 2>/dev/null || true
+    if [ ! -t 0 ] && [ -t 1 ] && [ -r /dev/tty ]; then
+        exec bash "$target_dir/lib/main.sh" "$@" < /dev/tty
+    else
+        exec bash "$target_dir/lib/main.sh" "$@"
+    fi
+}
+
 main() {
     # Prevent running as root
     if [ "$(id -u)" -eq 0 ]; then
@@ -67,12 +78,7 @@ main() {
 
     # Check if running inside local repository
     if [ -n "$script_dir" ] && [ -f "$script_dir/lib/main.sh" ]; then
-        chmod +x "$script_dir/lib/main.sh" 2>/dev/null || true
-        if [ ! -t 0 ] && [ -t 1 ] && [ -r /dev/tty ]; then
-            exec bash "$script_dir/lib/main.sh" "$@" < /dev/tty
-        else
-            exec bash "$script_dir/lib/main.sh" "$@"
-        fi
+        exec_main "$script_dir" "$@"
     fi
 
     # Standalone mode: requires git and cache repository
@@ -90,12 +96,7 @@ main() {
     fi
 
     if [ -f "$CACHE_DIR/lib/main.sh" ]; then
-        chmod +x "$CACHE_DIR/lib/main.sh" 2>/dev/null || true
-        if [ ! -t 0 ] && [ -t 1 ] && [ -r /dev/tty ]; then
-            exec bash "$CACHE_DIR/lib/main.sh" "$@" < /dev/tty
-        else
-            exec bash "$CACHE_DIR/lib/main.sh" "$@"
-        fi
+        exec_main "$CACHE_DIR" "$@"
     else
         echo -e "\e[1;31m[-] 错误: 缓存目录中未找到 lib/main.sh，仓库可能损坏。\e[0m"
         exit 1

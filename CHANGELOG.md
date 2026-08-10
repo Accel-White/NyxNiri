@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.2.1] - 2026-08-10
+
+### Changed
+- **底层引擎加固**: 重构部署引擎，大幅提升在磁盘已满或无权限等极端情况下的防崩溃保护，并清理了冗余的分支代码。
+
+### Fixed
+- **更新死锁修复**: 彻底解决了在线更新或重新启动核心进程时，因残留进程锁未能正确释放而导致的自身假死和实例锁竞争冲突。
+
 ## [v2.2.0] - 2026-08-09
 
 ### Added

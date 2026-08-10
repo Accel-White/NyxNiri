@@ -51,7 +51,7 @@ acquire_lock() {
     if [ -f "$NYXNIRI_LOCK_FILE" ]; then
         local lock_pid
         lock_pid=$(cat "$NYXNIRI_LOCK_FILE" 2>/dev/null || echo "")
-        if [ -n "$lock_pid" ] && kill -0 "$lock_pid" 2>/dev/null; then
+        if [ -n "$lock_pid" ] && [ "$lock_pid" != "$$" ] && kill -0 "$lock_pid" 2>/dev/null; then
             echo -e "\n\e[1;33m[!] Another NyxNiri instance (PID: $lock_pid) is already running.\e[0m"
             echo "    Aborting to prevent concurrent config modification."
             exit 1
@@ -88,9 +88,11 @@ init_logger() {
         tmp_log=$(tail -n 800 "$INSTALL_LOG" 2>/dev/null || true)
         echo "$tmp_log" > "$INSTALL_LOG"
     fi
-    echo "==================================================" >> "$INSTALL_LOG"
-    echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] NyxNiri Session Started (${CURRENT_VERSION:-v2.x})" >> "$INSTALL_LOG"
-    echo "==================================================" >> "$INSTALL_LOG"
+    {
+        echo "=================================================="
+        echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] NyxNiri Session Started (${CURRENT_VERSION:-v2.x})"
+        echo "=================================================="
+    } >> "$INSTALL_LOG"
 }
 
 log_msg() {

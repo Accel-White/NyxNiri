@@ -73,7 +73,7 @@ function proxy_status
 
     echo ""
     echo "--- IP 地理位置 (IP Location) ---"
-    curl -s -m 3 cip.cc 2>/dev/null | head -n 3
+    curl -s --connect-timeout 3 -m 3 cip.cc 2>/dev/null | head -n 3
 end
 
 function ask_agy

@@ -225,7 +225,7 @@ uninstall_nyxniri() {
             ts=$(date +%Y%m%d_%H%M%S)
             local archive_file="$HOME/.config/NyxNiri_final_backup_$ts.tar.gz"
             local temp_stage
-            temp_stage=$(mktemp -d)
+            temp_stage=$(mktemp -d) || return 1
             register_temp_path "$temp_stage"
             for item in "${CONFIG_ITEMS[@]}"; do
                 if [ -e "$HOME/.config/$item" ]; then

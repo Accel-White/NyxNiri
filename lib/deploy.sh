@@ -87,9 +87,11 @@ deploy_selected_configs() {
             local temp_monitor=""
             if [ "$item" = "niri" ] && [ -f "$dest/monitor.kdl" ]; then
                 if [ "${KEEP_MONITOR:-1}" = "1" ] || [ "${NYXNIRI_KEEP_MONITOR:-0}" = "1" ]; then
-                    temp_monitor=$(mktemp)
-                    register_temp_path "$temp_monitor"
-                    cp "$dest/monitor.kdl" "$temp_monitor"
+                    temp_monitor=$(mktemp) || temp_monitor=""
+                    if [ -n "$temp_monitor" ]; then
+                        register_temp_path "$temp_monitor"
+                        cp "$dest/monitor.kdl" "$temp_monitor"
+                    fi
                 fi
             fi
 
@@ -184,7 +186,7 @@ deploy_selected_configs() {
         echo -e "\e[1;34m:: [Fisher] 正在检查/更新 Fisher 插件管理器...\e[0m"
         log_msg INFO "Checking Fisher plugin manager installation"
         local fisher_tmp
-        fisher_tmp=$(mktemp)
+        fisher_tmp=$(mktemp) || return 0
         register_temp_path "$fisher_tmp"
         if fetch_raw_with_fallback "jorgebucaran/fisher" "main" "functions/fisher.fish" "$fisher_tmp"; then
             fish -c "
