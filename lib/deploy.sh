@@ -312,24 +312,79 @@ sync_wallpapers_fallback() {
     echo "  Deployed & Synced (incremental): $wp_dest"
 }
 
-run_selective_upgrade_menu() {
-    local select_status=()
-    for i in "${!CONFIG_ITEMS[@]}"; do
-        select_status[$i]=1
+run_master_component_menu() {
+    local is_update="${1:-false}"
+    local mode="${2:-full}"
+
+    CHOSEN_CONFIG_ITEMS=()
+    DO_FCITX="n"
+    DO_GREETER="n"
+    DO_WALLPAPERS="n"
+    DO_BACKUP="nobackup"
+    KEEP_MONITOR=0
+
+    declare -a MENU_ITEM_NAMES=()
+    declare -a MENU_ITEM_KEYS=()
+    declare -a MENU_ITEM_CHECKS=()
+
+    for item in "${CONFIG_ITEMS[@]}"; do
+        MENU_ITEM_NAMES+=("$(msg master_item_config "$item")")
+        MENU_ITEM_KEYS+=("config_$item")
+        MENU_ITEM_CHECKS+=(1)
     done
+
+    local wp_check=1
+    if wallpapers_pack_present; then wp_check=0; fi
+    MENU_ITEM_NAMES+=("$(msg master_item_asset "Wallpapers & Videos [$(wallpapers_status_label)]")")
+    MENU_ITEM_KEYS+=("assets_wallpapers")
+    MENU_ITEM_CHECKS+=("$wp_check")
+
+    if fcitx5_installed; then
+        local fcitx_check=1
+        if [ "$is_update" = true ] && ! fcitx_enabled; then
+            fcitx_check=0
+        fi
+        MENU_ITEM_NAMES+=("$(msg master_item_module "NyxMellow fcitx5 [$(fcitx_status_label)]")")
+        MENU_ITEM_KEYS+=("module_fcitx")
+        MENU_ITEM_CHECKS+=("$fcitx_check")
+    fi
+
+    if [ "$mode" = "full" ] || [ "$is_update" = true ]; then
+        local greeter_check=0
+        MENU_ITEM_NAMES+=("$(msg master_item_module "Noctalia Greeter [$(greeter_status_label)]")")
+        MENU_ITEM_KEYS+=("module_greeter")
+        MENU_ITEM_CHECKS+=("$greeter_check")
+    fi
+
+    if [ "$is_update" = false ]; then
+        MENU_ITEM_NAMES+=("$(msg master_item_behavior)")
+        MENU_ITEM_KEYS+=("sep_behavior")
+        MENU_ITEM_CHECKS+=(-1)
+
+        MENU_ITEM_NAMES+=("$(msg master_item_backup)")
+        MENU_ITEM_KEYS+=("behavior_backup")
+        MENU_ITEM_CHECKS+=(0)
+
+        if [ -f "$HOME/.config/niri/monitor.kdl" ]; then
+            MENU_ITEM_NAMES+=("$(msg master_item_monitor)")
+            MENU_ITEM_KEYS+=("behavior_monitor")
+            MENU_ITEM_CHECKS+=(1)
+        fi
+    fi
 
     while true; do
         clear 2>/dev/null || true
         show_logo
-        msg selective_title
-        for i in "${!CONFIG_ITEMS[@]}"; do
+        msg master_menu_title
+        for i in "${!MENU_ITEM_NAMES[@]}"; do
             local check=" "
-            if [ "${select_status[$i]:-0}" -eq 1 ]; then
+            if [ "${MENU_ITEM_CHECKS[$i]:--1}" -eq 1 ]; then
                 check="*"
-            else
-                check=" "
+            elif [ "${MENU_ITEM_CHECKS[$i]:--1}" -eq -1 ]; then
+                printf "  %s\n" "${MENU_ITEM_NAMES[$i]}"
+                continue
             fi
-            printf "  [%s] %2d) %s\n" "$check" "$((i+1))" "${CONFIG_ITEMS[$i]}"
+            printf "  [%s] %2d) %s\n" "$check" "$((i+1))" "${MENU_ITEM_NAMES[$i]}"
         done
         echo ""
         msg selective_hint
@@ -345,34 +400,40 @@ run_selective_upgrade_menu() {
         fi
 
         for num in $choice; do
-            if [[ "$num" =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le "${#CONFIG_ITEMS[@]}" ]; then
+            if [[ "$num" =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le "${#MENU_ITEM_NAMES[@]}" ]; then
                 local index=$((num-1))
-                if [ "${select_status[$index]:-0}" -eq 1 ]; then
-                    select_status[$index]=0
-                else
-                    select_status[$index]=1
+                if [ "${MENU_ITEM_CHECKS[$index]:--1}" -ne -1 ]; then
+                    if [ "${MENU_ITEM_CHECKS[$index]:-0}" -eq 1 ]; then
+                        MENU_ITEM_CHECKS[$index]=0
+                    else
+                        MENU_ITEM_CHECKS[$index]=1
+                    fi
                 fi
             fi
         done
     done
 
-    local chosen_items=()
-    for i in "${!CONFIG_ITEMS[@]}"; do
-        if [ "${select_status[$i]:-0}" -eq 1 ]; then
-            chosen_items+=("${CONFIG_ITEMS[$i]}")
+    for i in "${!MENU_ITEM_KEYS[@]}"; do
+        local key="${MENU_ITEM_KEYS[$i]}"
+        local is_checked="${MENU_ITEM_CHECKS[$i]}"
+        if [ "$is_checked" -eq 1 ]; then
+            if [[ "$key" == config_* ]]; then
+                CHOSEN_CONFIG_ITEMS+=("${key#config_}")
+            elif [ "$key" = "module_fcitx" ]; then
+                DO_FCITX="y"
+            elif [ "$key" = "module_greeter" ]; then
+                DO_GREETER="y"
+            elif [ "$key" = "assets_wallpapers" ]; then
+                DO_WALLPAPERS="y"
+            elif [ "$key" = "behavior_backup" ]; then
+                DO_BACKUP="backup"
+            elif [ "$key" = "behavior_monitor" ]; then
+                KEEP_MONITOR=1
+            fi
         fi
     done
-
-    if [ ${#chosen_items[@]} -gt 0 ]; then
-        msg upgrading_selected
-        deploy_selected_configs "nobackup" "${chosen_items[@]}"
-        print_custom_preserved
-        msg overwrite_done
-    else
-        echo "No components selected."
-    fi
+    export KEEP_MONITOR
 }
-
 offer_overwrite_upgrade() {
     local flag="${1:-}"
     if [ "$flag" = "--force" ] || [ "$flag" = "--deploy" ]; then
@@ -393,49 +454,88 @@ offer_overwrite_upgrade() {
         return 0
     fi
 
-    msg overwrite_title
-    msg overwrite_opt1
-    msg overwrite_opt2
-    msg overwrite_opt3
-    msg overwrite_opt4
-    echo ""
-    local mode_choice=""
-    if [ -c /dev/tty ]; then
-        read -p "$(msg overwrite_prompt)" mode_choice < /dev/tty || mode_choice="1"
-    fi
-    mode_choice="${mode_choice:-1}"
+    while true; do
+        msg overwrite_title
+        msg overwrite_opt1
+        msg overwrite_opt2
+        msg overwrite_opt3
+        msg overwrite_opt4
+        msg overwrite_opt5
+        echo ""
+        local mode_choice=""
+        if [ -c /dev/tty ]; then
+            read -p "$(msg overwrite_prompt)" mode_choice < /dev/tty || mode_choice="1"
+        fi
+        mode_choice="${mode_choice:-1}"
 
-    case "$mode_choice" in
-        1)
-            deploy_selected_configs "nobackup"
-            deploy_wallpapers
-            deploy_fcitx_theme
-            print_custom_preserved
-            msg overwrite_done
-            ;;
-        2)
-            deploy_selected_configs "backup"
-            deploy_wallpapers
-            deploy_fcitx_theme
-            print_custom_preserved
-            msg overwrite_done
-            ;;
-        3)
-            run_selective_upgrade_menu
-            ;;
-        4)
-            echo "Skipped config deployment."
-            ;;
-        *)
-            deploy_selected_configs "nobackup"
-            deploy_wallpapers
-            deploy_fcitx_theme
-            print_custom_preserved
-            msg overwrite_done
-            ;;
-    esac
+        case "$mode_choice" in
+            1)
+                deploy_selected_configs "nobackup"
+                deploy_wallpapers
+                deploy_fcitx_theme
+                print_custom_preserved
+                msg overwrite_done
+                break
+                ;;
+            2)
+                deploy_selected_configs "backup"
+                deploy_wallpapers
+                deploy_fcitx_theme
+                print_custom_preserved
+                msg overwrite_done
+                break
+                ;;
+            3)
+                run_master_component_menu true "full"
+                if [ ${#CHOSEN_CONFIG_ITEMS[@]} -gt 0 ] || [ "$DO_WALLPAPERS" = "y" ] || [ "$DO_FCITX" = "y" ] || [ "$DO_GREETER" = "y" ]; then
+                    msg upgrading_selected
+                    if [ ${#CHOSEN_CONFIG_ITEMS[@]} -gt 0 ]; then
+                        deploy_selected_configs "nobackup" "${CHOSEN_CONFIG_ITEMS[@]}"
+                    fi
+                    if [ "$DO_WALLPAPERS" = "y" ]; then
+                        deploy_wallpapers "y"
+                    fi
+                    if [ "$DO_FCITX" = "y" ]; then
+                        fcitx_install || true
+                    fi
+                    if [ "$DO_GREETER" = "y" ]; then
+                        greeter_install || true
+                    fi
+                    print_custom_preserved
+                    msg overwrite_done
+                else
+                    echo "No components selected."
+                fi
+                break
+                ;;
+            4)
+                echo "Skipped config deployment."
+                break
+                ;;
+            5|[vV])
+                msg diff_viewer_title
+                local repo_config_dir="${REPO_DIR:-.}/$CONFIG_DIR_NAME"
+                (
+                    for item in "${CONFIG_ITEMS[@]}"; do
+                        local src="$repo_config_dir/$item"
+                        local dest="$HOME/.config/$item"
+                        if [ -e "$src" ] && [ -e "$dest" ]; then
+                            diff -urN --color=always "$dest" "$src" || true
+                        fi
+                    done
+                ) | less -R
+                ;;
+            *)
+                deploy_selected_configs "nobackup"
+                deploy_wallpapers
+                deploy_fcitx_theme
+                print_custom_preserved
+                msg overwrite_done
+                break
+                ;;
+        esac
+    done
 }
-
 install_configs() {
     local mode="${1:-full}"
     WP_PACK_DEPLOYED=0
@@ -452,76 +552,27 @@ install_configs() {
     fi
 
     # ------------------------------------------------------------------
+    # ------------------------------------------------------------------
     # Phase 0: Pre-flight checklist (interactive & standardized card)
     # ------------------------------------------------------------------
     if [ -t 0 ] && [ -c /dev/tty ]; then
-        echo -e "\n=================================================="
-        echo -e " \e[1;36m[ NyxNiri Setup — Pre-flight Configuration ]\e[0m"
-        echo -e "=================================================="
-        echo -e "  · \e[1m[Core]\e[0m Configuration Files & Wallpaper Library"
-        echo -e "  · \e[1m[Module]\e[0m Full Wallpaper & Video Pack (on-demand ~100MB)"
-        if [ -f "$HOME/.config/niri/monitor.kdl" ]; then
-            echo -e "  · \e[1m[Hardware]\e[0m Personal Monitor Settings (~/.config/niri/monitor.kdl)"
-        fi
-        if [ "$fcitx_available" = true ]; then
-            echo -e "  · \e[1m[Module]\e[0m NyxMellow fcitx5 skin ($(fcitx_status_label))"
-        fi
-        if [ "$mode" = "full" ]; then
-            echo -e "  · \e[1m[Module]\e[0m Noctalia Greeter ($(greeter_status_label))"
-        fi
-        echo -e "==================================================\n"
-
-        if [ -f "$HOME/.config/niri/monitor.kdl" ]; then
-            if prompt_confirm ask_keep_monitor "y"; then
-                export KEEP_MONITOR=1
-            else
-                export KEEP_MONITOR=0
-            fi
-        fi
-
-        if prompt_confirm ask_backup_before_deploy "n"; then
-            do_backup="backup"
-        fi
-
-        local wp_default="y"
-        if wallpapers_pack_present; then
-            wp_default="n"
-        fi
-
-        # Automation (auto-yes): apply the same smart rule — never re-fetch an
-        # already-deployed pack, download when missing.
-        if [ "${NYXNIRI_AUTO_YES:-0}" = "1" ]; then
-            do_wallpapers="$wp_default"
-        elif prompt_confirm ask_download_wallpapers "$wp_default"; then
-            do_wallpapers="y"
-        fi
-
-        if [ "$fcitx_available" = true ]; then
-            if prompt_confirm ask_fcitx_install "n"; then
-                do_fcitx="y"
-            fi
-        else
-            msg fcitx_skipped_not_installed
-        fi
-
-        if [ "$mode" = "full" ]; then
-            if prompt_confirm greeter_ask "n"; then
-                do_greeter="y"
-            fi
-        fi
-
-        if ! prompt_confirm install_confirm "y"; then
+        run_master_component_menu false "$mode"
+        do_fcitx="$DO_FCITX"
+        do_greeter="$DO_GREETER"
+        do_wallpapers="$DO_WALLPAPERS"
+        do_backup="$DO_BACKUP"
+        if [ ${#CHOSEN_CONFIG_ITEMS[@]} -eq 0 ] && [ "$do_wallpapers" = "n" ] && [ "$do_fcitx" = "n" ] && [ "$do_greeter" = "n" ]; then
             msg install_cancelled
             return 0
         fi
     else
+        CHOSEN_CONFIG_ITEMS=("${CONFIG_ITEMS[@]}")
         # Non-interactive: same smart rule, decided automatically — skip when
         # the pack is already present, otherwise pull the full pack.
         if ! wallpapers_pack_present; then
             do_wallpapers="y"
         fi
     fi
-
     # ------------------------------------------------------------------
     # Numbered steps (Uninterrupted Execution Phase)
     # ------------------------------------------------------------------
@@ -533,7 +584,9 @@ install_configs() {
 
     cur=$((cur + 1))
     msg install_step_configs "$cur/$step_total"
-    deploy_selected_configs "$do_backup"
+    if [ ${#CHOSEN_CONFIG_ITEMS[@]} -gt 0 ]; then
+        deploy_selected_configs "$do_backup" "${CHOSEN_CONFIG_ITEMS[@]}"
+    fi
 
     cur=$((cur + 1))
     msg install_step_wallpapers "$cur/$step_total"

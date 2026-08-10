@@ -61,11 +61,8 @@ fcitx_consent_ask() {
         msg fcitx_skipped_not_installed
         return 1
     fi
-    if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
-        fcitx_enabled
-        return $?
-    fi
-    prompt_confirm ask_fcitx_install "n"
+    fcitx_enabled
+    return $?
 }
 
 fcitx_templates_registered() {

@@ -118,7 +118,7 @@ function nyxhelp --description "NyxNiri Cheatsheet速查手册"
             set_color -o magenta; echo "  [ 包管理与清理 ]"; set_color normal
             set_color -o yellow; echo -n "     up / update             "; set_color green; echo "-> 运行 paru/yay/shelly 一键全量更新"; set_color normal
             set_color -o yellow; echo -n "     in [包名]               "; set_color green; echo "-> 安装软件包 (无参时自动开启 se 模糊搜索)"; set_color normal
-            set_color -o yellow; echo -n "     se [关键字]             "; set_color green; echo "-> 模糊搜索软件包并 fzf 交互安装"; set_color normal
+            set_color -o yellow; echo -n "     se [关键字]             "; set_color green; echo "-> 模糊搜索软件包 (支持 aur/pac 前缀) 并 fzf 交互安装"; set_color normal
             set_color -o yellow; echo -n "     un [关键字]             "; set_color green; echo "-> 模糊搜索已安装包并 fzf 交互卸载"; set_color normal
             set_color -o yellow; echo -n "     clean [--auto]          "; set_color green; echo "-> 扫描并清理大缓存与日志垃圾"; set_color normal
             return
@@ -177,6 +177,52 @@ function nyxhelp --description "NyxNiri Cheatsheet速查手册"
     end
 end
 
+# 私有包管理器感知助手 (Paru > Yay > Shelly > Pacman)
+function _nyxniri_pkg_helper
+    if command -v paru &>/dev/null
+        echo "paru"
+    else if command -v yay &>/dev/null
+        echo "yay"
+    else if command -v shelly &>/dev/null
+        echo "shelly"
+    else
+        echo "pacman"
+    end
+end
+
+# 私有搜索分流助手 (供 se 交互及 fzf change 动态 reload)
+function _nyxniri_se_search --argument-names query helper
+    set -l input (string trim -- "$query")
+    set -l parts (string split -n -m 1 " " -- "$input")
+    set -l cmd "$parts[1]"
+    set -l kw "$parts[2]"
+
+    switch "$cmd"
+        case aur
+            if test -n "$kw"
+                if test "$helper" = "paru" -o "$helper" = "yay"
+                    $helper -Ssq --aur "$kw" 2>/dev/null | awk '{print "[AUR] "$0}' || true
+                else if command -v paru &>/dev/null
+                    paru -Ssq --aur "$kw" 2>/dev/null | awk '{print "[AUR] "$0}' || true
+                else if command -v yay &>/dev/null
+                    yay -Ssq --aur "$kw" 2>/dev/null | awk '{print "[AUR] "$0}' || true
+                end
+            end
+        case pac repo
+            if test -n "$kw"
+                pacman -Slq | grep -i -- "$kw" | awk '{print "[PAC] "$0}' || true
+            else
+                pacman -Slq | awk '{print "[PAC] "$0}' || true
+            end
+        case '*'
+            if test -n "$input"
+                pacman -Slq | grep -i -- "$input" | awk '{print "[PAC] "$0}' || true
+            else
+                pacman -Slq | awk '{print "[PAC] "$0}' || true
+            end
+    end
+end
+
 if status is-interactive
     # No greeting
     set fish_greeting
@@ -204,19 +250,6 @@ if status is-interactive
     alias clear "printf '\033[2J\033[3J\033[1;1H'" # fix: kitty doesn't clear scrollback properly
     alias celar "printf '\033[2J\033[3J\033[1;1H'"
     alias claer "printf '\033[2J\033[3J\033[1;1H'"
-    
-    # 私有包管理器感知助手 (Paru > Yay > Shelly > Pacman)
-    function _nyxniri_pkg_helper
-        if command -v paru &>/dev/null
-            echo "paru"
-        else if command -v yay &>/dev/null
-            echo "yay"
-        else if command -v shelly &>/dev/null
-            echo "shelly"
-        else
-            echo "pacman"
-        end
-    end
 
     # 智能一键更新 (优先 paru/yay，自动防中途取消误触发)
     function up --description "一键系统与软件包更新 (Arch / CachyOS)"
@@ -301,8 +334,8 @@ if status is-interactive
 
     alias clean='~/.config/fish/clean-cache'      # 运行一键缓存清理脚本
 
-    # se：模糊搜索软件包 (官方源 + AUR) 并用 fzf 交互安装 (无 fzf 时自动降级)
-    function se --description "模糊搜索并安装软件包 (官方源 + AUR)"
+    # se：模糊搜索软件包 (支持 aur <kw> / pac <kw> 前缀) 并用 fzf 交互安装 (无 fzf 时自动降级)
+    function se --description "模糊搜索并安装软件包 (支持 aur <kw> / pac <kw> 前缀)"
         set -l helper (_nyxniri_pkg_helper)
 
         # 无 fzf 时的降级处理
@@ -327,20 +360,29 @@ if status is-interactive
             set fzf_query "$argv"
         end
 
-        set -l preview_cmd "pacman -Si {1}"
+        set -l preview_cmd "pacman -Si {2}"
         if test "$helper" = "paru"
-            set preview_cmd "paru -Si {1}"
+            set preview_cmd "paru -Si {2} 2>/dev/null || pacman -Si {2}"
         else if test "$helper" = "yay"
-            set preview_cmd "yay -Si {1}"
+            set preview_cmd "yay -Si {2} 2>/dev/null || pacman -Si {2}"
         end
 
-        set -l pkgs (pacman -Slq | fzf --multi --prompt='📦 安装 > ' \
-            --header='[Tab] 多选 | [Enter] 确认安装 | [Esc] 取消' \
+        set -l header_str "💡 搜索提示: 输入 'aur 关键字' 搜 AUR | 'pac 关键字' 搜官方源 | [Tab] 多选"
+
+        set -l pkgs (_nyxniri_se_search "$fzf_query" "$helper" | fzf --multi --prompt='📦 包搜索 > ' \
+            --header="$header_str" \
             --query="$fzf_query" \
+            --bind 'change:reload(fish -c "_nyxniri_se_search {q} '$helper'")' \
             --preview "$preview_cmd" --preview-window 'right:60%:wrap')
 
         if test -n "$pkgs"
-            in $pkgs
+            set -l clean_pkgs
+            for p in $pkgs
+                set -a clean_pkgs (string replace -r '^\[.*?\]\s+' '' -- $p)
+            end
+            if test -n "$clean_pkgs"
+                in $clean_pkgs
+            end
         end
     end
 

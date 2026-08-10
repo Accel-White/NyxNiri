@@ -111,16 +111,13 @@ msg() {
             # Optional Modules Menu Labels & Wallpapers (External Pack)
             optmod_sub_fcitx) echo -e "NyxMellow fcitx5 皮肤" ;;
             optmod_sub_wallpapers) echo -e "下载全套壁纸 (约100MB)" ;;
-            ask_download_wallpapers) echo -e "\n:: 是否下载全套精美壁纸与动态视频包？(约 100MB) [y/N]: " ;;
             msg_downloading_wallpapers) echo -e "\n\e[1;34m:: 正在从外部仓库拉取壁纸包...\e[0m" ;;
             msg_downloading_wallpapers_node) echo -e "  [$p1] 尝试从 [$p2] 节点拉取壁纸仓库..." ;;
             msg_wallpapers_download_success) echo -e "\e[1;32m[+] 壁纸包下载并部署成功！\e[0m" ;;
             msg_wallpapers_download_failed) echo -e "\e[1;31m[-] 壁纸包下载失败，跳过。\e[0m" ;;
 
             # Install Flow
-            ask_fcitx_install) echo -e "\n:: 检测到 fcitx5。应用/刷新 NyxMellow fcitx5 皮肤？[y/N]: " ;;
             fcitx_skipped_not_installed) echo -e "\e[1;33m  [skip]\e[0m 未检测到 fcitx5，跳过 NyxMellow 皮肤 (安装 fcitx5 后可用: nyxniri fcitx install)" ;;
-            install_confirm) echo -e ":: 确认开始安装？[Y/n]: " ;;
             install_cancelled) echo -e "\e[1;34m已取消安装。\e[0m" ;;
             install_step_configs) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 部署配置文件...\e[0m" ;;
             install_step_wallpapers) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 同步壁纸库...\e[0m" ;;
@@ -157,8 +154,19 @@ msg() {
             overwrite_prompt) echo -e ":: 请选择覆盖模式 [1-4] (默认 1): " ;;
             selective_title) echo -e "\n\e[1;33m:: 请选择要覆盖升级的组件（输入数字切换，直接回车开始升级）：\e[0m" ;;
             selective_hint) echo -e "输入空格分隔的序列号（如 1 3）来勾选/取消，直接回车开始升级选中组件：" ;;
-            upgrading_selected) echo -e "\n\e[1;34m:: 正在覆盖升级选中的组件配置...\e[0m" ;;
-            overwrite_done) echo -e "\e[1;32m[+] 选中的配置文件已成功覆盖升级！\e[0m" ;;
+            upgrading_selected) echo -e "\n\e[1;34m:: 正在应用选中的组件...\e[0m" ;;
+            overwrite_done) echo -e "\e[1;32m[+] 选中的组件已成功部署/覆盖！\e[0m" ;;
+            overwrite_opt5) echo -e "  \e[1;34m5)\e[0m 🔍 查看配置差异 (View Config Diffs)" ;;
+            
+            # Master Component Menu
+            master_menu_title) echo -e "\n\e[1;33m:: 请确认部署清单（直接回车开始部署，或输入数字切换状态）：\e[0m" ;;
+            master_item_config) echo -e "核心配置: $p1" ;;
+            master_item_module) echo -e "可选模块: $p1" ;;
+            master_item_asset) echo -e "重型资源: $p1" ;;
+            master_item_behavior) echo -e "--- 部署行为 ---" ;;
+            master_item_backup) echo -e "部署前自动创建安全快照 (Backup)" ;;
+            master_item_monitor) echo -e "保留已存在的显示器硬件配置 (Keep monitor.kdl)" ;;
+            diff_viewer_title) echo -e "\n\e[1;36m:: 配置差异对比 (按 q 退出分页器)\e[0m" ;;
 
             # Uninstall Strings
             uninstall_title) echo -e "\n\e[1;31m────────────────────────────────────────────────────────────────\e[0m\n \e[1;31m:: NyxNiri 卸载与复原工具\e[0m\n\e[1;31m────────────────────────────────────────────────────────────────\e[0m" ;;
@@ -213,7 +221,6 @@ msg() {
             greeter_enabled_skip) echo -e "\e[1;32m[+] greetd 服务已启用。\e[0m" ;;
             greeter_enable_failed) echo -e "\e[1;31m[!] 启用 greetd 服务失败，请手动执行: sudo systemctl enable greetd\e[0m" ;;
             greeter_reboot_hint) echo -e "\e[1;36m提示: 重启或注销后登录界面将变为 Noctalia Greeter。主题同步请在 Noctalia 设置 → 安全 → Noctalia Greeter → Sync Now。\e[0m" ;;
-            greeter_ask) echo -e ":: 是否安装并配置 Noctalia Greeter 登录启动器（可选）？[y/N]: " ;;
             greeter_status_title) echo -e "\n\e[1;36m:: Noctalia Greeter 状态检查\e[0m" ;;
             greeter_status_ok) echo -e "\e[1;32m[+] Greeter 已完整就绪！\e[0m" ;;
             greeter_status_hint) echo -e "\e[1;36m提示: 运行 nyxniri greeter install 完成安装与配置。\e[0m" ;;
@@ -282,8 +289,6 @@ msg() {
             # Alerts / Prompts
             warn_deps_missing) echo -e "\n\e[1;33m[!] 警告: 检测到你缺少一些运行所需的依赖组件！\e[0m" ;;
             ask_install_now) echo -e ":: 是否现在检查并进入依赖安装菜单？[Y/n]: " ;;
-            ask_backup_before_deploy) echo -e ":: 是否在部署前备份当前配置？[y/N] (默认直接部署不备份): " ;;
-            ask_keep_monitor) echo -e "\n\e[1;36m:: 检测到已存在显示配置 ~/.config/niri/monitor.kdl (包含针对您个人硬件的配置)。\e[0m\n:: 是否保留您当前的显示器配置？[Y/n]: " ;;
         esac
     else
         case "$key" in
@@ -351,16 +356,13 @@ msg() {
             # Optional Modules Menu Labels & Wallpapers (External Pack)
             optmod_sub_fcitx) echo -e "NyxMellow fcitx5 Skin" ;;
             optmod_sub_wallpapers) echo -e "Wallpaper Pack (100MB)" ;;
-            ask_download_wallpapers) echo -e "\n:: Download the full wallpaper & video pack? (~100MB) [y/N]: " ;;
             msg_downloading_wallpapers) echo -e "\n\e[1;34m:: Downloading wallpapers from external repository...\e[0m" ;;
             msg_downloading_wallpapers_node) echo -e "  [$p1] Attempting to pull wallpapers from [$p2]..." ;;
             msg_wallpapers_download_success) echo -e "\e[1;32m[+] Wallpapers downloaded and deployed successfully!\e[0m" ;;
             msg_wallpapers_download_failed) echo -e "\e[1;31m[-] Failed to download wallpapers. Skipping.\e[0m" ;;
 
             # Install Flow
-            ask_fcitx_install) echo -e "\n:: fcitx5 detected. Apply/refresh the NyxMellow fcitx5 skin? [y/N]: " ;;
             fcitx_skipped_not_installed) echo -e "\e[1;33m  [skip]\e[0m fcitx5 not detected; skipping NyxMellow skin (after installing fcitx5: nyxniri fcitx install)" ;;
-            install_confirm) echo -e ":: Confirm to start installation? [Y/n]: " ;;
             install_cancelled) echo -e "\e[1;34mInstallation cancelled.\e[0m" ;;
             install_step_configs) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Deploying config files...\e[0m" ;;
             install_step_wallpapers) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Syncing wallpapers...\e[0m" ;;
@@ -396,9 +398,20 @@ msg() {
             overwrite_opt4) echo -e "  \e[1;30m4)\e[0m Skip Config Overwrite (Keep current ~/.config untouched)" ;;
             overwrite_prompt) echo -e ":: Select overwrite mode [1-4] (default 1): " ;;
             selective_title) echo -e "\n\e[1;33m:: Select components to overwrite (type numbers to toggle, press Enter to confirm):\e[0m" ;;
-            selective_hint) echo -e "Type space-separated numbers (e.g. 1 3) to toggle, then press Enter to upgrade:" ;;
-            upgrading_selected) echo -e "\n\e[1;34m:: Overwrite upgrading selected components...\e[0m" ;;
-            overwrite_done) echo -e "\e[1;32m[+] Selected configurations overwritten and upgraded successfully!\e[0m" ;;
+            selective_hint) echo -e "Type space-separated numbers (e.g. 1 3) to toggle, then press Enter to confirm:" ;;
+            upgrading_selected) echo -e "\n\e[1;34m:: Applying selected components...\e[0m" ;;
+            overwrite_done) echo -e "\e[1;32m[+] Selected components deployed/overwritten successfully!\e[0m" ;;
+            overwrite_opt5) echo -e "  \e[1;34m5)\e[0m 🔍 View Configuration Differences (Diff)" ;;
+            
+            # Master Component Menu
+            master_menu_title) echo -e "\n\e[1;33m:: Confirm deployment checklist (press Enter to deploy, or type numbers to toggle):\e[0m" ;;
+            master_item_config) echo -e "Core Config: $p1" ;;
+            master_item_module) echo -e "Optional Module: $p1" ;;
+            master_item_asset) echo -e "Heavy Asset: $p1" ;;
+            master_item_behavior) echo -e "--- Deployment Behaviors ---" ;;
+            master_item_backup) echo -e "Auto-create safe snapshot before deploy (Backup)" ;;
+            master_item_monitor) echo -e "Keep existing monitor hardware config (Keep monitor.kdl)" ;;
+            diff_viewer_title) echo -e "\n\e[1;36m:: Configuration Differences (Press 'q' to quit pager)\e[0m" ;;
 
             # Uninstall Strings
             uninstall_title) echo -e "\n\e[1;31m────────────────────────────────────────────────────────────────\e[0m\n \e[1;31m:: NyxNiri Uninstall & Environment Restoration Tool\e[0m\n\e[1;31m────────────────────────────────────────────────────────────────\e[0m" ;;
@@ -453,7 +466,6 @@ msg() {
             greeter_enabled_skip) echo -e "\e[1;32m[+] greetd service already enabled.\e[0m" ;;
             greeter_enable_failed) echo -e "\e[1;31m[!] Failed to enable greetd. Run manually: sudo systemctl enable greetd\e[0m" ;;
             greeter_reboot_hint) echo -e "\e[1;36mHint: After reboot/logout the login screen becomes Noctalia Greeter. Sync theme via Noctalia Settings → Security → Noctalia Greeter → Sync Now.\e[0m" ;;
-            greeter_ask) echo -e ":: Install & configure Noctalia Greeter login (optional)? [y/N]: " ;;
             greeter_status_title) echo -e "\n\e[1;36m:: Noctalia Greeter status\e[0m" ;;
             greeter_status_ok) echo -e "\e[1;32m[+] Greeter fully ready!\e[0m" ;;
             greeter_status_hint) echo -e "\e[1;36mHint: run nyxniri greeter install to set up.\e[0m" ;;
@@ -516,8 +528,6 @@ msg() {
             # Alerts / Prompts
             warn_deps_missing) echo -e "\n\e[1;33m[!] Warning: Some required dependencies are missing on your system!\e[0m" ;;
             ask_install_now) echo -e ":: Would you like to check and install missing dependencies now? [Y/n]: " ;;
-            ask_backup_before_deploy) echo -e ":: Do you want to back up current configs before deploying? [y/N] (Default direct deploy without backup): " ;;
-            ask_keep_monitor) echo -e "\n\e[1;36m:: Existing monitor config ~/.config/niri/monitor.kdl detected (contains resolution/layout settings specific to your personal hardware).\e[0m\n:: Preserve your current monitor settings? [Y/n]: " ;;
         esac
     fi
 }
