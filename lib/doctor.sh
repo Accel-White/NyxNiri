@@ -11,24 +11,24 @@ run_doctor() {
     sleep 1
 
     local xdg_curr="${XDG_CURRENT_DESKTOP:-}"
-    if [ "$xdg_curr" = "niri" ]; then
-        msg doctor_ok "Compositor: Niri is currently running."
+    if [ "$xdg_curr" = "$MAIN_WM" ]; then
+        msg doctor_ok "Compositor: $MAIN_WM is currently running."
     else
-        msg doctor_warn "Compositor: Current desktop environment is '${xdg_curr:-Unknown}' (Niri is not running)."
+        msg doctor_warn "Compositor: Current desktop environment is '${xdg_curr:-Unknown}' ($MAIN_WM is not running)."
     fi
 
-    if [ -f "/usr/share/wayland-sessions/niri.desktop" ]; then
-        msg doctor_ok "Session: Niri Wayland session desktop file is registered."
+    if [ -f "/usr/share/wayland-sessions/$MAIN_WM.desktop" ]; then
+        msg doctor_ok "Session: $MAIN_WM Wayland session desktop file is registered."
     else
-        msg doctor_warn "Session: /usr/share/wayland-sessions/niri.desktop is missing. (Niri might not show up on your Display Manager login screen)"
+        msg doctor_warn "Session: /usr/share/wayland-sessions/$MAIN_WM.desktop is missing. ($MAIN_WM might not show up on your Display Manager login screen)"
     fi
 
-    if ! command -v noctalia >/dev/null 2>&1; then
-        msg doctor_err "Noctalia: Not installed (not found in PATH). Install via AUR: paru -S noctalia"
-    elif noctalia msg status >/dev/null 2>&1; then
-        msg doctor_ok "Noctalia Daemon: Running and responsive."
+    if ! command -v "$THEME_ENGINE" >/dev/null 2>&1; then
+        msg doctor_err "$THEME_ENGINE: Not installed (not found in PATH). Install via AUR: paru -S $THEME_ENGINE"
+    elif "$THEME_ENGINE" msg status >/dev/null 2>&1; then
+        msg doctor_ok "$THEME_ENGINE Daemon: Running and responsive."
     else
-        msg doctor_err "Noctalia Daemon: Not running. (Launch: niri msg action spawn -- noctalia)"
+        msg doctor_err "$THEME_ENGINE Daemon: Not running. (Launch: $MAIN_WM msg action spawn -- $THEME_ENGINE)"
     fi
 
     local doc_pics_dir
@@ -40,7 +40,7 @@ run_doctor() {
     fi
 
     local missing_critical=0
-    for cmd in niri noctalia fish starship; do
+    for cmd in "$MAIN_WM" "$THEME_ENGINE" fish starship; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
             msg doctor_err "Dependency: '$cmd' is missing from PATH."
             missing_critical=$((missing_critical + 1))
@@ -48,11 +48,11 @@ run_doctor() {
     done
 
     if [ "$missing_critical" -eq 0 ]; then
-        msg doctor_ok "Core Dependencies: All core tools (niri, noctalia, fish, starship) are installed."
+        msg doctor_ok "Core Dependencies: All core tools ($MAIN_WM, $THEME_ENGINE, fish, starship) are installed."
     fi
 
     for script in "theme-sync.sh" "wallpaper-hook.sh" "mpvpaper-sync.sh"; do
-        local path="$HOME/.config/noctalia/$script"
+        local path="$HOME/.config/$THEME_ENGINE/$script"
         if [ -f "$path" ]; then
             if [ -x "$path" ]; then
                 msg doctor_ok "Scripts: $script is executable."
@@ -76,8 +76,8 @@ run_doctor() {
         msg doctor_err "Scripts: clean-cache is missing from ~/.config/fish/."
     fi
 
-    # Check toggle-eyecare.sh in niri config directory
-    local te_path="$HOME/.config/niri/toggle-eyecare.sh"
+    # Check toggle-eyecare.sh in $MAIN_WM config directory
+    local te_path="$HOME/.config/$MAIN_WM/toggle-eyecare.sh"
     if [ -f "$te_path" ]; then
         if [ -x "$te_path" ]; then
             msg doctor_ok "Scripts: toggle-eyecare.sh is executable."
@@ -87,8 +87,8 @@ run_doctor() {
         fi
     fi
 
-    # Check niri-scratch-toggle.sh in niri config directory
-    local st_path="$HOME/.config/niri/niri-scratch-toggle.sh"
+    # Check niri-scratch-toggle.sh in $MAIN_WM config directory
+    local st_path="$HOME/.config/$MAIN_WM/niri-scratch-toggle.sh"
     if [ -f "$st_path" ]; then
         if [ -x "$st_path" ]; then
             msg doctor_ok "Scripts: niri-scratch-toggle.sh is executable."
@@ -149,7 +149,7 @@ run_doctor() {
         if [ "$disk_free_kb" -lt $((10 * 1024 * 1024)) ]; then
             local free_human
             free_human=$(awk -v k="$disk_free_kb" 'BEGIN{ if (k >= 1048576) printf "%.1f GiB", k/1048576; else if (k >= 1024) printf "%.1f MiB", k/1024; else printf "%d KiB", k }')
-            msg doctor_warn "Disk Space: only $free_human free on $HOME. (Try: clean-cache or nyxniri snapshot prune)"
+            msg doctor_warn "Disk Space: only $free_human free on $HOME. (Try: clean-cache or $CLI_CMD snapshot prune)"
         else
             msg doctor_ok "Disk Space: sufficient free space on $HOME."
         fi
@@ -160,7 +160,7 @@ run_doctor() {
         if fcitx_enabled; then
             msg doctor_ok "Fcitx5: NyxMellow skin is enabled (will auto-refresh on update)."
         else
-            msg doctor_warn "Fcitx5: NyxMellow skin not enabled. (Run: nyxniri fcitx install)"
+            msg doctor_warn "Fcitx5: $FCITX_THEME skin not enabled. (Run: $CLI_CMD fcitx install)"
         fi
     fi
 
@@ -179,7 +179,7 @@ generate_bug_report() {
     msg generating_report
     local timestamp
     timestamp=$(date +%Y%m%d_%H%M%S)
-    local report_file="$HOME/nyxniri-bug-report-${timestamp}.md"
+    local report_file="$HOME/$PROJECT_NAME-bug-report-${timestamp}.md"
 
     {
         echo "# NyxNiri System Diagnostic Bug Report"
@@ -204,16 +204,16 @@ generate_bug_report() {
         echo ""
         echo "## 3. Connected Displays (Niri)"
         echo '```text'
-        if command -v niri >/dev/null 2>&1; then
-            niri msg outputs 2>/dev/null || echo "niri msg outputs failed (is Niri running?)"
+        if command -v "$MAIN_WM" >/dev/null 2>&1; then
+            "$MAIN_WM" msg outputs 2>/dev/null || echo "$MAIN_WM msg outputs failed (is $MAIN_WM running?)"
         else
-            echo "niri is not installed"
+            echo "$MAIN_WM is not installed"
         fi
         echo '```'
         echo ""
         echo "## 4. Installed Tool Versions"
         echo '```text'
-        for cmd in niri noctalia fish starship kitty mpvpaper wpctl ddcutil brightnessctl; do
+        for cmd in "$MAIN_WM" "$THEME_ENGINE" fish starship kitty mpvpaper wpctl ddcutil brightnessctl; do
             if command -v "$cmd" >/dev/null 2>&1; then
                 local ver=""
                 if [ "$cmd" = "wpctl" ]; then
@@ -234,7 +234,7 @@ generate_bug_report() {
         echo "## 5. Daemon & Service Status"
         echo '```text'
         echo "--- Noctalia status ---"
-        noctalia msg status 2>/dev/null || echo "Noctalia daemon not responding"
+        "$THEME_ENGINE" msg status 2>/dev/null || echo "$THEME_ENGINE daemon not responding"
         echo ""
         echo "--- Desktop portal status ---"
         systemctl --user status xdg-desktop-portal 2>/dev/null | head -n 10 || echo "xdg-desktop-portal service check failed"
@@ -257,7 +257,7 @@ generate_bug_report() {
         echo ""
         echo "## 7. Noctalia Hook Log (Last 20 Lines)"
         echo '```text'
-        local hook_log="${XDG_STATE_HOME:-$HOME/.local/state}/noctalia/hook.log"
+        local hook_log="${XDG_STATE_HOME:-$HOME/.local/state}/$THEME_ENGINE/hook.log"
         if [ -f "$hook_log" ]; then
             tail -n 20 "$hook_log"
         else

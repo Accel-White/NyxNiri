@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-# NyxNiri Configuration Backup, Snapshot, Rollback & Uninstall Manager
+# $PROJECT_NAME Configuration Backup, Snapshot, Rollback & Uninstall Manager
 # ==============================================================================
 
 set -euo pipefail
 
-BACKUP_BASE_DIR="$HOME/.config/NyxNiri/backups"
+BACKUP_BASE_DIR="$HOME/.config/$PROJECT_NAME/backups"
 declare -a CONFIG_ITEMS=()
 
 discover_config_items() {
@@ -242,7 +242,7 @@ uninstall_nyxniri() {
                     echo "  Removed: ~/.config/$item"
                 fi
             done
-            [ -L "$HOME/.local/bin/nyxniri" ] && rm -f "$HOME/.local/bin/nyxniri"
+            [ -L "$HOME/.local/bin/$CLI_CMD" ] && rm -f "$HOME/.local/bin/$CLI_CMD"
             fcitx_uninstall || true
             msg uninstall_done
             ;;
@@ -259,7 +259,7 @@ uninstall_nyxniri() {
                         echo "  Restored: ~/.config/$item"
                     fi
                 done
-                [ -L "$HOME/.local/bin/nyxniri" ] && rm -f "$HOME/.local/bin/nyxniri"
+                [ -L "$HOME/.local/bin/$CLI_CMD" ] && rm -f "$HOME/.local/bin/$CLI_CMD"
                 msg restore_origin_done
             else
                 msg no_backups_found
@@ -271,9 +271,9 @@ uninstall_nyxniri() {
                     rm -rf "$HOME/.config/$item"
                 fi
             done
-            [ -L "$HOME/.local/bin/nyxniri" ] && rm -f "$HOME/.local/bin/nyxniri"
-            [ -d "$HOME/.cache/NyxNiri" ] && rm -rf "$HOME/.cache/NyxNiri"
-            [ -d "$HOME/.config/NyxNiri" ] && rm -rf "$HOME/.config/NyxNiri"
+            [ -L "$HOME/.local/bin/$CLI_CMD" ] && rm -f "$HOME/.local/bin/$CLI_CMD"
+            [ -d "$HOME/.cache/$PROJECT_NAME" ] && rm -rf "$HOME/.cache/$PROJECT_NAME"
+            [ -d "$HOME/.config/$PROJECT_NAME" ] && rm -rf "$HOME/.config/$PROJECT_NAME"
             fcitx_uninstall || true
             local pics_dir
             pics_dir="$(get_pics_dir)"

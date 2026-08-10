@@ -7,8 +7,8 @@
 set -euo pipefail
 
 DEPS=(
-    "niri"
-    "noctalia"
+    "$MAIN_WM"
+    "$THEME_ENGINE"
     "wlsunset"
     "fish"
     "starship"
@@ -28,7 +28,7 @@ DEPS=(
 
 # Packages only available via AUR (not in official repos)
 AUR_DEPS=(
-    "noctalia"
+    "$THEME_ENGINE"
     "mpvpaper"
 )
 

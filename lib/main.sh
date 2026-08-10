@@ -199,11 +199,11 @@ main_menu() {
 
         case "$opt" in
             1)
-                install_configs "full"
+                install_configs "express"
                 press_any_key
                 ;;
             2)
-                install_configs "config_only"
+                install_configs "full"
                 press_any_key
                 ;;
             3)
@@ -262,7 +262,7 @@ main() {
             install|deploy)
                 shift
                 discover_config_items
-                install_configs "${1:-full}"
+                install_configs "${1:-express}"
                 exit 0
                 ;;
             snapshot|backup)
@@ -362,8 +362,8 @@ main() {
                 exit 0
                 ;;
             help|-h|--help)
-                echo "NyxNiri Dotfiles Management Tool (nyxniri)"
-                echo "Usage: nyxniri [command] [args]"
+                echo "$PROJECT_NAME Dotfiles Management Tool ($CLI_CMD)"
+                echo "Usage: $CLI_CMD [command] [args]"
                 echo ""
                 echo "Commands:"
                 echo "  install [full|config] Deploy dotfiles and install dependencies"

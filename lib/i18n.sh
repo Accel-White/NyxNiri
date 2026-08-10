@@ -54,8 +54,8 @@ msg() {
             # Main Menu
             menu_title) echo -e "\n\e[1;35m=== $PROJECT_NAME 控制面板与工具箱 ===\e[0m" ;;
             menu_group_deploy) echo -e "  \e[1;36m[ 部署与安装 ]\e[0m" ;;
-            menu_opt1) echo -e "  \e[1;32m1)\e[0m 一键完整安装 (依赖 + 配置 + 可选模块)" ;;
-            menu_opt2) echo -e "  \e[1;32m2)\e[0m 仅部署配置文件" ;;
+            menu_opt1) echo -e "  \e[1;32m1)\e[0m 🚀 一键安装体验版 (极简全自动部署)" ;;
+            menu_opt2) echo -e "  \e[1;32m2)\e[0m 🛠️ 高级自定义部署 (分项选装)" ;;
             menu_opt3) echo -e "  \e[1;32m3)\e[0m 检查与安装依赖项" ;;
 
             menu_group_backup) echo -e "\n  \e[1;36m[ 快照与恢复 ]\e[0m" ;;
@@ -147,16 +147,15 @@ msg() {
 
             # Optional Overwrite Upgrade Strings
             overwrite_title) echo -e "\n\e[1;35m────────────────────────────────────────────────────────────────\e[0m\n \e[1;36m:: NyxNiri 配置覆盖升级\e[0m\n\e[1;35m────────────────────────────────────────────────────────────────\e[0m" ;;
-            overwrite_opt1) echo -e "  \e[1;32m1)\e[0m 极速直接覆盖 (不建立备份，直接应用最新配置)" ;;
-            overwrite_opt2) echo -e "  \e[1;36m2)\e[0m 安全备份覆盖 (先自动打安全快照，再应用配置)" ;;
-            overwrite_opt3) echo -e "  \e[1;33m3)\e[0m 选择性/逐组件覆盖 (自由勾选要更新的组件)" ;;
-            overwrite_opt4) echo -e "  \e[1;30m4)\e[0m 仅更新仓库与脚本 (保持当前 ~/.config 不变)" ;;
+            overwrite_opt1) echo -e "  \e[1;32m1)\e[0m 🚀 一键应用最新配置 (自动安全备份)" ;;
+            overwrite_opt2) echo -e "  \e[1;36m2)\e[0m 🛠️ 自定义选择要更新的组件 (多选)" ;;
+            overwrite_opt3) echo -e "  \e[1;33m3)\e[0m 🔍 查看当前与最新配置的差异 (Diff)" ;;
+            overwrite_opt4) echo -e "  \e[1;30m4)\e[0m 🚪 仅更新脚本，暂不覆盖配置 (跳过)" ;;
             overwrite_prompt) echo -e ":: 请选择覆盖模式 [1-4] (默认 1): " ;;
             selective_title) echo -e "\n\e[1;33m:: 请选择要覆盖升级的组件（输入数字切换，直接回车开始升级）：\e[0m" ;;
             selective_hint) echo -e "输入空格分隔的序列号（如 1 3）来勾选/取消，直接回车开始升级选中组件：" ;;
             upgrading_selected) echo -e "\n\e[1;34m:: 正在应用选中的组件...\e[0m" ;;
             overwrite_done) echo -e "\e[1;32m[+] 选中的组件已成功部署/覆盖！\e[0m" ;;
-            overwrite_opt5) echo -e "  \e[1;34m5)\e[0m 🔍 查看配置差异 (View Config Diffs)" ;;
             
             # Master Component Menu
             master_menu_title) echo -e "\n\e[1;33m:: 请确认部署清单（直接回车开始部署，或输入数字切换状态）：\e[0m" ;;
@@ -286,9 +285,10 @@ msg() {
             mpvpaper_upgrade_done) echo -e "\e[1;32m[+] mpvpaper-git 安装完成，内存泄漏问题已修复。\e[0m" ;;
             mpvpaper_upgrade_skip) echo -e "如需手动升级，请运行: paru -S mpvpaper-git 或 yay -S mpvpaper-git" ;;
 
-            # Alerts / Prompts
+            preflight_express_summary) echo -e "\n\e[1;34m:: 即将安装以下组件:\e[0m" ;;
             warn_deps_missing) echo -e "\n\e[1;33m[!] 警告: 检测到你缺少一些运行所需的依赖组件！\e[0m" ;;
             ask_install_now) echo -e ":: 是否现在检查并进入依赖安装菜单？[Y/n]: " ;;
+            preflight_sudo_prompt) echo -e "\n\e[1;34m:: 部分安装步骤（如依赖、系统服务）需要管理员权限。请提前输入 sudo 密码验证：\e[0m" ;;
         esac
     else
         case "$key" in
@@ -299,8 +299,8 @@ msg() {
             # Main Menu
             menu_title) echo -e "\n\e[1;35m=== $PROJECT_NAME Control Panel & Toolbox ===\e[0m" ;;
             menu_group_deploy) echo -e "  \e[1;36m[ Deployment & Setup ]\e[0m" ;;
-            menu_opt1) echo -e "  \e[1;32m1)\e[0m Full Install (Deps + Configs + Optional)" ;;
-            menu_opt2) echo -e "  \e[1;32m2)\e[0m Deploy Configurations Only" ;;
+            menu_opt1) echo -e "  \e[1;32m1)\e[0m 🚀 Express Install (Fully Automatic)" ;;
+            menu_opt2) echo -e "  \e[1;32m2)\e[0m 🛠️ Custom Install (Selective Deployment)" ;;
             menu_opt3) echo -e "  \e[1;32m3)\e[0m Check & Install Dependencies Only" ;;
 
             menu_group_backup) echo -e "\n  \e[1;36m[ Snapshots & Recovery ]\e[0m" ;;
@@ -392,16 +392,15 @@ msg() {
 
             # Optional Overwrite Upgrade Strings
             overwrite_title) echo -e "\n\e[1;35m────────────────────────────────────────────────────────────────\e[0m\n \e[1;36m:: NyxNiri Config Overwrite Upgrade\e[0m\n\e[1;35m────────────────────────────────────────────────────────────────\e[0m" ;;
-            overwrite_opt1) echo -e "  \e[1;32m1)\e[0m Direct Overwrite (Skip backup, deploy latest configs immediately)" ;;
-            overwrite_opt2) echo -e "  \e[1;36m2)\e[0m Safe Overwrite (Create auto snapshot before deploying)" ;;
-            overwrite_opt3) echo -e "  \e[1;33m3)\e[0m Selective Overwrite (Choose specific components to update)" ;;
-            overwrite_opt4) echo -e "  \e[1;30m4)\e[0m Skip Config Overwrite (Keep current ~/.config untouched)" ;;
+            overwrite_opt1) echo -e "  \e[1;32m1)\e[0m 🚀 Auto Deploy Latest Configs (with safe backup)" ;;
+            overwrite_opt2) echo -e "  \e[1;36m2)\e[0m 🛠️ Custom/Selective Overwrite (Choose components)" ;;
+            overwrite_opt3) echo -e "  \e[1;33m3)\e[0m 🔍 View Configuration Differences (Diff)" ;;
+            overwrite_opt4) echo -e "  \e[1;30m4)\e[0m 🚪 Skip Config Overwrite (Keep current ~/.config)" ;;
             overwrite_prompt) echo -e ":: Select overwrite mode [1-4] (default 1): " ;;
             selective_title) echo -e "\n\e[1;33m:: Select components to overwrite (type numbers to toggle, press Enter to confirm):\e[0m" ;;
             selective_hint) echo -e "Type space-separated numbers (e.g. 1 3) to toggle, then press Enter to confirm:" ;;
             upgrading_selected) echo -e "\n\e[1;34m:: Applying selected components...\e[0m" ;;
             overwrite_done) echo -e "\e[1;32m[+] Selected components deployed/overwritten successfully!\e[0m" ;;
-            overwrite_opt5) echo -e "  \e[1;34m5)\e[0m 🔍 View Configuration Differences (Diff)" ;;
             
             # Master Component Menu
             master_menu_title) echo -e "\n\e[1;33m:: Confirm deployment checklist (press Enter to deploy, or type numbers to toggle):\e[0m" ;;
@@ -526,13 +525,21 @@ msg() {
             mpvpaper_upgrade_skip) echo -e "To manually upgrade, run: paru -S mpvpaper-git or yay -S mpvpaper-git" ;;
 
             # Alerts / Prompts
+            preflight_express_summary) echo -e "\n\e[1;34m:: Preparing to install the following components:\e[0m" ;;
             warn_deps_missing) echo -e "\n\e[1;33m[!] Warning: Some required dependencies are missing on your system!\e[0m" ;;
             ask_install_now) echo -e ":: Would you like to check and install missing dependencies now? [Y/n]: " ;;
+            preflight_sudo_prompt) echo -e "\n\e[1;34m:: Some installation steps require administrator privileges. Please enter your sudo password:\e[0m" ;;
         esac
     fi
 }
 
 select_language() {
+    local lang_cache_file="$HOME/.local/state/NyxNiri/lang"
+    if [ -f "$lang_cache_file" ]; then
+        LANG_MODE="$(cat "$lang_cache_file")"
+        return 0
+    fi
+
     clear 2>/dev/null || true
     show_logo
     echo ""
@@ -549,6 +556,9 @@ select_language() {
     else
         LANG_MODE="zh"
     fi
+
+    mkdir -p "$(dirname "$lang_cache_file")"
+    echo "$LANG_MODE" > "$lang_cache_file"
 }
 
 # General bilingual prompt confirmation helper.

@@ -13,8 +13,8 @@ set -euo pipefail
 GREETER_PKG="noctalia-greeter"
 GREETER_SESSION_BIN="noctalia-greeter-session"
 GREETER_ETC_CFG="/etc/greetd/config.toml"
-GREETER_STATE_DIR="/var/lib/noctalia-greeter"
-GREETER_POLKIT_RULE="/etc/polkit-1/rules.d/50-noctalia-greeter.rules"
+GREETER_STATE_DIR="/var/lib/$GREETER_PKG"
+GREETER_POLKIT_RULE="/etc/polkit-1/rules.d/50-$GREETER_PKG.rules"
 GREETER_CONFLICT_DMS=(sddm lightdm gdm ly)
 
 greeter_installed() {
@@ -28,7 +28,7 @@ greeter_status_label() {
         return 0
     fi
     local cfg_ok=false
-    if [ -f "$GREETER_ETC_CFG" ] && grep -q "noctalia-greeter-session" "$GREETER_ETC_CFG" 2>/dev/null; then
+    if [ -f "$GREETER_ETC_CFG" ] && grep -q "$GREETER_SESSION_BIN" "$GREETER_ETC_CFG" 2>/dev/null; then
         cfg_ok=true
     fi
     if command -v systemctl >/dev/null 2>&1 && systemctl is-enabled greetd >/dev/null 2>&1 && [ "$cfg_ok" = "true" ]; then
@@ -48,9 +48,9 @@ greeter_session_path() {
 
 greeter_session_arg() {
     local arg=""
-    if command -v noctalia-greeter >/dev/null 2>&1; then
-        if noctalia-greeter sessions 2>/dev/null | grep -ixq "niri"; then
-            arg="-- --session niri"
+    if command -v "$GREETER_PKG" >/dev/null 2>&1; then
+        if "$GREETER_PKG" sessions 2>/dev/null | grep -ixq "$MAIN_WM"; then
+            arg="-- --session $MAIN_WM"
         fi
     fi
     echo "$arg"
@@ -71,9 +71,9 @@ greeter_rule_present() {
     local rule_dir
     rule_dir="$(dirname "$GREETER_POLKIT_RULE")"
     if greeter_rule_visible; then
-        grep -qs "org.noctalia.greeter.apply-appearance" "$rule_dir"/*.rules 2>/dev/null
+        grep -qs "org.${THEME_ENGINE}.greeter.apply-appearance" "$rule_dir"/*.rules 2>/dev/null
     else
-        sudo -n sh -c 'grep -qs "org.noctalia.greeter.apply-appearance" "$1"/*.rules 2>/dev/null' sh "$rule_dir" 2>/dev/null
+        sudo -n sh -c "grep -qs 'org.${THEME_ENGINE}.greeter.apply-appearance' \"\$1\"/*.rules 2>/dev/null" sh "$rule_dir" 2>/dev/null
     fi
 }
 
@@ -129,13 +129,13 @@ greeter_detect_dm_conflict() {
 greeter_apply_greetd_config() {
     local session_path="$1" session_arg="$2"
 
-    if [ -f "$GREETER_ETC_CFG" ] && grep -q "noctalia-greeter-session" "$GREETER_ETC_CFG" 2>/dev/null; then
-        msg greeter_config_skip
+    if [ -f "$GREETER_ETC_CFG" ] && grep -q "$GREETER_SESSION_BIN" "$GREETER_ETC_CFG" 2>/dev/null; then
+        msg greeter_install_skipped
         return 0
     fi
 
-    local bak
-    bak="${GREETER_ETC_CFG}.nyxniri.bak.$(date +%Y%m%d_%H%M%S)"
+    # Backup existing
+    bak="${GREETER_ETC_CFG}.$CLI_CMD.bak.$(date +%Y%m%d_%H%M%S)"
     if [ -f "$GREETER_ETC_CFG" ]; then
         sudo cp -a "$GREETER_ETC_CFG" "$bak" 2>/dev/null || true
     fi
@@ -185,7 +185,7 @@ greeter_apply_polkit_rule() {
     register_temp_path "$tmp_rule"
     cat > "$tmp_rule" <<'EOF'
 polkit.addRule(function(action, subject) {
-    if (action.id == "org.noctalia.greeter.apply-appearance" &&
+    if (action.id == "org.${THEME_ENGINE}.greeter.apply-appearance" &&
         subject.isInGroup("wheel")) {
         return polkit.Result.YES;
     }
@@ -250,17 +250,17 @@ greeter_status() {
     fi
 
     if greeter_installed; then
-        msg doctor_ok "noctalia-greeter: installed ($(greeter_session_path))"
+        msg doctor_ok "$GREETER_PKG: installed ($(greeter_session_path))"
     else
-        msg doctor_err "noctalia-greeter: not installed"
+        msg doctor_err "$GREETER_PKG: not installed"
         err=1
     fi
 
     if [ -f "$GREETER_ETC_CFG" ]; then
-        if grep -q "noctalia-greeter-session" "$GREETER_ETC_CFG" 2>/dev/null; then
-            msg doctor_ok "greetd config: uses noctalia-greeter"
+        if grep -q "$GREETER_SESSION_BIN" "$GREETER_ETC_CFG" 2>/dev/null; then
+            msg doctor_ok "greetd config: uses $GREETER_PKG"
         else
-            msg doctor_warn "greetd config: not pointed at noctalia-greeter"
+            msg doctor_warn "greetd config: not pointed at $GREETER_PKG"
         fi
     else
         msg doctor_warn "greetd config: $GREETER_ETC_CFG missing"
@@ -280,7 +280,7 @@ greeter_status() {
         msg doctor_warn "state dir: $GREETER_STATE_DIR missing"
     fi
 
-    if [ -f "/usr/share/wayland-sessions/niri.desktop" ]; then
+    if [ -f "/usr/share/wayland-sessions/$MAIN_WM.desktop" ]; then
         msg doctor_ok "session: niri.desktop registered"
     else
         msg doctor_err "session: /usr/share/wayland-sessions/niri.desktop missing"
@@ -302,7 +302,7 @@ greeter_uninstall() {
     fi
 
     local bak
-    bak=$(ls -1 "${GREETER_ETC_CFG}.nyxniri.bak."* 2>/dev/null | tail -n 1 || true)
+    bak=$(find "$(dirname "$GREETER_ETC_CFG")" -maxdepth 1 -name "$(basename "$GREETER_ETC_CFG").$CLI_CMD.bak.*" 2>/dev/null | sort | tail -n 1 || true)
     if [ -n "$bak" ] && [ -f "$bak" ]; then
         if sudo cp -a "$bak" "$GREETER_ETC_CFG" 2>/dev/null; then
             msg greeter_uninstall_restored "$bak"

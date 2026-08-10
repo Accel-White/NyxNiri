@@ -47,12 +47,12 @@ get_pics_dir() {
 NYXNIRI_LOCK_FILE=""
 acquire_lock() {
     mkdir -p "$LOG_DIR" 2>/dev/null || true
-    NYXNIRI_LOCK_FILE="$LOG_DIR/nyxniri.lock"
+    NYXNIRI_LOCK_FILE="$LOG_DIR/${CLI_CMD}.lock"
     if [ -f "$NYXNIRI_LOCK_FILE" ]; then
         local lock_pid
         lock_pid=$(cat "$NYXNIRI_LOCK_FILE" 2>/dev/null || echo "")
         if [ -n "$lock_pid" ] && [ "$lock_pid" != "$$" ] && kill -0 "$lock_pid" 2>/dev/null; then
-            echo -e "\n\e[1;33m[!] Another NyxNiri instance (PID: $lock_pid) is already running.\e[0m"
+            echo -e "\n\e[1;33m[!] Another $PROJECT_NAME instance (PID: $lock_pid) is already running.\e[0m"
             echo "    Aborting to prevent concurrent config modification."
             exit 1
         fi
@@ -70,15 +70,23 @@ release_lock() {
     fi
 }
 
+# --- DOTFILES ENGINE CONFIGURATION ---
+export PROJECT_NAME="NyxNiri"
+export CLI_CMD="nyxniri"
+export REPO_URL="https://github.com/ech678/NyxNiri.git"
+export MAIN_WM="niri"
+export MAIN_WM_HARDWARE_CONFIG="monitor.kdl"
+export THEME_ENGINE="noctalia"
+export GREETER_PKG="noctalia-greeter"
+export FCITX_THEME="nyxmellow"
+
 # Global Variables & Paths
 LANG_MODE="en"
-PROJECT_NAME="NyxNiri"
-REPO_URL="https://github.com/ech678/NyxNiri.git"
-CACHE_DIR="$HOME/.cache/NyxNiri"
+CACHE_DIR="$HOME/.cache/$PROJECT_NAME"
 CONFIG_DIR_NAME="v2"
 
 # XDG Compliance State & Log Engine
-LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/NyxNiri"
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/$PROJECT_NAME"
 mkdir -p "$LOG_DIR" 2>/dev/null || true
 INSTALL_LOG="$LOG_DIR/install.log"
 
@@ -90,7 +98,7 @@ init_logger() {
     fi
     {
         echo "=================================================="
-        echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] NyxNiri Session Started (${CURRENT_VERSION:-v2.x})"
+        echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] $PROJECT_NAME Session Started (${CURRENT_VERSION:-v2.x})"
         echo "=================================================="
     } >> "$INSTALL_LOG"
 }
@@ -152,10 +160,10 @@ init_environment_paths() {
     CURRENT_VERSION=$(get_version "$REPO_DIR")
 }
 
-# Ensure symlink ~/.local/bin/nyxniri points to install.sh
+# Ensure symlink ~/.local/bin/$CLI_CMD points to install.sh
 ensure_nyxniri_symlink() {
     mkdir -p "$HOME/.local/bin"
-    local target_bin="$HOME/.local/bin/nyxniri"
+    local target_bin="$HOME/.local/bin/$CLI_CMD"
     local root_installer="${SCRIPT_DIR:-}/install.sh"
 
     if [ -z "$root_installer" ] || [ ! -f "$root_installer" ]; then

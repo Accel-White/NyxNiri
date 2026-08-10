@@ -17,8 +17,14 @@ atomic_replace_item() {
         rm -f "$tmp_file" 2>/dev/null || true
         register_temp_path "$tmp_file"
         cp -a "$src" "$tmp_file" || { rm -f "$tmp_file" 2>/dev/null || true; return 1; }
-        rm -f "$dest" 2>/dev/null || true
-        mv "$tmp_file" "$dest"
+        if [ -e "$dest" ]; then
+            local old_dest="${dest}.old.$$"
+            mv "$dest" "$old_dest" || return 1
+            mv "$tmp_file" "$dest" || { mv "$old_dest" "$dest"; return 1; }
+            ( rm -f "$old_dest" & ) 2>/dev/null
+        else
+            mv "$tmp_file" "$dest"
+        fi
         return 0
     fi
 
@@ -49,33 +55,23 @@ atomic_replace_item() {
         done || true)
     fi
 
-    rm -rf "$dest" 2>/dev/null || true
-    mv "$tmp_new" "$dest"
+    if [ -e "$dest" ]; then
+        local old_dest="${dest}.old.$$"
+        mv "$dest" "$old_dest" || return 1
+        mv "$tmp_new" "$dest" || { mv "$old_dest" "$dest"; return 1; }
+        ( rm -rf "$old_dest" & ) 2>/dev/null
+    else
+        mv "$tmp_new" "$dest"
+    fi
 }
 
 atomic_replace_dir() {
     atomic_replace_item "$@"
 }
 
-deploy_selected_configs() {
-    local do_backup="${1:-nobackup}"
-    shift || true
+_phase_atomic_deployment() {
     local items_to_deploy=("$@")
-    if [ ${#items_to_deploy[@]} -eq 0 ]; then
-        items_to_deploy=("${CONFIG_ITEMS[@]}")
-    fi
-
-    if [ "$do_backup" = "backup" ]; then
-        backup_configs "auto_snapshot_before_deploy" "non_interactive"
-    fi
-
-    msg copying_configs
     local repo_config_dir="${REPO_DIR:-.}/$CONFIG_DIR_NAME"
-
-    local _custom_log
-    _custom_log=$(mktemp) || _custom_log=""
-    export NYXNIRI_CUSTOM_LOG="$_custom_log"
-    register_temp_path "$NYXNIRI_CUSTOM_LOG"
 
     mkdir -p "$HOME/.config"
 
@@ -85,12 +81,12 @@ deploy_selected_configs() {
 
         if [ -e "$src" ]; then
             local temp_monitor=""
-            if [ "$item" = "niri" ] && [ -f "$dest/monitor.kdl" ]; then
+            if [ "$item" = "$MAIN_WM" ] && [ -f "$dest/$MAIN_WM_HARDWARE_CONFIG" ]; then
                 if [ "${KEEP_MONITOR:-1}" = "1" ] || [ "${NYXNIRI_KEEP_MONITOR:-0}" = "1" ]; then
                     temp_monitor=$(mktemp) || temp_monitor=""
                     if [ -n "$temp_monitor" ]; then
                         register_temp_path "$temp_monitor"
-                        cp "$dest/monitor.kdl" "$temp_monitor"
+                        cp "$dest/$MAIN_WM_HARDWARE_CONFIG" "$temp_monitor"
                     fi
                 fi
             fi
@@ -98,48 +94,48 @@ deploy_selected_configs() {
             atomic_replace_dir "$src" "$dest"
 
             if [ -n "$temp_monitor" ] && [ -f "$temp_monitor" ]; then
-                cp "$temp_monitor" "$dest/monitor.kdl"
+                cp "$temp_monitor" "$dest/$MAIN_WM_HARDWARE_CONFIG"
                 rm -f "$temp_monitor" 2>/dev/null || true
-                echo "  Preserved existing: ~/.config/niri/monitor.kdl"
+                echo "  Preserved existing: ~/.config/$MAIN_WM/$MAIN_WM_HARDWARE_CONFIG"
             fi
 
             echo "  Deployed: ~/.config/$item"
         fi
     done
 
-    local wp_dest
-    wp_dest="$(get_pics_dir)/Wallpapers"
-
     # Ensure scripts are executable and initial effects symlink exists
     if [ -f "$HOME/.config/fish/clean-cache" ]; then
         chmod +x "$HOME/.config/fish/clean-cache"
     fi
-    if [ -f "$HOME/.config/niri/toggle-eyecare.sh" ]; then
-        chmod +x "$HOME/.config/niri/toggle-eyecare.sh"
+    if [ -f "$HOME/.config/$MAIN_WM/toggle-eyecare.sh" ]; then
+        chmod +x "$HOME/.config/$MAIN_WM/toggle-eyecare.sh"
     fi
-    if [ -f "$HOME/.config/niri/niri-scratch-toggle.sh" ]; then
-        chmod +x "$HOME/.config/niri/niri-scratch-toggle.sh"
+    if [ -f "$HOME/.config/$MAIN_WM/niri-scratch-toggle.sh" ]; then
+        chmod +x "$HOME/.config/$MAIN_WM/niri-scratch-toggle.sh"
     fi
-    if [ -f "$HOME/.config/niri/effects_normal.kdl" ] && [ ! -e "$HOME/.config/niri/effects.kdl" ]; then
-        ln -sfn "$HOME/.config/niri/effects_normal.kdl" "$HOME/.config/niri/effects.kdl"
+    if [ -f "$HOME/.config/$MAIN_WM/effects_normal.kdl" ] && [ ! -e "$HOME/.config/$MAIN_WM/effects.kdl" ]; then
+        ln -sfn "$HOME/.config/$MAIN_WM/effects_normal.kdl" "$HOME/.config/$MAIN_WM/effects.kdl"
     fi
+}
 
+_phase_render_templates() {
+    local wp_dest
+    wp_dest="$(get_pics_dir)/Wallpapers"
+    
     # Post-process to replace hardcoded template home paths with actual '$HOME' and '$wp_dest' for portability
     local esc_home esc_wp_dest
     esc_home=$(printf '%s\n' "$HOME" | sed 's/[|&]/\\&/g')
     esc_wp_dest=$(printf '%s\n' "$wp_dest" | sed 's/[|&]/\\&/g')
 
-    if [ -f "$HOME/.config/noctalia/noctalia-config.toml" ]; then
-        # Language-agnostic TOML key-based replacement (works on all locales).
-        # Wallpapers/video suffix is fixed; $wp_dest comes from xdg-user-dir PICTURES.
+    if [ -f "$HOME/.config/$THEME_ENGINE/noctalia-config.toml" ]; then
         local esc_wp_video_dest
         esc_wp_video_dest=$(printf '%s\n' "$wp_dest/video" | sed 's/[|&]/\\&/g')
-        sed -i "s|^directory = \".*\"|directory = \"${esc_wp_dest}\"|" "$HOME/.config/noctalia/noctalia-config.toml"
-        sed -i "s|^video_directory = \".*\"|video_directory = \"${esc_wp_video_dest}\"|" "$HOME/.config/noctalia/noctalia-config.toml"
-        sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/noctalia/noctalia-config.toml"
+        sed -i "s|^directory = \".*\"|directory = \"${esc_wp_dest}\"|" "$HOME/.config/$THEME_ENGINE/noctalia-config.toml"
+        sed -i "s|^video_directory = \".*\"|video_directory = \"${esc_wp_video_dest}\"|" "$HOME/.config/$THEME_ENGINE/noctalia-config.toml"
+        sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/$THEME_ENGINE/noctalia-config.toml"
     fi
-    if [ -f "$HOME/.config/niri/config.kdl" ]; then
-        sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/niri/config.kdl"
+    if [ -f "$HOME/.config/$MAIN_WM/config.kdl" ]; then
+        sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/$MAIN_WM/config.kdl"
         local pics_dir rel_pics_dir esc_rel_pics_dir
         pics_dir="$(get_pics_dir)"
         if [[ "$pics_dir" == "$HOME"* ]]; then
@@ -148,37 +144,41 @@ deploy_selected_configs() {
             rel_pics_dir="$pics_dir"
         fi
         esc_rel_pics_dir=$(printf '%s\n' "$rel_pics_dir" | sed 's/[|&]/\\&/g')
-        sed -i -E "s|^[[:space:]]*(//)?[[:space:]]*screenshot-path .*|screenshot-path \"${esc_rel_pics_dir}/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png\"|g" "$HOME/.config/niri/config.kdl"
+        sed -i -E "s|^[[:space:]]*(//)?[[:space:]]*screenshot-path .*|screenshot-path \"${esc_rel_pics_dir}/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png\"|g" "$HOME/.config/$MAIN_WM/config.kdl"
     fi
     if [ -f "$HOME/.config/fish/fish_variables" ]; then
         sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/fish/fish_variables"
     fi
+}
 
+_phase_hardware_patches() {
     # GPU Hardware Detection: Automatically uncomment NVIDIA environment variables if NVIDIA GPU is present
-    if [ -f "$HOME/.config/niri/config.kdl" ]; then
+    if [ -f "$HOME/.config/$MAIN_WM/config.kdl" ]; then
         if command -v lspci >/dev/null 2>&1 && lspci | grep -i -q "NVIDIA"; then
             echo ":: NVIDIA GPU detected. Enabling NVIDIA Wayland environment variables in config.kdl..."
             log_msg "INFO" "NVIDIA GPU detected via lspci. Enabled NVIDIA Wayland envs in config.kdl"
-            sed -i 's|^[[:space:]]*//[[:space:]]*\(GBM_BACKEND "nvidia-drm"\)|\1|g' "$HOME/.config/niri/config.kdl"
-            sed -i 's|^[[:space:]]*//[[:space:]]*\(__GLX_VENDOR_LIBRARY_NAME "nvidia"\)|\1|g' "$HOME/.config/niri/config.kdl"
-            sed -i 's|^[[:space:]]*//[[:space:]]*\(LIBVA_DRIVER_NAME "nvidia"\)|\1|g' "$HOME/.config/niri/config.kdl"
+            sed -i 's|^[[:space:]]*//[[:space:]]*\(GBM_BACKEND "nvidia-drm"\)|\1|g' "$HOME/.config/$MAIN_WM/config.kdl"
+            sed -i 's|^[[:space:]]*//[[:space:]]*\(__GLX_VENDOR_LIBRARY_NAME "nvidia"\)|\1|g' "$HOME/.config/$MAIN_WM/config.kdl"
+            sed -i 's|^[[:space:]]*//[[:space:]]*\(LIBVA_DRIVER_NAME "nvidia"\)|\1|g' "$HOME/.config/$MAIN_WM/config.kdl"
         else
             echo ":: Non-NVIDIA GPU / Virtual Machine detected. Keeping NVIDIA envs disabled to prevent black screens."
             log_msg "INFO" "Non-NVIDIA / Virtual Machine GPU detected. NVIDIA envs kept disabled."
         fi
     fi
+}
 
+_phase_post_install_services() {
     # Post-deployment initialization: Trigger theme-sync to apply GTK and system theme settings
-    if [ -f "$HOME/.config/noctalia/theme-sync.sh" ]; then
-        chmod +x "$HOME/.config/noctalia/theme-sync.sh"
-        bash "$HOME/.config/noctalia/theme-sync.sh" >/dev/null 2>&1 || true
-        echo "  Initialized: Noctalia theme and GTK sync"
+    if [ -f "$HOME/.config/$THEME_ENGINE/theme-sync.sh" ]; then
+        chmod +x "$HOME/.config/$THEME_ENGINE/theme-sync.sh"
+        bash "$HOME/.config/$THEME_ENGINE/theme-sync.sh" >/dev/null 2>&1 || true
+        echo "  Initialized: Theme and GTK sync"
     fi
 
-    # Enable Noctalia mpvpaper plugin if noctalia CLI is available
-    if command -v noctalia >/dev/null 2>&1; then
-        echo ":: Enabling Noctalia mpvpaper plugin..."
-        noctalia msg plugins enable noctalia/mpvpaper 2>/dev/null || true
+    # Enable mpvpaper plugin if CLI is available
+    if command -v "$THEME_ENGINE" >/dev/null 2>&1; then
+        echo ":: Enabling mpvpaper plugin..."
+        "$THEME_ENGINE" msg plugins enable noctalia/mpvpaper 2>/dev/null || true
     fi
 
     # Install/Update Fisher plugins if fish is available
@@ -203,6 +203,31 @@ deploy_selected_configs() {
             log_msg WARN "Fisher auto-install skipped (all mirrors unreachable)"
         fi
     fi
+}
+
+deploy_selected_configs() {
+    local do_backup="${1:-nobackup}"
+    shift || true
+    local items_to_deploy=("$@")
+    if [ ${#items_to_deploy[@]} -eq 0 ]; then
+        items_to_deploy=("${CONFIG_ITEMS[@]}")
+    fi
+
+    if [ "$do_backup" = "backup" ]; then
+        backup_configs "auto_snapshot_before_deploy" "non_interactive"
+    fi
+
+    msg copying_configs
+
+    local _custom_log
+    _custom_log=$(mktemp) || _custom_log=""
+    export NYXNIRI_CUSTOM_LOG="$_custom_log"
+    register_temp_path "$NYXNIRI_CUSTOM_LOG"
+
+    _phase_atomic_deployment "${items_to_deploy[@]}"
+    _phase_render_templates
+    _phase_hardware_patches
+    _phase_post_install_services
 
     msg copy_done
 }
@@ -363,9 +388,9 @@ run_master_component_menu() {
 
         MENU_ITEM_NAMES+=("$(msg master_item_backup)")
         MENU_ITEM_KEYS+=("behavior_backup")
-        MENU_ITEM_CHECKS+=(0)
+        MENU_ITEM_CHECKS+=(1)
 
-        if [ -f "$HOME/.config/niri/monitor.kdl" ]; then
+        if [ -f "$HOME/.config/$MAIN_WM/$MAIN_WM_HARDWARE_CONFIG" ]; then
             MENU_ITEM_NAMES+=("$(msg master_item_monitor)")
             MENU_ITEM_KEYS+=("behavior_monitor")
             MENU_ITEM_CHECKS+=(1)
@@ -460,7 +485,6 @@ offer_overwrite_upgrade() {
         msg overwrite_opt2
         msg overwrite_opt3
         msg overwrite_opt4
-        msg overwrite_opt5
         echo ""
         local mode_choice=""
         if [ -c /dev/tty ]; then
@@ -470,14 +494,6 @@ offer_overwrite_upgrade() {
 
         case "$mode_choice" in
             1)
-                deploy_selected_configs "nobackup"
-                deploy_wallpapers
-                deploy_fcitx_theme
-                print_custom_preserved
-                msg overwrite_done
-                break
-                ;;
-            2)
                 deploy_selected_configs "backup"
                 deploy_wallpapers
                 deploy_fcitx_theme
@@ -485,7 +501,7 @@ offer_overwrite_upgrade() {
                 msg overwrite_done
                 break
                 ;;
-            3)
+            2)
                 run_master_component_menu true "full"
                 if [ ${#CHOSEN_CONFIG_ITEMS[@]} -gt 0 ] || [ "$DO_WALLPAPERS" = "y" ] || [ "$DO_FCITX" = "y" ] || [ "$DO_GREETER" = "y" ]; then
                     msg upgrading_selected
@@ -508,11 +524,7 @@ offer_overwrite_upgrade() {
                 fi
                 break
                 ;;
-            4)
-                echo "Skipped config deployment."
-                break
-                ;;
-            5|[vV])
+            3|[vV]|diff)
                 msg diff_viewer_title
                 local repo_config_dir="${REPO_DIR:-.}/$CONFIG_DIR_NAME"
                 (
@@ -525,17 +537,58 @@ offer_overwrite_upgrade() {
                     done
                 ) | less -R
                 ;;
-            *)
-                deploy_selected_configs "nobackup"
-                deploy_wallpapers
-                deploy_fcitx_theme
-                print_custom_preserved
-                msg overwrite_done
+            4|0|q|skip)
+                echo "Skipped config deployment."
                 break
+                ;;
+            *)
+                msg invalid_opt
+                sleep 1
                 ;;
         esac
     done
 }
+_phase_preflight_check() {
+    local mode="$1"
+    local fcitx_available="$2"
+    local do_greeter="$3"
+    local do_wallpapers="$4"
+
+    # 1. Ask for Sudo upfront if required (Dependencies or Greeter)
+    local needs_sudo=false
+    if [ "$mode" = "full" ]; then
+        needs_sudo=true
+    fi
+    if [ "$do_greeter" = "y" ]; then
+        needs_sudo=true
+    fi
+
+    if [ "$needs_sudo" = true ] || [ "$mode" = "full" ]; then
+        msg preflight_express_summary
+        echo -e "  \e[1;36m- Configs:\e[0m ${#CHOSEN_CONFIG_ITEMS[@]} item(s)"
+        [ "$do_wallpapers" = "y" ] && echo -e "  \e[1;36m- Heavy Asset:\e[0m Wallpapers Pack"
+        [ "$do_fcitx" = "y" ] && echo -e "  \e[1;36m- Module:\e[0m $FCITX_THEME fcitx5 skin"
+        [ "$do_greeter" = "y" ] && echo -e "  \e[1;36m- Module:\e[0m $GREETER_PKG"
+        [ "$mode" = "full" ] && echo -e "  \e[1;36m- System:\e[0m Missing Dependencies"
+    fi
+
+    if [ "$needs_sudo" = true ]; then
+        msg preflight_sudo_prompt
+        if sudo -v; then
+            # Sudo cached successfully
+            log_msg INFO "Sudo credentials cached upfront during pre-flight."
+        else
+            echo -e "\n\e[1;31m[-] Administrator privileges are required to proceed. Aborting.\e[0m"
+            exit 1
+        fi
+    fi
+
+    # 2. Check dependencies silently (we don't install them here, we just check state)
+    if [ "$mode" = "full" ]; then
+        check_all_deps
+    fi
+}
+
 install_configs() {
     local mode="${1:-full}"
     WP_PACK_DEPLOYED=0
@@ -552,27 +605,41 @@ install_configs() {
     fi
 
     # ------------------------------------------------------------------
-    # ------------------------------------------------------------------
     # Phase 0: Pre-flight checklist (interactive & standardized card)
     # ------------------------------------------------------------------
     if [ -t 0 ] && [ -c /dev/tty ]; then
-        run_master_component_menu false "$mode"
-        do_fcitx="$DO_FCITX"
-        do_greeter="$DO_GREETER"
-        do_wallpapers="$DO_WALLPAPERS"
-        do_backup="$DO_BACKUP"
-        if [ ${#CHOSEN_CONFIG_ITEMS[@]} -eq 0 ] && [ "$do_wallpapers" = "n" ] && [ "$do_fcitx" = "n" ] && [ "$do_greeter" = "n" ]; then
-            msg install_cancelled
-            return 0
+        if [ "$mode" = "express" ]; then
+            # Express Install Mode: No menus, just setup defaults
+            mode="full"
+            CHOSEN_CONFIG_ITEMS=("${CONFIG_ITEMS[@]}")
+            do_backup="backup"
+            do_fcitx="y"
+            do_greeter="y"
+            if ! wallpapers_pack_present; then
+                do_wallpapers="y"
+            fi
+        else
+            # Custom Install Mode
+            run_master_component_menu false "$mode"
+            do_fcitx="$DO_FCITX"
+            do_greeter="$DO_GREETER"
+            do_wallpapers="$DO_WALLPAPERS"
+            do_backup="$DO_BACKUP"
+            if [ ${#CHOSEN_CONFIG_ITEMS[@]} -eq 0 ] && [ "$do_wallpapers" = "n" ] && [ "$do_fcitx" = "n" ] && [ "$do_greeter" = "n" ]; then
+                msg install_cancelled
+                return 0
+            fi
         fi
     else
         CHOSEN_CONFIG_ITEMS=("${CONFIG_ITEMS[@]}")
-        # Non-interactive: same smart rule, decided automatically — skip when
-        # the pack is already present, otherwise pull the full pack.
+        # Non-interactive
         if ! wallpapers_pack_present; then
             do_wallpapers="y"
         fi
     fi
+
+    _phase_preflight_check "$mode" "$fcitx_available" "$do_greeter" "$do_wallpapers"
+
     # ------------------------------------------------------------------
     # Numbered steps (Uninterrupted Execution Phase)
     # ------------------------------------------------------------------
@@ -596,31 +663,25 @@ install_configs() {
         cur=$((cur + 1))
         msg install_step_fcitx "$cur/$step_total"
         if [ "$do_fcitx" = "y" ] || { [ "$do_fcitx" = "n" ] && fcitx_enabled && { [ ! -t 0 ] || [ ! -c /dev/tty ]; }; }; then
-            fcitx_install
+            fcitx_install || true
         fi
     fi
 
     if [ "$mode" = "full" ]; then
         cur=$((cur + 1))
         msg install_step_deps "$cur/$step_total"
-        check_all_deps
-        local missing_count=0
-        for stat in "${DEP_STATUS[@]:-}"; do
-            if [ "${stat:-0}" -eq 0 ]; then
-                missing_count=$((missing_count + 1))
+        
+        # Install all dependencies directly (since this is full/express mode)
+        # In custom mode with full deps, we also just install them since sudo is cached
+        # The prompt was handled upfront or is implied by 'full' install.
+        for i in "${!DEPS[@]}"; do
+            if [ "${DEP_STATUS[$i]:-0}" -eq 0 ]; then
+                DEP_SELECT[$i]=1
+            else
+                DEP_SELECT[$i]=0
             fi
         done
-
-        if [ "$missing_count" -gt 0 ]; then
-            msg warn_deps_missing
-            local ask_choice=""
-            if [ -t 0 ] && [ -c /dev/tty ]; then
-                read -p "$(msg ask_install_now)" ask_choice < /dev/tty || ask_choice="y"
-            fi
-            if [[ "$ask_choice" =~ ^[Yy]$ || -z "$ask_choice" ]]; then
-                run_dep_menu_loop
-            fi
-        fi
+        install_selected_deps || true
     fi
 
     if [ "$do_greeter" = "y" ]; then
