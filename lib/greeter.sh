@@ -269,9 +269,9 @@ greeter_status() {
     if greeter_rule_present; then
         msg doctor_ok "polkit rule: present"
     elif greeter_rule_visible || sudo -n true 2>/dev/null; then
-        msg doctor_warn "polkit rule: missing (optional)"
+        msg doctor_warn "polkit rule: missing"
     else
-        msg doctor_warn "polkit rule: unverifiable (dir locked to root/polkitd; run: sudo ls /etc/polkit-1/rules.d)"
+        msg doctor_warn "polkit rule: unverifiable"
     fi
 
     if [ -d "$GREETER_STATE_DIR" ]; then

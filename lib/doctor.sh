@@ -12,52 +12,52 @@ run_doctor() {
 
     local xdg_curr="${XDG_CURRENT_DESKTOP:-}"
     if [ "$xdg_curr" = "$MAIN_WM" ]; then
-        msg doctor_ok "Compositor: $MAIN_WM is currently running."
+        msg doctor_ok "Compositor: $MAIN_WM is currently running"
     else
-        msg doctor_warn "Compositor: Current desktop environment is '${xdg_curr:-Unknown}' ($MAIN_WM is not running)."
+        msg doctor_warn "Compositor: Current desktop environment is '${xdg_curr:-Unknown}' ($MAIN_WM is not running)"
     fi
 
     if [ -f "/usr/share/wayland-sessions/$MAIN_WM.desktop" ]; then
-        msg doctor_ok "Session: $MAIN_WM Wayland session desktop file is registered."
+        msg doctor_ok "Session: $MAIN_WM Wayland session desktop file is registered"
     else
-        msg doctor_warn "Session: /usr/share/wayland-sessions/$MAIN_WM.desktop is missing. ($MAIN_WM might not show up on your Display Manager login screen)"
+        msg doctor_warn "Session: /usr/share/wayland-sessions/$MAIN_WM.desktop is missing"
     fi
 
     if ! command -v "$THEME_ENGINE" >/dev/null 2>&1; then
-        msg doctor_err "$THEME_ENGINE: Not installed (not found in PATH). Install via AUR: paru -S $THEME_ENGINE"
+        msg doctor_err "$THEME_ENGINE: Not installed in PATH"
     elif "$THEME_ENGINE" msg status >/dev/null 2>&1; then
-        msg doctor_ok "$THEME_ENGINE Daemon: Running and responsive."
+        msg doctor_ok "$THEME_ENGINE Daemon: Running and responsive"
     else
-        msg doctor_err "$THEME_ENGINE Daemon: Not running. (Launch: $MAIN_WM msg action spawn -- $THEME_ENGINE)"
+        msg doctor_err "$THEME_ENGINE Daemon: Not running"
     fi
 
     local doc_pics_dir
     doc_pics_dir="$(get_pics_dir)"
     if [ -d "$doc_pics_dir/Wallpapers" ]; then
-        msg doctor_ok "Wallpapers: $doc_pics_dir/Wallpapers directory exists."
+        msg doctor_ok "Wallpapers: $doc_pics_dir/Wallpapers directory exists"
     else
-        msg doctor_err "Wallpapers: $doc_pics_dir/Wallpapers directory is missing."
+        msg doctor_err "Wallpapers: $doc_pics_dir/Wallpapers directory is missing"
     fi
 
     local missing_critical=0
     for cmd in "$MAIN_WM" "$THEME_ENGINE" fish starship; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
-            msg doctor_err "Dependency: '$cmd' is missing from PATH."
+            msg doctor_err "Dependency: '$cmd' is missing from PATH"
             missing_critical=$((missing_critical + 1))
         fi
     done
 
     if [ "$missing_critical" -eq 0 ]; then
-        msg doctor_ok "Core Dependencies: All core tools ($MAIN_WM, $THEME_ENGINE, fish, starship) are installed."
+        msg doctor_ok "Core Dependencies: All core tools ($MAIN_WM, $THEME_ENGINE, fish, starship) are installed"
     fi
 
     for script in "theme-sync.sh" "wallpaper-hook.sh" "mpvpaper-sync.sh"; do
         local path="$HOME/.config/$THEME_ENGINE/$script"
         if [ -f "$path" ]; then
             if [ -x "$path" ]; then
-                msg doctor_ok "Scripts: $script is executable."
+                msg doctor_ok "Scripts: $script is executable"
             else
-                msg doctor_warn "Scripts: $script is not executable. Fixing permissions..."
+                msg doctor_warn "Scripts: $script is not executable. Fixing permissions…"
                 chmod +x "$path"
             fi
         fi
@@ -67,22 +67,22 @@ run_doctor() {
     local cc_path="$HOME/.config/fish/clean-cache"
     if [ -f "$cc_path" ]; then
         if [ -x "$cc_path" ]; then
-            msg doctor_ok "Scripts: clean-cache is executable."
+            msg doctor_ok "Scripts: clean-cache is executable"
         else
-            msg doctor_warn "Scripts: clean-cache is not executable. Fixing permissions..."
+            msg doctor_warn "Scripts: clean-cache is not executable. Fixing permissions…"
             chmod +x "$cc_path"
         fi
     else
-        msg doctor_err "Scripts: clean-cache is missing from ~/.config/fish/."
+        msg doctor_err "Scripts: clean-cache is missing from ~/.config/fish/"
     fi
 
     # Check toggle-eyecare.sh in $MAIN_WM config directory
     local te_path="$HOME/.config/$MAIN_WM/toggle-eyecare.sh"
     if [ -f "$te_path" ]; then
         if [ -x "$te_path" ]; then
-            msg doctor_ok "Scripts: toggle-eyecare.sh is executable."
+            msg doctor_ok "Scripts: toggle-eyecare.sh is executable"
         else
-            msg doctor_warn "Scripts: toggle-eyecare.sh is not executable. Fixing permissions..."
+            msg doctor_warn "Scripts: toggle-eyecare.sh is not executable. Fixing permissions…"
             chmod +x "$te_path"
         fi
     fi
@@ -91,55 +91,55 @@ run_doctor() {
     local st_path="$HOME/.config/$MAIN_WM/niri-scratch-toggle.sh"
     if [ -f "$st_path" ]; then
         if [ -x "$st_path" ]; then
-            msg doctor_ok "Scripts: niri-scratch-toggle.sh is executable."
+            msg doctor_ok "Scripts: niri-scratch-toggle.sh is executable"
         else
-            msg doctor_warn "Scripts: niri-scratch-toggle.sh is not executable. Fixing permissions..."
+            msg doctor_warn "Scripts: niri-scratch-toggle.sh is not executable. Fixing permissions…"
             chmod +x "$st_path"
         fi
     fi
 
     if command -v wlsunset >/dev/null 2>&1; then
-        msg doctor_ok "EyeCare Component: wlsunset is available for smooth warmth transition."
+        msg doctor_ok "EyeCare Component: wlsunset is installed"
     else
-        msg doctor_warn "EyeCare Component: wlsunset is missing (Night mode temperature ramp will be unavailable)."
+        msg doctor_warn "EyeCare Component: wlsunset is missing"
     fi
 
     if command -v tmux >/dev/null 2>&1; then
-        msg doctor_ok "Scratchpad Component: tmux is available for persistent session support."
+        msg doctor_ok "Scratchpad Component: tmux is installed"
     else
-        msg doctor_warn "Scratchpad Component: tmux is missing (Scratchpad will run in temporary fallback mode)."
+        msg doctor_warn "Scratchpad Component: tmux is missing"
     fi
 
     local curr_shell="${SHELL:-}"
     if [[ "$curr_shell" == *fish ]]; then
-        msg doctor_ok "Shell: Fish is the current default shell."
+        msg doctor_ok "Shell: Fish is the current default shell"
     else
-        msg doctor_warn "Shell: Current shell is '$curr_shell', not Fish. (Change: chsh -s \$(which fish))"
+        msg doctor_warn "Shell: Current shell is '$curr_shell', not Fish"
     fi
 
     if command -v wpctl >/dev/null 2>&1; then
-        msg doctor_ok "Audio Control: wpctl (WirePlumber) is available."
+        msg doctor_ok "Audio Control: wpctl (WirePlumber) is available"
     else
-        msg doctor_warn "Audio Control: wpctl is missing. (Volume control keys will not work)"
+        msg doctor_warn "Audio Control: wpctl is missing"
     fi
 
     if command -v ddcutil >/dev/null 2>&1 || command -v brightnessctl >/dev/null 2>&1; then
-        msg doctor_ok "Brightness Control: ddcutil / brightnessctl is available."
+        msg doctor_ok "Brightness Control: ddcutil / brightnessctl is available"
     else
-        msg doctor_warn "Brightness Control: ddcutil and brightnessctl are missing."
+        msg doctor_warn "Brightness Control: ddcutil and brightnessctl are missing"
     fi
 
     if systemctl --user is-active xdg-desktop-portal >/dev/null 2>&1 || pgrep -f "xdg-desktop-portal" >/dev/null 2>&1; then
-        msg doctor_ok "Desktop Portal: xdg-desktop-portal is active."
+        msg doctor_ok "Desktop Portal: xdg-desktop-portal is active"
     else
-        msg doctor_warn "Desktop Portal: xdg-desktop-portal is not active."
+        msg doctor_warn "Desktop Portal: xdg-desktop-portal is not active"
     fi
 
     # GTK portal backend (file dialogs / screen capture in GTK apps)
     if command -v pacman >/dev/null 2>&1 && pacman -Qq xdg-desktop-portal-gtk >/dev/null 2>&1; then
-        msg doctor_ok "Desktop Portal: xdg-desktop-portal-gtk backend is installed."
+        msg doctor_ok "Desktop Portal: xdg-desktop-portal-gtk backend is installed"
     elif command -v pacman >/dev/null 2>&1; then
-        msg doctor_warn "Desktop Portal: xdg-desktop-portal-gtk is missing. (GTK apps may lack native file dialogs; install with: paru -S xdg-desktop-portal-gtk)"
+        msg doctor_warn "Desktop Portal: xdg-desktop-portal-gtk is missing"
     fi
 
     # Free disk space on $HOME (10 GiB threshold)
@@ -149,24 +149,24 @@ run_doctor() {
         if [ "$disk_free_kb" -lt $((10 * 1024 * 1024)) ]; then
             local free_human
             free_human=$(awk -v k="$disk_free_kb" 'BEGIN{ if (k >= 1048576) printf "%.1f GiB", k/1048576; else if (k >= 1024) printf "%.1f MiB", k/1024; else printf "%d KiB", k }')
-            msg doctor_warn "Disk Space: only $free_human free on $HOME. (Try: clean-cache or $CLI_CMD snapshot prune)"
+            msg doctor_warn "Disk Space: only $free_human free on $HOME"
         else
-            msg doctor_ok "Disk Space: sufficient free space on $HOME."
+            msg doctor_ok "Disk Space: sufficient free space on $HOME"
         fi
     fi
 
     # NyxMellow fcitx5 skin enabled state (only relevant when fcitx5 is around)
     if command -v fcitx5 >/dev/null 2>&1 || [ -f "$HOME/.config/fcitx5/conf/classicui.conf" ]; then
         if fcitx_enabled; then
-            msg doctor_ok "Fcitx5: NyxMellow skin is enabled (will auto-refresh on update)."
+            msg doctor_ok "Fcitx5: NyxMellow skin is enabled"
         else
-            msg doctor_warn "Fcitx5: $FCITX_THEME skin not enabled. (Run: $CLI_CMD fcitx install)"
+            msg doctor_warn "Fcitx5: $FCITX_THEME skin not enabled"
         fi
     fi
 
     # Virtual Machine Check
     if command -v lspci >/dev/null 2>&1 && lspci | grep -i -q "VMware\|VirtualBox\|QEMU\|Virtio"; then
-        msg doctor_warn "Virtual Machine detected (VMware/VirtualBox/QEMU). Ensure 'Accelerate 3D Graphics' is enabled in VM settings to avoid black screen in Niri Wayland!"
+        msg doctor_warn "Virtual Machine detected. Ensure 3D Graphics Acceleration is enabled in VM settings"
     fi
 
     greeter_status

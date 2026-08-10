@@ -41,7 +41,7 @@ backup_configs() {
     for item in "${CONFIG_ITEMS[@]}"; do
         if [ -e "$HOME/.config/$item" ]; then
             cp -rP "$HOME/.config/$item" "$tmp_snap/"
-            echo "  Backed up: ~/.config/$item"
+            echo "  [✓] 已备份: ~/.config/$item"
         fi
     done
 
@@ -151,7 +151,7 @@ rollback_configs() {
     for item in "${CONFIG_ITEMS[@]}"; do
         if [ -e "$selected_backup/$item" ]; then
             atomic_replace_dir "$selected_backup/$item" "$HOME/.config/$item"
-            echo "  Restored: ~/.config/$item"
+            echo "  [✓] 已恢复: ~/.config/$item"
         fi
     done
 
@@ -239,7 +239,7 @@ uninstall_nyxniri() {
             for item in "${CONFIG_ITEMS[@]}"; do
                 if [ -e "$HOME/.config/$item" ] && [ "$HOME/.config/$item" != "$HOME" ]; then
                     rm -rf "$HOME/.config/$item"
-                    echo "  Removed: ~/.config/$item"
+                    echo "  [-] 已移除: ~/.config/$item"
                 fi
             done
             [ -L "$HOME/.local/bin/$CLI_CMD" ] && rm -f "$HOME/.local/bin/$CLI_CMD"
@@ -252,11 +252,11 @@ uninstall_nyxniri() {
                 local earliest="${ALL_BACKUPS[0]}"
                 local earliest_name
                 earliest_name=$(basename "$earliest")
-                echo "Restoring earliest pre-install configuration from: $earliest_name"
+                echo ":: 正在从初始备份恢复配置: $earliest_name…"
                 for item in "${CONFIG_ITEMS[@]}"; do
                     if [ -e "$earliest/$item" ]; then
                         atomic_replace_dir "$earliest/$item" "$HOME/.config/$item"
-                        echo "  Restored: ~/.config/$item"
+                        echo "  [✓] 已恢复: ~/.config/$item"
                     fi
                 done
                 [ -L "$HOME/.local/bin/$CLI_CMD" ] && rm -f "$HOME/.local/bin/$CLI_CMD"
@@ -281,7 +281,7 @@ uninstall_nyxniri() {
             msg purge_done
             ;;
         *)
-            echo "Uninstall cancelled."
+            echo "已取消卸载"
             return 0
             ;;
     esac

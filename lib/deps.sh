@@ -273,7 +273,7 @@ install_selected_deps() {
     # Install official repo packages
     if [ ${#repo_install[@]} -gt 0 ]; then
         $pkg_manager -S --noconfirm "${repo_install[@]}" || {
-            echo "Some repo package installations failed. Continuing..."
+            echo "部分官方源软件包安装失败，继续后续步骤…"
         }
     fi
 
@@ -285,7 +285,7 @@ install_selected_deps() {
         fi
         if [ "$has_aur_helper" = true ]; then
             $pkg_manager -S --noconfirm "${aur_install[@]}" || {
-                echo "Some AUR package installations failed. Continuing..."
+                echo "部分 AUR 软件包安装失败，继续后续步骤…"
             }
         else
             local aur_list="${aur_install[*]}"
@@ -348,7 +348,7 @@ check_mpvpaper_version() {
             if $mgr -S --noconfirm mpvpaper-git; then
                 msg mpvpaper_upgrade_done
             else
-                echo -e "\e[1;31m[-] Failed to install mpvpaper-git.\e[0m"
+                echo -e "\e[1;31m[-] mpvpaper-git 安装失败\e[0m"
             fi
         else
             msg mpvpaper_upgrade_skip

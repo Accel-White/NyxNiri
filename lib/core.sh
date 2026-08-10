@@ -24,7 +24,7 @@ cleanup() {
         done
     fi
     if [ $exit_code -ne 0 ] && [ $exit_code -ne 130 ]; then
-        echo -e "\n\e[1;31m[-] Action interrupted or terminated unexpectedly. (Exit Code: $exit_code)\e[0m"
+        echo -e "\n\e[1;31m[-] 操作被中断或异常终止 (退出码: $exit_code)\e[0m"
     fi
 }
 trap cleanup EXIT INT TERM
@@ -52,8 +52,7 @@ acquire_lock() {
         local lock_pid
         lock_pid=$(cat "$NYXNIRI_LOCK_FILE" 2>/dev/null || echo "")
         if [ -n "$lock_pid" ] && [ "$lock_pid" != "$$" ] && kill -0 "$lock_pid" 2>/dev/null; then
-            echo -e "\n\e[1;33m[!] Another $PROJECT_NAME instance (PID: $lock_pid) is already running.\e[0m"
-            echo "    Aborting to prevent concurrent config modification."
+            echo -e "\n\e[1;33m[!] $PROJECT_NAME 已在运行 (PID: $lock_pid)\e[0m"
             exit 1
         fi
     fi

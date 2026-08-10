@@ -39,7 +39,7 @@ atomic_replace_item() {
         (cd "$dest" && find . -type d -name "*__custom__*" -prune -o \( -type f -o -type l \) -name "*__custom__*" -print0 2>/dev/null | while IFS= read -r -d '' file; do
             mkdir -p "$tmp_new/$(dirname "$file")"
             cp -a "$file" "$tmp_new/$file"
-            echo "  Preserved custom file: $dest/${file#./}"
+            echo "  [✓] 保留自定义文件: ~/.config/${dest#"$HOME"/.config/}/${file#./}"
             if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ]; then
                 echo "    - File: $dest/${file#./}" >> "$NYXNIRI_CUSTOM_LOG"
             fi
@@ -48,7 +48,7 @@ atomic_replace_item() {
         (cd "$dest" && find . -type d -name "*__custom__*" -prune -print0 2>/dev/null | while IFS= read -r -d '' dir; do
             mkdir -p "$tmp_new/$(dirname "$dir")"
             cp -a "$dir" "$tmp_new/$(dirname "$dir")/"
-            echo "  Preserved custom dir:  $dest/${dir#./}"
+            echo "  [✓] 保留自定义目录: ~/.config/${dest#"$HOME"/.config/}/${dir#./}"
             if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ]; then
                 echo "    - Dir:  $dest/${dir#./}" >> "$NYXNIRI_CUSTOM_LOG"
             fi
@@ -96,10 +96,10 @@ _phase_atomic_deployment() {
             if [ -n "$temp_monitor" ] && [ -f "$temp_monitor" ]; then
                 cp "$temp_monitor" "$dest/$MAIN_WM_HARDWARE_CONFIG"
                 rm -f "$temp_monitor" 2>/dev/null || true
-                echo "  Preserved existing: ~/.config/$MAIN_WM/$MAIN_WM_HARDWARE_CONFIG"
+                echo "  [✓] 保留显示器配置: ~/.config/$MAIN_WM/$MAIN_WM_HARDWARE_CONFIG"
             fi
 
-            echo "  Deployed: ~/.config/$item"
+            echo "  [✓] 部署配置: ~/.config/$item"
         fi
     done
 
@@ -155,13 +155,13 @@ _phase_hardware_patches() {
     # GPU Hardware Detection: Automatically uncomment NVIDIA environment variables if NVIDIA GPU is present
     if [ -f "$HOME/.config/$MAIN_WM/config.kdl" ]; then
         if command -v lspci >/dev/null 2>&1 && lspci | grep -i -q "NVIDIA"; then
-            echo ":: NVIDIA GPU detected. Enabling NVIDIA Wayland environment variables in config.kdl..."
+            echo ":: 检测到 NVIDIA GPU。启用 Wayland 环境变量"
             log_msg "INFO" "NVIDIA GPU detected via lspci. Enabled NVIDIA Wayland envs in config.kdl"
             sed -i 's|^[[:space:]]*//[[:space:]]*\(GBM_BACKEND "nvidia-drm"\)|\1|g' "$HOME/.config/$MAIN_WM/config.kdl"
             sed -i 's|^[[:space:]]*//[[:space:]]*\(__GLX_VENDOR_LIBRARY_NAME "nvidia"\)|\1|g' "$HOME/.config/$MAIN_WM/config.kdl"
             sed -i 's|^[[:space:]]*//[[:space:]]*\(LIBVA_DRIVER_NAME "nvidia"\)|\1|g' "$HOME/.config/$MAIN_WM/config.kdl"
         else
-            echo ":: Non-NVIDIA GPU / Virtual Machine detected. Keeping NVIDIA envs disabled to prevent black screens."
+            echo ":: 未检测到 NVIDIA GPU。保持默认环境变量"
             log_msg "INFO" "Non-NVIDIA / Virtual Machine GPU detected. NVIDIA envs kept disabled."
         fi
     fi
@@ -172,18 +172,18 @@ _phase_post_install_services() {
     if [ -f "$HOME/.config/$THEME_ENGINE/theme-sync.sh" ]; then
         chmod +x "$HOME/.config/$THEME_ENGINE/theme-sync.sh"
         bash "$HOME/.config/$THEME_ENGINE/theme-sync.sh" >/dev/null 2>&1 || true
-        echo "  Initialized: Theme and GTK sync"
+        echo "  [✓] 初始化主题与 GTK 同步"
     fi
 
     # Enable mpvpaper plugin if CLI is available
     if command -v "$THEME_ENGINE" >/dev/null 2>&1; then
-        echo ":: Enabling mpvpaper plugin..."
+        echo ":: 启用 mpvpaper 插件"
         "$THEME_ENGINE" msg plugins enable noctalia/mpvpaper 2>/dev/null || true
     fi
 
     # Install/Update Fisher plugins if fish is available
     if command -v fish >/dev/null 2>&1; then
-        echo -e "\e[1;34m:: [Fisher] 正在检查/更新 Fisher 插件管理器...\e[0m"
+        echo -e "\e[1;34m:: 检查 Fisher 插件管理器…\e[0m"
         log_msg INFO "Checking Fisher plugin manager installation"
         local fisher_tmp
         fisher_tmp=$(mktemp) || return 0
@@ -194,12 +194,12 @@ _phase_post_install_services() {
                     source '$fisher_tmp' && fisher install jorgebucaran/fisher
                 end
                 if test -f ~/.config/fish/fish_plugins && functions -q fisher
-                    echo 'Installing plugins listed in fish_plugins...'
-                    fisher update || echo '[-] Fisher update skipped due to network connectivity issue.'
+                    echo '安装 fish_plugins 列出的插件…'
+                    fisher update || echo '[-] Fisher 更新已跳过 (网络限制)'
                 end
             " || true
         else
-            echo "[-] Fisher auto-install skipped due to network connectivity issues across all mirrors."
+            echo "[-] Fisher 自动安装已跳过 (网络限制)"
             log_msg WARN "Fisher auto-install skipped (all mirrors unreachable)"
         fi
     fi
@@ -237,7 +237,7 @@ deploy_selected_configs() {
 print_custom_preserved() {
     if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ] && [ -s "$NYXNIRI_CUSTOM_LOG" ]; then
         echo -e "\n\e[1;36m==================================================\e[0m"
-        echo -e "\e[1;36m[ NyxNiri Customizations Preserved ]\e[0m"
+        echo -e "\e[1;36m[ $PROJECT_NAME 自定义套用项已保留 ]\e[0m"
         cat "$NYXNIRI_CUSTOM_LOG"
         echo -e "\e[1;36m==================================================\e[0m\n"
     fi
@@ -334,7 +334,7 @@ sync_wallpapers_fallback() {
     fi
     mkdir -p "$wp_dest"
     cp -an "$wp_src"/. "$wp_dest"/ 2>/dev/null || true
-    echo "  Deployed & Synced (incremental): $wp_dest"
+    echo "  [✓] 增量同步壁纸库: $wp_dest"
 }
 
 run_master_component_menu() {
@@ -520,7 +520,7 @@ offer_overwrite_upgrade() {
                     print_custom_preserved
                     msg overwrite_done
                 else
-                    echo "No components selected."
+                    echo "未选择任何组件"
                 fi
                 break
                 ;;
@@ -538,7 +538,7 @@ offer_overwrite_upgrade() {
                 ) | less -R
                 ;;
             4|0|q|skip)
-                echo "Skipped config deployment."
+                echo "已跳过配置部署"
                 break
                 ;;
             *)
@@ -565,11 +565,11 @@ _phase_preflight_check() {
 
     if [ "$needs_sudo" = true ] || [ "$mode" = "full" ]; then
         msg preflight_express_summary
-        echo -e "  \e[1;36m- Configs:\e[0m ${#CHOSEN_CONFIG_ITEMS[@]} item(s)"
-        [ "$do_wallpapers" = "y" ] && echo -e "  \e[1;36m- Heavy Asset:\e[0m Wallpapers Pack"
-        [ "$do_fcitx" = "y" ] && echo -e "  \e[1;36m- Module:\e[0m $FCITX_THEME fcitx5 skin"
-        [ "$do_greeter" = "y" ] && echo -e "  \e[1;36m- Module:\e[0m $GREETER_PKG"
-        [ "$mode" = "full" ] && echo -e "  \e[1;36m- System:\e[0m Missing Dependencies"
+        echo -e "  \e[1;36m- 配置组件:\e[0m ${#CHOSEN_CONFIG_ITEMS[@]} 项"
+        [ "$do_wallpapers" = "y" ] && echo -e "  \e[1;36m- 重型资源:\e[0m 全套壁纸包"
+        [ "$do_fcitx" = "y" ] && echo -e "  \e[1;36m- 可选模块:\e[0m $FCITX_THEME fcitx5 皮肤"
+        [ "$do_greeter" = "y" ] && echo -e "  \e[1;36m- 可选模块:\e[0m $GREETER_PKG"
+        [ "$mode" = "full" ] && echo -e "  \e[1;36m- 系统依赖:\e[0m 检查与补全缺失依赖"
     fi
 
     if [ "$needs_sudo" = true ]; then
@@ -578,7 +578,7 @@ _phase_preflight_check() {
             # Sudo cached successfully
             log_msg INFO "Sudo credentials cached upfront during pre-flight."
         else
-            echo -e "\n\e[1;31m[-] Administrator privileges are required to proceed. Aborting.\e[0m"
+            echo -e "\n\e[1;31m[-] 缺少管理员权限。已中止。\e[0m"
             exit 1
         fi
     fi

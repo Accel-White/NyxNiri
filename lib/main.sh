@@ -245,10 +245,8 @@ main_menu() {
 
 main() {
     if [ "$(id -u)" -eq 0 ]; then
-        echo -e "\n\e[1;31m[-] 错误: 请勿使用 root (或 sudo) 权限运行此脚本！\e[0m"
-        echo -e "    NyxNiri Dotfiles 必须安装部署在普通用户账户下。"
-        echo -e "    Error: Do NOT run this installer as root or with sudo!"
-        echo -e "    Please re-run as normal user: ./install.sh\n"
+        echo -e "\n\e[1;31m[-] 禁止使用 root 运行。请以普通用户身份运行 ./install.sh\e[0m"
+        echo -e "[-] Do not run as root. Re-run as normal user: ./install.sh\n"
         exit 1
     fi
 
