@@ -46,7 +46,7 @@ _nyxniri_banner() {
     else
         echo -e "      System Cache Cleaner V3.0 (Powered by Maclean) ${NC}"
     fi
-    echo "=============================================="
+    echo "  ──────────────────────────────────────────────────"
 }
 _nyxniri_banner
 
