@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Issue 社区模板**: 升级 GitHub 问题与需求提交表单，支持结构化表单填写
 
+### Changed
+- **终端排版调整**: 增加了界面留白，统一了全局列表与标题的视觉对齐
+
 ### Fixed
 - **非交互部署修复**: 修复了通过管道或脚本自动化部署时，安装菜单等待键盘输入的卡死问题
 

@@ -239,10 +239,10 @@ deploy_selected_configs() {
 # in their completion summary (install flow / update flow).
 print_custom_preserved() {
     if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ] && [ -s "$NYXNIRI_CUSTOM_LOG" ]; then
-        echo -e "\n\e[1;36m==================================================\e[0m"
+        echo -e "\n\e[1;36m──────────────────────────────────────────────────\e[0m"
         msg preflight_custom_config_kept
         cat "$NYXNIRI_CUSTOM_LOG"
-        echo -e "\e[1;36m==================================================\e[0m\n"
+        echo -e "\e[1;36m──────────────────────────────────────────────────\e[0m\n"
     fi
     if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ]; then
         rm -f "$NYXNIRI_CUSTOM_LOG" 2>/dev/null || true
@@ -400,46 +400,107 @@ run_master_component_menu() {
         fi
     fi
 
+    local cur_focus=0
+    while [ "$cur_focus" -lt "${#MENU_ITEM_NAMES[@]}" ] && [ "${MENU_ITEM_CHECKS[$cur_focus]:--1}" -eq -1 ]; do
+        cur_focus=$((cur_focus + 1))
+    done
+
+    clear 2>/dev/null || true
     while true; do
-        clear 2>/dev/null || true
+        printf '\e[?25l\e[H'
         show_logo
         msg master_menu_title
         for i in "${!MENU_ITEM_NAMES[@]}"; do
-            local check=" "
-            if [ "${MENU_ITEM_CHECKS[$i]:--1}" -eq 1 ]; then
-                check="*"
-            elif [ "${MENU_ITEM_CHECKS[$i]:--1}" -eq -1 ]; then
-                printf "  %s\n" "${MENU_ITEM_NAMES[$i]}"
+            if [ "${MENU_ITEM_CHECKS[$i]:--1}" -eq -1 ]; then
+                echo -e "${MENU_ITEM_NAMES[$i]}"
                 continue
             fi
-            printf "  [%s] %2d) %s\n" "$check" "$((i+1))" "${MENU_ITEM_NAMES[$i]}"
+
+            local prefix="    "
+            if [ "$i" -eq "$cur_focus" ]; then
+                prefix="  \e[1;36m❯ \e[0m"
+            fi
+
+            local check_str="\e[90m[ ]\e[0m"
+            if [ "${MENU_ITEM_CHECKS[$i]:-0}" -eq 1 ]; then
+                check_str="\e[1;32m[✓]\e[0m"
+            fi
+
+            local item_label="${MENU_ITEM_NAMES[$i]}"
+            if [ "$i" -eq "$cur_focus" ]; then
+                printf "%b%b \e[1;37m%s\e[0m\n" "$prefix" "$check_str" "$item_label"
+            else
+                printf "%b%b %s\n" "$prefix" "$check_str" "$item_label"
+            fi
         done
         echo ""
         msg selective_hint
-        local choice=""
-        if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -r -p "> " choice < /dev/tty || choice=""
-        else
+        echo ""
+        printf '\e[J'
+
+        if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
             break
         fi
 
-        if [ -z "$choice" ]; then
-            break
-        fi
+        local key
+        key=$(read_key) || break
 
-        for num in $choice; do
-            if [[ "$num" =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le "${#MENU_ITEM_NAMES[@]}" ]; then
-                local index=$((num-1))
-                if [ "${MENU_ITEM_CHECKS[index]:--1}" -ne -1 ]; then
-                    if [ "${MENU_ITEM_CHECKS[index]:-0}" -eq 1 ]; then
-                        MENU_ITEM_CHECKS[index]=0
+        case "$key" in
+            UP|[kK])
+                cur_focus=$((cur_focus - 1))
+                [ "$cur_focus" -lt 0 ] && cur_focus=$((${#MENU_ITEM_NAMES[@]} - 1))
+                while [ "$cur_focus" -ge 0 ] && [ "${MENU_ITEM_CHECKS[$cur_focus]:--1}" -eq -1 ]; do
+                    cur_focus=$((cur_focus - 1))
+                done
+                [ "$cur_focus" -lt 0 ] && cur_focus=0
+                ;;
+            DOWN|[jJ])
+                cur_focus=$((cur_focus + 1))
+                [ "$cur_focus" -ge "${#MENU_ITEM_NAMES[@]}" ] && cur_focus=0
+                while [ "$cur_focus" -lt "${#MENU_ITEM_NAMES[@]}" ] && [ "${MENU_ITEM_CHECKS[$cur_focus]:--1}" -eq -1 ]; do
+                    cur_focus=$((cur_focus + 1))
+                done
+                [ "$cur_focus" -ge "${#MENU_ITEM_NAMES[@]}" ] && cur_focus=$((${#MENU_ITEM_NAMES[@]} - 1))
+                ;;
+            SPACE)
+                if [ "${MENU_ITEM_CHECKS[$cur_focus]:--1}" -ne -1 ]; then
+                    if [ "${MENU_ITEM_CHECKS[$cur_focus]:-0}" -eq 1 ]; then
+                        MENU_ITEM_CHECKS[cur_focus]=0
                     else
-                        MENU_ITEM_CHECKS[index]=1
+                        MENU_ITEM_CHECKS[cur_focus]=1
                     fi
                 fi
-            fi
-        done
+                ;;
+            ENTER)
+                break
+                ;;
+            [aA])
+                for i in "${!MENU_ITEM_NAMES[@]}"; do
+                    [ "${MENU_ITEM_CHECKS[$i]:--1}" -ne -1 ] && MENU_ITEM_CHECKS[i]=1
+                done
+                ;;
+            [nN])
+                for i in "${!MENU_ITEM_NAMES[@]}"; do
+                    [ "${MENU_ITEM_CHECKS[$i]:--1}" -ne -1 ] && MENU_ITEM_CHECKS[i]=0
+                done
+                ;;
+            [1-9])
+                local idx=$((key - 1))
+                if [ "$idx" -ge 0 ] && [ "$idx" -lt "${#MENU_ITEM_NAMES[@]}" ] && [ "${MENU_ITEM_CHECKS[$idx]:--1}" -ne -1 ]; then
+                    cur_focus=$idx
+                    if [ "${MENU_ITEM_CHECKS[$idx]:-0}" -eq 1 ]; then
+                        MENU_ITEM_CHECKS[idx]=0
+                    else
+                        MENU_ITEM_CHECKS[idx]=1
+                    fi
+                fi
+                ;;
+            [qQ]|ESC)
+                break
+                ;;
+        esac
     done
+    printf '\e[?25h'
 
     for i in "${!MENU_ITEM_KEYS[@]}"; do
         local key="${MENU_ITEM_KEYS[$i]}"
@@ -482,19 +543,58 @@ offer_overwrite_upgrade() {
         return 0
     fi
 
-    while true; do
-        msg overwrite_title
-        msg overwrite_opt1
-        msg overwrite_opt2
-        msg overwrite_opt3
-        msg overwrite_opt4
-        echo ""
-        local mode_choice=""
-        if [ -c /dev/tty ]; then
-            read -r -p "$(msg overwrite_prompt)" mode_choice < /dev/tty || mode_choice="1"
-        fi
-        mode_choice="${mode_choice:-1}"
+    local cur_focus=0
+    clear 2>/dev/null || true
 
+    while true; do
+        printf '\e[?25l\e[H'
+        show_logo
+        msg overwrite_title
+
+        _render_menu_item 0 "$(msg overwrite_opt1)" "$cur_focus"
+        _render_menu_item 1 "$(msg overwrite_opt2)" "$cur_focus"
+        _render_menu_item 2 "$(msg overwrite_opt3)" "$cur_focus"
+        _render_menu_item 3 "$(msg overwrite_opt4)" "$cur_focus" "subtle"
+
+        echo ""
+        msg submenu_hint
+        echo ""
+        printf '\e[J'
+
+        local mode_choice=0
+        if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
+            mode_choice=1
+        else
+            local key
+            key=$(read_key) || break
+
+            local act=-1
+            case "$key" in
+                UP|[kK])
+                    cur_focus=$((cur_focus - 1))
+                    [ "$cur_focus" -lt 0 ] && cur_focus=3
+                    ;;
+                DOWN|[jJ])
+                    cur_focus=$((cur_focus + 1))
+                    [ "$cur_focus" -gt 3 ] && cur_focus=0
+                    ;;
+                ENTER|SPACE)
+                    act=$cur_focus
+                    ;;
+                [1-4])
+                    cur_focus=$((key - 1))
+                    act=$cur_focus
+                    ;;
+                0|[qQ]|ESC)
+                    cur_focus=3
+                    act=3
+                    ;;
+            esac
+            [ "$act" -eq -1 ] && continue
+            mode_choice=$((act + 1))
+        fi
+
+        printf '\e[?25h'
         case "$mode_choice" in
             1)
                 deploy_selected_configs "backup"
@@ -527,7 +627,7 @@ offer_overwrite_upgrade() {
                 fi
                 break
                 ;;
-            3|[vV]|diff)
+            3)
                 msg diff_viewer_title
                 local repo_config_dir="${REPO_DIR:-.}/$CONFIG_DIR_NAME"
                 (
@@ -539,17 +639,15 @@ offer_overwrite_upgrade() {
                         fi
                     done
                 ) | less -R
+                clear 2>/dev/null || true
                 ;;
-            4|0|q|skip)
+            4)
                 msg log_config_deploy_skipped
                 break
                 ;;
-            *)
-                msg invalid_opt
-                sleep 1
-                ;;
         esac
     done
+    printf '\e[?25h'
 }
 _phase_preflight_check() {
     local mode="$1"

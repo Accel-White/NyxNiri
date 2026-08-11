@@ -16,6 +16,7 @@ register_temp_path() {
 # Cleanup trap handler for unexpected signals or interruptions
 cleanup() {
     local exit_code=$?
+    printf '\e[?25h' 2>/dev/null || true
     release_lock
     local p
     if [ ${#CLEANUP_TEMP_PATHS[@]} -gt 0 ]; then
@@ -96,9 +97,9 @@ init_logger() {
         echo "$tmp_log" > "$INSTALL_LOG"
     fi
     {
-        echo "=================================================="
+        echo "──────────────────────────────────────────────────"
         echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] $PROJECT_NAME Session Started (${CURRENT_VERSION:-v2.x})"
-        echo "=================================================="
+        echo "──────────────────────────────────────────────────"
     } >> "$INSTALL_LOG"
 }
 
@@ -179,3 +180,26 @@ ensure_nyxniri_symlink() {
         [ -f "$root_installer" ] && chmod +x "$root_installer" 2>/dev/null || true
     fi
 }
+
+# Pure Bash single key reader for TUI navigation (supports arrow keys, space, enter, numbers)
+read_key() {
+    local key=""
+    IFS= read -rsn1 key < /dev/tty 2>/dev/null || return 1
+    if [[ "$key" == $'\x1b' ]]; then
+        local subkey=""
+        read -rsn2 -t 0.05 subkey < /dev/tty 2>/dev/null || true
+        case "$subkey" in
+            "[A"|"OA") key="UP" ;;
+            "[B"|"OB") key="DOWN" ;;
+            "[C"|"OC") key="RIGHT" ;;
+            "[D"|"OD") key="LEFT" ;;
+            *) key="ESC" ;;
+        esac
+    elif [[ "$key" == "" ]]; then
+        key="ENTER"
+    elif [[ "$key" == " " ]]; then
+        key="SPACE"
+    fi
+    printf '%s' "$key"
+}
+

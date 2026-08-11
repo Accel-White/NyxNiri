@@ -61,12 +61,16 @@ check_all_deps() {
 }
 
 show_dep_menu() {
-    clear 2>/dev/null || true
+    local focus="${1:-0}"
+    printf '\e[?25l\e[H'
     show_logo
     msg dep_menu_title
     for i in "${!DEPS[@]}"; do
         local status=""
-        local check=" "
+        local prefix="    "
+        if [ "$i" -eq "$focus" ]; then
+            prefix="  \e[1;36m❯ \e[0m"
+        fi
 
         if [ "${DEP_STATUS[i]:-0}" -eq 1 ]; then
             status=$(msg installed)
@@ -74,16 +78,21 @@ show_dep_menu() {
             status=$(msg missing)
         fi
 
+        local check_str="\e[90m[ ]\e[0m"
         if [ "${DEP_SELECT[i]:-0}" -eq 1 ]; then
-            check="*"
-        else
-            check=" "
+            check_str="\e[1;32m[✓]\e[0m"
         fi
 
-        printf "  [%s] %2d) %-24s %s\n" "$check" "$((i+1))" "${DEPS[$i]}" "$status"
+        if [ "$i" -eq "$focus" ]; then
+            printf "%b%b \e[1;37m%-24s\e[0m %s\n" "$prefix" "$check_str" "${DEPS[$i]}" "$status"
+        else
+            printf "%b%b %-24s %s\n" "$prefix" "$check_str" "${DEPS[$i]}" "$status"
+        fi
     done
     echo ""
     msg dep_menu_hint
+    echo ""
+    printf '\e[J'
 }
 
 run_dep_menu_loop() {
@@ -97,38 +106,60 @@ run_dep_menu_loop() {
         fi
     done
 
+    clear 2>/dev/null || true
+    local cur_focus=0
     while true; do
-        show_dep_menu
-        local choice=""
-        if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -r -p "> " choice < /dev/tty || choice=""
-        else
+        show_dep_menu "$cur_focus"
+
+        if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
             break
         fi
 
-        if [ -z "$choice" ] || [[ "$choice" =~ ^[Ii]$ ]] || [ "$choice" = "0" ]; then
-            break
-        fi
+        local key
+        key=$(read_key) || break
 
-        if [[ "$choice" =~ ^[Aa]$ ]]; then
-            for i in "${!DEPS[@]}"; do DEP_SELECT[i]=1; done
-            continue
-        elif [[ "$choice" =~ ^[Nn]$ ]]; then
-            for i in "${!DEPS[@]}"; do DEP_SELECT[i]=0; done
-            continue
-        fi
-
-        for num in $choice; do
-            if [[ "$num" =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le "${#DEPS[@]}" ]; then
-                local index=$((num-1))
-                if [ "${DEP_SELECT[index]:-0}" -eq 1 ]; then
-                    DEP_SELECT[index]=0
+        case "$key" in
+            UP|[kK])
+                cur_focus=$((cur_focus - 1))
+                [ "$cur_focus" -lt 0 ] && cur_focus=$((${#DEPS[@]} - 1))
+                ;;
+            DOWN|[jJ])
+                cur_focus=$((cur_focus + 1))
+                [ "$cur_focus" -ge "${#DEPS[@]}" ] && cur_focus=0
+                ;;
+            SPACE)
+                if [ "${DEP_SELECT[cur_focus]:-0}" -eq 1 ]; then
+                    DEP_SELECT[cur_focus]=0
                 else
-                    DEP_SELECT[index]=1
+                    DEP_SELECT[cur_focus]=1
                 fi
-            fi
-        done
+                ;;
+            ENTER|[iI])
+                break
+                ;;
+            [aA])
+                for i in "${!DEPS[@]}"; do DEP_SELECT[i]=1; done
+                ;;
+            [nN])
+                for i in "${!DEPS[@]}"; do DEP_SELECT[i]=0; done
+                ;;
+            [1-9])
+                local idx=$((key - 1))
+                if [ "$idx" -ge 0 ] && [ "$idx" -lt "${#DEPS[@]}" ]; then
+                    cur_focus=$idx
+                    if [ "${DEP_SELECT[idx]:-0}" -eq 1 ]; then
+                        DEP_SELECT[idx]=0
+                    else
+                        DEP_SELECT[idx]=1
+                    fi
+                fi
+                ;;
+            [qQ]|0|ESC)
+                break
+                ;;
+        esac
     done
+    printf '\e[?25h'
 
     install_selected_deps
 }
@@ -332,7 +363,6 @@ check_mpvpaper_version() {
         msg mpvpaper_version_ok "$version"
     else
         msg mpvpaper_leak_warn "$version"
-        local choice=""
         if prompt_confirm mpvpaper_upgrade_prompt "n"; then
             local mgr=""
             if ! mgr=$(aur_helper_usable); then

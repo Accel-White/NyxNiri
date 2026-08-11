@@ -208,15 +208,61 @@ delete_backup() {
 uninstall_nyxniri() {
     local mode="${1:-}"
     if [ -z "$mode" ]; then
-        msg uninstall_title
-        msg uninstall_opt1
-        msg uninstall_opt2
-        msg uninstall_opt3
-        msg uninstall_opt4
-        echo ""
-        if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -r -p "$(msg uninstall_prompt)" mode < /dev/tty || mode=""
+        if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
+            return 0
         fi
+
+        local cur_focus=0
+        clear 2>/dev/null || true
+
+        while true; do
+            printf '\e[?25l\e[H'
+            show_logo
+            msg uninstall_title
+
+            _render_menu_item 0 "$(msg uninstall_opt1)" "$cur_focus"
+            _render_menu_item 1 "$(msg uninstall_opt2)" "$cur_focus"
+            _render_menu_item 2 "$(msg uninstall_opt3)" "$cur_focus" "warn"
+            _render_menu_item 3 "$(msg uninstall_opt4)" "$cur_focus" "subtle"
+
+            echo ""
+            msg submenu_hint
+            echo ""
+            printf '\e[J'
+
+            local key
+            key=$(read_key) || return 0
+
+            local act=-1
+            case "$key" in
+                UP|[kK])
+                    cur_focus=$((cur_focus - 1))
+                    [ "$cur_focus" -lt 0 ] && cur_focus=3
+                    ;;
+                DOWN|[jJ])
+                    cur_focus=$((cur_focus + 1))
+                    [ "$cur_focus" -gt 3 ] && cur_focus=0
+                    ;;
+                ENTER|SPACE)
+                    act=$cur_focus
+                    ;;
+                [1-4])
+                    cur_focus=$((key - 1))
+                    act=$cur_focus
+                    ;;
+                0|[qQ]|ESC)
+                    cur_focus=3
+                    act=3
+                    ;;
+            esac
+
+            if [ "$act" -ne -1 ]; then
+                printf '\e[?25h'
+                mode=$((act + 1))
+                break
+            fi
+        done
+        printf '\e[?25h'
     fi
 
     case "$mode" in

@@ -34,212 +34,396 @@ press_any_key() {
     fi
 }
 
+_render_menu_item() {
+    local idx="$1"
+    local label="$2"
+    local focus="$3"
+    local style="${4:-normal}"
+
+    local prefix="    "
+    if [ "$idx" -eq "$focus" ]; then
+        prefix="  \e[1;36m❯ \e[0m"
+    fi
+
+    if [ "$idx" -eq "$focus" ]; then
+        if [ "$style" = "warn" ]; then
+            printf "%b\e[1;31m%s\e[0m\n" "$prefix" "$label"
+        elif [ "$style" = "subtle" ]; then
+            printf "%b\e[1;30m%s\e[0m\n" "$prefix" "$label"
+        else
+            printf "%b\e[1;37m%s\e[0m\n" "$prefix" "$label"
+        fi
+    else
+        if [ "$style" = "warn" ]; then
+            printf "%b\e[31m%s\e[0m\n" "$prefix" "$label"
+        elif [ "$style" = "subtle" ]; then
+            printf "%b\e[90m%s\e[0m\n" "$prefix" "$label"
+        else
+            printf "%b%s\n" "$prefix" "$label"
+        fi
+    fi
+}
+
 snapshot_menu() {
+    local cur_focus=0
+    clear 2>/dev/null || true
+
     while true; do
-        clear 2>/dev/null || true
+        printf '\e[?25l\e[H'
         show_logo
         msg snapshot_menu_title
-        msg snapshot_sub_create
-        msg snapshot_sub_list
-        msg snapshot_sub_delete
-        msg snapshot_sub_rollback
-        msg snapshot_sub_back
+
+        _render_menu_item 0 "$(msg snapshot_sub_create)" "$cur_focus"
+        _render_menu_item 1 "$(msg snapshot_sub_list)" "$cur_focus"
+        _render_menu_item 2 "$(msg snapshot_sub_delete)" "$cur_focus" "warn"
+        _render_menu_item 3 "$(msg snapshot_sub_rollback)" "$cur_focus"
+        _render_menu_item 4 "$(msg snapshot_sub_back)" "$cur_focus" "subtle"
+
         echo ""
-        local opt=""
-        if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -r -p "> " opt < /dev/tty || opt=""
-        else
+        msg submenu_hint
+        echo ""
+        printf '\e[J'
+
+        if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
             break
         fi
-        case "$opt" in
-            1)
-                discover_config_items
-                local note_in=""
-                read -r -p "$(msg snapshot_note_prompt)" note_in < /dev/tty || note_in=""
-                backup_configs "$note_in"
+
+        local key
+        key=$(read_key) || break
+
+        local act=-1
+        case "$key" in
+            UP|[kK])
+                cur_focus=$((cur_focus - 1))
+                [ "$cur_focus" -lt 0 ] && cur_focus=4
                 ;;
-            2)
-                list_backups
+            DOWN|[jJ])
+                cur_focus=$((cur_focus + 1))
+                [ "$cur_focus" -gt 4 ] && cur_focus=0
                 ;;
-            3)
-                discover_config_items
-                delete_backup ""
+            ENTER|SPACE)
+                act=$cur_focus
                 ;;
-            4)
-                discover_config_items
-                rollback_configs ""
+            [1-4])
+                cur_focus=$((key - 1))
+                act=$cur_focus
                 ;;
-            0|q)
-                return 0
-                ;;
-            *)
-                msg invalid_opt
-                sleep 1
+            0|[qQ]|ESC)
+                cur_focus=4
+                act=4
                 ;;
         esac
-        press_any_key
+
+        if [ "$act" -ne -1 ]; then
+            printf '\e[?25h'
+            case "$act" in
+                0)
+                    discover_config_items
+                    local note_in=""
+                    read -r -p "$(msg snapshot_note_prompt)" note_in < /dev/tty || note_in=""
+                    backup_configs "$note_in"
+                    press_any_key
+                    ;;
+                1)
+                    list_backups
+                    press_any_key
+                    ;;
+                2)
+                    discover_config_items
+                    delete_backup ""
+                    press_any_key
+                    ;;
+                3)
+                    discover_config_items
+                    rollback_configs ""
+                    press_any_key
+                    ;;
+                4)
+                    return 0
+                    ;;
+            esac
+            clear 2>/dev/null || true
+        fi
     done
+    printf '\e[?25h'
 }
 
 greeter_menu() {
+    local cur_focus=0
+    clear 2>/dev/null || true
+
     while true; do
-        clear 2>/dev/null || true
+        printf '\e[?25l\e[H'
         show_logo
         msg greeter_menu_title
-        msg greeter_sub_install
-        msg greeter_sub_status
-        msg greeter_sub_uninstall
-        msg greeter_sub_back
+
+        _render_menu_item 0 "$(msg greeter_sub_install)" "$cur_focus"
+        _render_menu_item 1 "$(msg greeter_sub_status)" "$cur_focus"
+        _render_menu_item 2 "$(msg greeter_sub_uninstall)" "$cur_focus" "warn"
+        _render_menu_item 3 "$(msg greeter_sub_back)" "$cur_focus" "subtle"
+
         echo ""
-        local opt=""
-        if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -r -p "> " opt < /dev/tty || opt=""
-        else
+        msg submenu_hint
+        echo ""
+        printf '\e[J'
+
+        if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
             break
         fi
-        case "$opt" in
-            1) greeter_install ;;
-            2) greeter_status ;;
-            3) greeter_uninstall ;;
-            0|q) return 0 ;;
-            *) msg invalid_opt; sleep 1 ;;
+
+        local key
+        key=$(read_key) || break
+
+        local act=-1
+        case "$key" in
+            UP|[kK])
+                cur_focus=$((cur_focus - 1))
+                [ "$cur_focus" -lt 0 ] && cur_focus=3
+                ;;
+            DOWN|[jJ])
+                cur_focus=$((cur_focus + 1))
+                [ "$cur_focus" -gt 3 ] && cur_focus=0
+                ;;
+            ENTER|SPACE)
+                act=$cur_focus
+                ;;
+            [1-3])
+                cur_focus=$((key - 1))
+                act=$cur_focus
+                ;;
+            0|[qQ]|ESC)
+                cur_focus=3
+                act=3
+                ;;
         esac
-        press_any_key
+
+        if [ "$act" -ne -1 ]; then
+            printf '\e[?25h'
+            case "$act" in
+                0) greeter_install; press_any_key ;;
+                1) greeter_status; press_any_key ;;
+                2) greeter_uninstall; press_any_key ;;
+                3) return 0 ;;
+            esac
+            clear 2>/dev/null || true
+        fi
     done
+    printf '\e[?25h'
 }
 
 fcitx_menu() {
+    local cur_focus=0
+    clear 2>/dev/null || true
+
     while true; do
-        clear 2>/dev/null || true
+        printf '\e[?25l\e[H'
         show_logo
         msg fcitx_menu_title
-        msg fcitx_sub_install
-        msg fcitx_sub_status
-        msg fcitx_sub_uninstall
-        msg fcitx_sub_back
+
+        _render_menu_item 0 "$(msg fcitx_sub_install)" "$cur_focus"
+        _render_menu_item 1 "$(msg fcitx_sub_status)" "$cur_focus"
+        _render_menu_item 2 "$(msg fcitx_sub_uninstall)" "$cur_focus" "warn"
+        _render_menu_item 3 "$(msg fcitx_sub_back)" "$cur_focus" "subtle"
+
         echo ""
-        local opt=""
-        if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -r -p "> " opt < /dev/tty || opt=""
-        else
+        msg submenu_hint
+        echo ""
+        printf '\e[J'
+
+        if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
             break
         fi
-        case "$opt" in
-            1) fcitx_install ;;
-            2) fcitx_status ;;
-            3) fcitx_uninstall ;;
-            0|q) return 0 ;;
-            *) msg invalid_opt; sleep 1 ;;
+
+        local key
+        key=$(read_key) || break
+
+        local act=-1
+        case "$key" in
+            UP|[kK])
+                cur_focus=$((cur_focus - 1))
+                [ "$cur_focus" -lt 0 ] && cur_focus=3
+                ;;
+            DOWN|[jJ])
+                cur_focus=$((cur_focus + 1))
+                [ "$cur_focus" -gt 3 ] && cur_focus=0
+                ;;
+            ENTER|SPACE)
+                act=$cur_focus
+                ;;
+            [1-3])
+                cur_focus=$((key - 1))
+                act=$cur_focus
+                ;;
+            0|[qQ]|ESC)
+                cur_focus=3
+                act=3
+                ;;
         esac
-        press_any_key
+
+        if [ "$act" -ne -1 ]; then
+            printf '\e[?25h'
+            case "$act" in
+                0) fcitx_install; press_any_key ;;
+                1) fcitx_status; press_any_key ;;
+                2) fcitx_uninstall; press_any_key ;;
+                3) return 0 ;;
+            esac
+            clear 2>/dev/null || true
+        fi
     done
+    printf '\e[?25h'
 }
 
 optional_modules_menu() {
+    local cur_focus=0
+    clear 2>/dev/null || true
+
     while true; do
-        clear 2>/dev/null || true
+        printf '\e[?25l\e[H'
         show_logo
         msg optmod_menu_title
-        printf "  \e[1;32m1)\e[0m %s %s\n" "$(_disp_pad "Noctalia Greeter" 22)" "$(greeter_status_label)"
-        printf "  \e[1;32m2)\e[0m %s %s\n" "$(_disp_pad "$(msg optmod_sub_fcitx)" 22)" "$(fcitx_status_label)"
-        printf "  \e[1;32m3)\e[0m %s %s\n" "$(_disp_pad "$(msg optmod_sub_wallpapers)" 22)" "$(wallpapers_status_label)"
-        msg optmod_purge
-        msg optmod_back
+
+        local label1 label2 label3
+        label1="$(_disp_pad "Noctalia Greeter" 26)$(greeter_status_label)"
+        label2="$(_disp_pad "$(msg optmod_sub_fcitx)" 26)$(fcitx_status_label)"
+        label3="$(_disp_pad "$(msg optmod_sub_wallpapers)" 26)$(wallpapers_status_label)"
+
+        _render_menu_item 0 "$label1" "$cur_focus"
+        _render_menu_item 1 "$label2" "$cur_focus"
+        _render_menu_item 2 "$label3" "$cur_focus"
+        _render_menu_item 3 "$(msg optmod_purge)" "$cur_focus" "warn"
+        _render_menu_item 4 "$(msg optmod_back)" "$cur_focus" "subtle"
+
         echo ""
-        local opt=""
-        if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -r -p "> " opt < /dev/tty || opt=""
-        else
+        msg submenu_hint
+        echo ""
+        printf '\e[J'
+
+        if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
             break
         fi
-        case "$opt" in
-            1) greeter_menu ;;
-            2) fcitx_menu ;;
-            3) deploy_wallpapers "y"; press_any_key ;;
-            4) discover_config_items; uninstall_nyxniri "purge" ;;
-            0|q) return 0 ;;
-            *) msg invalid_opt; sleep 1 ;;
+
+        local key
+        key=$(read_key) || break
+
+        local act=-1
+        case "$key" in
+            UP|[kK])
+                cur_focus=$((cur_focus - 1))
+                [ "$cur_focus" -lt 0 ] && cur_focus=4
+                ;;
+            DOWN|[jJ])
+                cur_focus=$((cur_focus + 1))
+                [ "$cur_focus" -gt 4 ] && cur_focus=0
+                ;;
+            ENTER|SPACE)
+                act=$cur_focus
+                ;;
+            [1-4])
+                cur_focus=$((key - 1))
+                act=$cur_focus
+                ;;
+            0|[qQ]|ESC)
+                cur_focus=4
+                act=4
+                ;;
         esac
-        press_any_key
+
+        if [ "$act" -ne -1 ]; then
+            printf '\e[?25h'
+            case "$act" in
+                0) greeter_menu ;;
+                1) fcitx_menu ;;
+                2) deploy_wallpapers "y"; press_any_key ;;
+                3) discover_config_items; uninstall_nyxniri "purge"; press_any_key ;;
+                4) return 0 ;;
+            esac
+            clear 2>/dev/null || true
+        fi
     done
+    printf '\e[?25h'
 }
 
 main_menu() {
+    local cur_focus=0
+    clear 2>/dev/null || true
+
     while true; do
-        clear 2>/dev/null || true
+        printf '\e[?25l\e[H'
         show_logo
         msg menu_title
 
         msg menu_group_deploy
-        msg menu_opt1
-        msg menu_opt2
-        msg menu_opt3
+        _render_menu_item 0 "$(msg menu_opt1)" "$cur_focus"
+        _render_menu_item 1 "$(msg menu_opt2)" "$cur_focus"
+        _render_menu_item 2 "$(msg menu_opt3)" "$cur_focus"
 
         msg menu_group_backup
-        msg menu_opt4
+        _render_menu_item 3 "$(msg menu_opt4)" "$cur_focus"
 
         msg menu_group_maint
-        msg menu_opt5
-        msg menu_opt6
-        msg menu_opt7
+        _render_menu_item 4 "$(msg menu_opt5)" "$cur_focus"
+        _render_menu_item 5 "$(msg menu_opt6)" "$cur_focus"
+        _render_menu_item 6 "$(msg menu_opt7)" "$cur_focus"
 
         msg menu_group_system
-        msg menu_opt8
-        msg menu_opt9
-        msg menu_opt0
+        _render_menu_item 7 "$(msg menu_opt8)" "$cur_focus" "warn"
+        _render_menu_item 8 "$(msg menu_opt9)" "$cur_focus"
+        _render_menu_item 9 "$(msg menu_opt0)" "$cur_focus" "subtle"
 
         echo ""
-        local opt=""
-        if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -r -p "$(msg menu_prompt)" opt < /dev/tty || opt="0"
-        else
+        msg menu_hint
+        echo ""
+        printf '\e[J'
+
+        if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
             break
         fi
 
-        case "$opt" in
-            1)
-                install_configs "express"
-                press_any_key
+        local key
+        key=$(read_key) || break
+
+        local action_item=-1
+        case "$key" in
+            UP|[kK])
+                cur_focus=$((cur_focus - 1))
+                [ "$cur_focus" -lt 0 ] && cur_focus=9
                 ;;
-            2)
-                install_configs "full"
-                press_any_key
+            DOWN|[jJ])
+                cur_focus=$((cur_focus + 1))
+                [ "$cur_focus" -gt 9 ] && cur_focus=0
                 ;;
-            3)
-                run_dep_menu_loop
-                press_any_key
+            ENTER|SPACE)
+                action_item=$cur_focus
                 ;;
-            4)
-                snapshot_menu
+            [1-9])
+                cur_focus=$((key - 1))
+                action_item=$cur_focus
                 ;;
-            5)
-                update_repo_and_script ""
-                press_any_key
-                ;;
-            6)
-                run_doctor
-                press_any_key
-                ;;
-            7)
-                generate_bug_report
-                press_any_key
-                ;;
-            8)
-                uninstall_nyxniri ""
-                press_any_key
-                ;;
-            9)
-                optional_modules_menu
-                ;;
-            0|q|exit)
-                exit 0
-                ;;
-            *)
-                msg invalid_opt
-                sleep 1.5
+            0|[qQ]|exit|ESC)
+                cur_focus=9
+                action_item=9
                 ;;
         esac
+
+        if [ "$action_item" -ne -1 ]; then
+            printf '\e[?25h'
+            case "$action_item" in
+                0) install_configs "express"; press_any_key ;;
+                1) install_configs "full"; press_any_key ;;
+                2) run_dep_menu_loop; press_any_key ;;
+                3) snapshot_menu ;;
+                4) update_repo_and_script ""; press_any_key ;;
+                5) run_doctor; press_any_key ;;
+                6) generate_bug_report; press_any_key ;;
+                7) uninstall_nyxniri ""; press_any_key ;;
+                8) optional_modules_menu ;;
+                9) exit 0 ;;
+            esac
+            clear 2>/dev/null || true
+        fi
     done
+    printf '\e[?25h'
 }
 
 main() {
