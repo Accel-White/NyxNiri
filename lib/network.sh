@@ -30,28 +30,28 @@ git_clone_timeout() {
 clone_repo_with_fallback() {
     local target_dir="$1"
     log_msg INFO "Starting Git clone with fallback (Priority: Official -> gh-proxy)"
-    echo -e "\e[1;34m:: 正在按优先级拉取仓库 (官方 -> gh-proxy)…\e[0m" >&2
+    msg net_pull_repo
 
     local idx=1
     for item in "${GIT_MIRROR_REGISTRY[@]}"; do
         local tag="${item%%|*}"
         local url="${item#*|}"
 
-        echo -e "\n  \e[1;36m[$idx/${#GIT_MIRROR_REGISTRY[@]}] 从 [$tag] 节点拉取…\e[0m" >&2
+        msg net_pull_node "$idx" "${#GIT_MIRROR_REGISTRY[@]}" "$tag"
         rm -rf "$target_dir" 2>/dev/null || true
 
         if git_clone_timeout "$url" "$target_dir"; then
-            echo -e "\e[1;32m[✓] 从 [$tag] 节点拉取完成\e[0m\n" >&2
+            msg net_pull_node_ok "$tag"
             log_msg INFO "Git clone [$tag] SUCCESS ($url)"
             return 0
         else
-            echo -e "\e[1;31m[-] 从 [$tag] 节点拉取失败，尝试下一节点…\e[0m" >&2
+            msg net_pull_node_fail "$tag"
             log_msg WARN "Git clone [$tag] FAILED ($url)"
         fi
         idx=$((idx + 1))
     done
 
-    echo -e "\e[1;31m[-] 所有 Git 镜像节点均拉取失败。请检查网络。\e[0m\n" >&2
+    msg net_pull_all_fail
     log_msg ERROR "All Git clone attempts failed"
     return 1
 }
@@ -64,7 +64,7 @@ fetch_raw_with_fallback() {
     local output_file="$4"
 
     log_msg INFO "Fetching raw file: $user_repo/$file_path ($branch)"
-    echo -e "\e[1;34m:: 正在按优先级下载资源 ($user_repo/$file_path)…\e[0m"
+    msg net_download_asset "$user_repo" "$file_path"
 
     local idx=1
     for tpl_entry in "${RAW_MIRROR_TEMPLATES[@]}"; do
@@ -91,13 +91,13 @@ fetch_raw_with_fallback() {
         [ $dur -lt 0 ] && dur=0
 
         if [ "$http_code" = "200" ] && [ -s "$tmp_file" ] && ! head -n 5 "$tmp_file" | grep -qi "<html"; then
-            echo -e "\e[1;32m[✓] 成功 (HTTP 200, ${dur}ms)\e[0m"
+            msg net_download_ok "${dur}"
             log_msg INFO "Downloaded raw file via [$tag] ($url) - ${dur}ms"
             mv "$tmp_file" "$output_file"
-            echo -e "\e[1;32m[✓] 已通过 [$tag] 节点拉取资源\e[0m\n"
+            msg net_download_node_ok "$tag"
             return 0
         else
-            echo -e "\e[1;31m[-] 失败 (HTTP ${http_code:-FAIL})\e[0m"
+            msg net_download_fail "${http_code:-FAIL}"
             log_msg WARN "Fetch failed via [$tag] ($url) - HTTP ${http_code:-FAIL}"
             rm -f "$tmp_file" 2>/dev/null || true
         fi
@@ -105,7 +105,7 @@ fetch_raw_with_fallback() {
     done
 
     log_msg ERROR "Failed to fetch raw file $user_repo/$file_path from all mirror nodes."
-    echo -e "\e[1;31m[-] 所有镜像节点均拉取失败\e[0m\n"
+    msg net_download_all_fail
     return 1
 }
 
@@ -136,7 +136,7 @@ show_release_notes() {
     if [ -f "$changelog_file" ]; then
         echo -e "\n\e[1;35m════════════════════════════════════════════════════════════════\e[0m"
         if [ "${LANG_MODE:-en}" = "zh" ]; then
-            echo -e " \e[1;36m:: 最新更新日志 (Changelog)\e[0m"
+            msg net_changelog_title
         else
             echo -e " \e[1;36m:: Latest Release Notes (Changelog)\e[0m"
         fi
@@ -157,7 +157,7 @@ safe_pull_or_reset() {
         msg dirty_tree_warn "$dir"
         if [ -t 0 ] && [ -c /dev/tty ]; then
             local confirm_reset=""
-            read -p "$(msg dirty_tree_confirm)" confirm_reset < /dev/tty || confirm_reset="n"
+            read -r -p "$(msg dirty_tree_confirm)" confirm_reset < /dev/tty || confirm_reset="n"
             if [[ ! "$confirm_reset" =~ ^[Yy]$ ]]; then
                 msg update_cancelled_dirty
                 return 1
@@ -191,8 +191,7 @@ update_repo_and_script() {
         offer_overwrite_upgrade "$flag"
         msg updating_done
         if [ -t 0 ] && [ -c /dev/tty ]; then
-            local k=""
-            read -p "$(msg press_any_key)" -n 1 k < /dev/tty || sleep 1.5
+            read -r -p "$(msg press_any_key)" -n 1 _k < /dev/tty || sleep 1.5
         else
             sleep 1.5
         fi

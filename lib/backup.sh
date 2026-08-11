@@ -41,7 +41,7 @@ backup_configs() {
     for item in "${CONFIG_ITEMS[@]}"; do
         if [ -e "$HOME/.config/$item" ]; then
             cp -rP "$HOME/.config/$item" "$tmp_snap/"
-            echo "  [✓] 已备份: ~/.config/$item"
+            msg log_backup_item "$item"
         fi
     done
 
@@ -117,7 +117,7 @@ rollback_configs() {
         list_backups
         echo ""
         if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -p "$(msg select_rollback_target)" target_idx < /dev/tty || target_idx=""
+            read -r -p "$(msg select_rollback_target)" target_idx < /dev/tty || target_idx=""
         fi
     fi
 
@@ -151,7 +151,7 @@ rollback_configs() {
     for item in "${CONFIG_ITEMS[@]}"; do
         if [ -e "$selected_backup/$item" ]; then
             atomic_replace_dir "$selected_backup/$item" "$HOME/.config/$item"
-            echo "  [✓] 已恢复: ~/.config/$item"
+            msg log_restore_item "$item"
         fi
     done
 
@@ -178,7 +178,7 @@ delete_backup() {
         list_backups
         echo ""
         if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -p "$(msg select_rollback_target)" target_idx < /dev/tty || target_idx=""
+            read -r -p "$(msg select_rollback_target)" target_idx < /dev/tty || target_idx=""
         fi
     fi
 
@@ -194,7 +194,7 @@ delete_backup() {
     msg delete_confirm "$selected_name"
     local confirm=""
     if [ -t 0 ] && [ -c /dev/tty ]; then
-        read -p "$(msg delete_prompt)" confirm < /dev/tty || confirm="n"
+        read -r -p "$(msg delete_prompt)" confirm < /dev/tty || confirm="n"
     fi
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
         msg delete_cancelled
@@ -215,7 +215,7 @@ uninstall_nyxniri() {
         msg uninstall_opt4
         echo ""
         if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -p "$(msg uninstall_prompt)" mode < /dev/tty || mode=""
+            read -r -p "$(msg uninstall_prompt)" mode < /dev/tty || mode=""
         fi
     fi
 
@@ -239,7 +239,7 @@ uninstall_nyxniri() {
             for item in "${CONFIG_ITEMS[@]}"; do
                 if [ -e "$HOME/.config/$item" ] && [ "$HOME/.config/$item" != "$HOME" ]; then
                     rm -rf "$HOME/.config/$item"
-                    echo "  [-] 已移除: ~/.config/$item"
+                    msg log_remove_item "$item"
                 fi
             done
             [ -L "$HOME/.local/bin/$CLI_CMD" ] && rm -f "$HOME/.local/bin/$CLI_CMD"
@@ -252,11 +252,11 @@ uninstall_nyxniri() {
                 local earliest="${ALL_BACKUPS[0]}"
                 local earliest_name
                 earliest_name=$(basename "$earliest")
-                echo ":: 正在从初始备份恢复配置: $earliest_name…"
+                msg log_restoring_origin_config "$earliest_name"
                 for item in "${CONFIG_ITEMS[@]}"; do
                     if [ -e "$earliest/$item" ]; then
                         atomic_replace_dir "$earliest/$item" "$HOME/.config/$item"
-                        echo "  [✓] 已恢复: ~/.config/$item"
+                        msg log_restore_item "$item"
                     fi
                 done
                 [ -L "$HOME/.local/bin/$CLI_CMD" ] && rm -f "$HOME/.local/bin/$CLI_CMD"
@@ -281,7 +281,7 @@ uninstall_nyxniri() {
             msg purge_done
             ;;
         *)
-            echo "已取消卸载"
+            msg log_uninstall_cancelled
             return 0
             ;;
     esac

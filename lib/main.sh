@@ -30,8 +30,7 @@ init_environment_paths
 press_any_key() {
     if [ -t 0 ] && [ -c /dev/tty ]; then
         # shellcheck disable=SC2034  # read key is intentionally discarded
-        local k=""
-        read -p "$(msg press_any_key)" -n 1 k < /dev/tty || sleep 1
+        read -r -p "$(msg press_any_key)" -n 1 _k < /dev/tty || sleep 1
     fi
 }
 
@@ -48,7 +47,7 @@ snapshot_menu() {
         echo ""
         local opt=""
         if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -p "> " opt < /dev/tty || opt=""
+            read -r -p "> " opt < /dev/tty || opt=""
         else
             break
         fi
@@ -56,7 +55,7 @@ snapshot_menu() {
             1)
                 discover_config_items
                 local note_in=""
-                read -p "$(msg snapshot_note_prompt)" note_in < /dev/tty || note_in=""
+                read -r -p "$(msg snapshot_note_prompt)" note_in < /dev/tty || note_in=""
                 backup_configs "$note_in"
                 ;;
             2)
@@ -94,7 +93,7 @@ greeter_menu() {
         echo ""
         local opt=""
         if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -p "> " opt < /dev/tty || opt=""
+            read -r -p "> " opt < /dev/tty || opt=""
         else
             break
         fi
@@ -121,7 +120,7 @@ fcitx_menu() {
         echo ""
         local opt=""
         if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -p "> " opt < /dev/tty || opt=""
+            read -r -p "> " opt < /dev/tty || opt=""
         else
             break
         fi
@@ -149,7 +148,7 @@ optional_modules_menu() {
         echo ""
         local opt=""
         if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -p "> " opt < /dev/tty || opt=""
+            read -r -p "> " opt < /dev/tty || opt=""
         else
             break
         fi
@@ -192,7 +191,7 @@ main_menu() {
         echo ""
         local opt=""
         if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -p "$(msg menu_prompt)" opt < /dev/tty || opt="0"
+            read -r -p "$(msg menu_prompt)" opt < /dev/tty || opt="0"
         else
             break
         fi
@@ -245,7 +244,7 @@ main_menu() {
 
 main() {
     if [ "$(id -u)" -eq 0 ]; then
-        echo -e "\n\e[1;31m[-] 禁止使用 root 运行。请以普通用户身份运行 ./install.sh\e[0m"
+        msg err_root_denied
         echo -e "[-] Do not run as root. Re-run as normal user: ./install.sh\n"
         exit 1
     fi

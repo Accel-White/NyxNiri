@@ -24,7 +24,7 @@ cleanup() {
         done
     fi
     if [ $exit_code -ne 0 ] && [ $exit_code -ne 130 ]; then
-        echo -e "\n\e[1;31m[-] 操作被中断或异常终止 (退出码: $exit_code)\e[0m"
+        msg err_aborted_code "$exit_code"
     fi
 }
 trap cleanup EXIT INT TERM
@@ -52,7 +52,7 @@ acquire_lock() {
         local lock_pid
         lock_pid=$(cat "$NYXNIRI_LOCK_FILE" 2>/dev/null || echo "")
         if [ -n "$lock_pid" ] && [ "$lock_pid" != "$$" ] && kill -0 "$lock_pid" 2>/dev/null; then
-            echo -e "\n\e[1;33m[!] $PROJECT_NAME 已在运行 (PID: $lock_pid)\e[0m"
+            msg err_already_running "$lock_pid"
             exit 1
         fi
     fi
@@ -80,7 +80,7 @@ export GREETER_PKG="noctalia-greeter"
 export FCITX_THEME="nyxmellow"
 
 # Global Variables & Paths
-LANG_MODE="en"
+export LANG_MODE="en"
 CACHE_DIR="$HOME/.cache/$PROJECT_NAME"
 CONFIG_DIR_NAME="v2"
 
@@ -107,6 +107,7 @@ log_msg() {
     shift
     local raw_msg="$*"
     local clean_msg
+    # shellcheck disable=SC2001
     clean_msg=$(echo "$raw_msg" | sed 's/\x1b\[[0-9;]*m//g')
     echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] $clean_msg" >> "$INSTALL_LOG" 2>/dev/null || true
 }
@@ -151,8 +152,8 @@ init_environment_paths() {
         MODE_LABEL="Local Path"
         REPO_DIR="$SCRIPT_DIR"
     else
-        RUN_MODE="standalone"
-        MODE_LABEL="Remote Cache"
+        export RUN_MODE="standalone"
+        export MODE_LABEL="Remote Cache"
         REPO_DIR="$CACHE_DIR"
     fi
 

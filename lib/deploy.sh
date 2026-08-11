@@ -39,7 +39,7 @@ atomic_replace_item() {
         (cd "$dest" && find . -type d -name "*__custom__*" -prune -o \( -type f -o -type l \) -name "*__custom__*" -print0 2>/dev/null | while IFS= read -r -d '' file; do
             mkdir -p "$tmp_new/$(dirname "$file")"
             cp -a "$file" "$tmp_new/$file"
-            echo "  [✓] 保留自定义文件: ~/.config/${dest#"$HOME"/.config/}/${file#./}"
+            msg log_keep_custom_file "${dest#"$HOME"/.config/}/${file#./}"
             if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ]; then
                 echo "    - File: $dest/${file#./}" >> "$NYXNIRI_CUSTOM_LOG"
             fi
@@ -48,7 +48,7 @@ atomic_replace_item() {
         (cd "$dest" && find . -type d -name "*__custom__*" -prune -print0 2>/dev/null | while IFS= read -r -d '' dir; do
             mkdir -p "$tmp_new/$(dirname "$dir")"
             cp -a "$dir" "$tmp_new/$(dirname "$dir")/"
-            echo "  [✓] 保留自定义目录: ~/.config/${dest#"$HOME"/.config/}/${dir#./}"
+            msg log_keep_custom_dir "${dest#"$HOME"/.config/}/${dir#./}"
             if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ]; then
                 echo "    - Dir:  $dest/${dir#./}" >> "$NYXNIRI_CUSTOM_LOG"
             fi
@@ -96,10 +96,10 @@ _phase_atomic_deployment() {
             if [ -n "$temp_monitor" ] && [ -f "$temp_monitor" ]; then
                 cp "$temp_monitor" "$dest/$MAIN_WM_HARDWARE_CONFIG"
                 rm -f "$temp_monitor" 2>/dev/null || true
-                echo "  [✓] 保留显示器配置: ~/.config/$MAIN_WM/$MAIN_WM_HARDWARE_CONFIG"
+                msg log_keep_monitor_config "$MAIN_WM" "$MAIN_WM_HARDWARE_CONFIG"
             fi
 
-            echo "  [✓] 部署配置: ~/.config/$item"
+            msg log_deploy_config_item "$item"
         fi
     done
 
@@ -155,13 +155,13 @@ _phase_hardware_patches() {
     # GPU Hardware Detection: Automatically uncomment NVIDIA environment variables if NVIDIA GPU is present
     if [ -f "$HOME/.config/$MAIN_WM/config.kdl" ]; then
         if command -v lspci >/dev/null 2>&1 && lspci | grep -i -q "NVIDIA"; then
-            echo ":: 检测到 NVIDIA GPU。启用 Wayland 环境变量"
+            msg log_nvidia_gpu_detected
             log_msg "INFO" "NVIDIA GPU detected via lspci. Enabled NVIDIA Wayland envs in config.kdl"
             sed -i 's|^[[:space:]]*//[[:space:]]*\(GBM_BACKEND "nvidia-drm"\)|\1|g' "$HOME/.config/$MAIN_WM/config.kdl"
             sed -i 's|^[[:space:]]*//[[:space:]]*\(__GLX_VENDOR_LIBRARY_NAME "nvidia"\)|\1|g' "$HOME/.config/$MAIN_WM/config.kdl"
             sed -i 's|^[[:space:]]*//[[:space:]]*\(LIBVA_DRIVER_NAME "nvidia"\)|\1|g' "$HOME/.config/$MAIN_WM/config.kdl"
         else
-            echo ":: 未检测到 NVIDIA GPU。保持默认环境变量"
+            msg log_nvidia_gpu_not_detected
             log_msg "INFO" "Non-NVIDIA / Virtual Machine GPU detected. NVIDIA envs kept disabled."
         fi
     fi
@@ -172,34 +172,37 @@ _phase_post_install_services() {
     if [ -f "$HOME/.config/$THEME_ENGINE/theme-sync.sh" ]; then
         chmod +x "$HOME/.config/$THEME_ENGINE/theme-sync.sh"
         bash "$HOME/.config/$THEME_ENGINE/theme-sync.sh" >/dev/null 2>&1 || true
-        echo "  [✓] 初始化主题与 GTK 同步"
+        msg log_gtk_theme_init
     fi
 
     # Enable mpvpaper plugin if CLI is available
     if command -v "$THEME_ENGINE" >/dev/null 2>&1; then
-        echo ":: 启用 mpvpaper 插件"
+        msg log_enable_mpvpaper
         "$THEME_ENGINE" msg plugins enable noctalia/mpvpaper 2>/dev/null || true
     fi
 
     # Install/Update Fisher plugins if fish is available
     if command -v fish >/dev/null 2>&1; then
-        echo -e "\e[1;34m:: 检查 Fisher 插件管理器…\e[0m"
+        msg log_check_fisher
         log_msg INFO "Checking Fisher plugin manager installation"
         local fisher_tmp
         fisher_tmp=$(mktemp) || return 0
         register_temp_path "$fisher_tmp"
+        local msg_install msg_skip
+        msg_install=$(msg log_install_fish_plugins)
+        msg_skip=$(msg log_fisher_update_skipped)
         if fetch_raw_with_fallback "jorgebucaran/fisher" "main" "functions/fisher.fish" "$fisher_tmp"; then
             fish -c "
                 if not functions -q fisher
                     source '$fisher_tmp' && fisher install jorgebucaran/fisher
                 end
                 if test -f ~/.config/fish/fish_plugins && functions -q fisher
-                    echo '安装 fish_plugins 列出的插件…'
-                    fisher update || echo '[-] Fisher 更新已跳过 (网络限制)'
+                    echo \"$msg_install\"
+                    fisher update || echo \"$msg_skip\"
                 end
             " || true
         else
-            echo "[-] Fisher 自动安装已跳过 (网络限制)"
+            msg log_fisher_install_skipped
             log_msg WARN "Fisher auto-install skipped (all mirrors unreachable)"
         fi
     fi
@@ -237,7 +240,7 @@ deploy_selected_configs() {
 print_custom_preserved() {
     if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ] && [ -s "$NYXNIRI_CUSTOM_LOG" ]; then
         echo -e "\n\e[1;36m==================================================\e[0m"
-        echo -e "\e[1;36m[ $PROJECT_NAME 自定义套用项已保留 ]\e[0m"
+        msg preflight_custom_config_kept
         cat "$NYXNIRI_CUSTOM_LOG"
         echo -e "\e[1;36m==================================================\e[0m\n"
     fi
@@ -334,7 +337,7 @@ sync_wallpapers_fallback() {
     fi
     mkdir -p "$wp_dest"
     cp -an "$wp_src"/. "$wp_dest"/ 2>/dev/null || true
-    echo "  [✓] 增量同步壁纸库: $wp_dest"
+    msg log_sync_wallpapers "$wp_dest"
 }
 
 run_master_component_menu() {
@@ -360,7 +363,7 @@ run_master_component_menu() {
 
     local wp_check=1
     if wallpapers_pack_present; then wp_check=0; fi
-    MENU_ITEM_NAMES+=("$(msg master_item_asset "Wallpapers & Videos [$(wallpapers_status_label)]")")
+    MENU_ITEM_NAMES+=("$(msg master_item_asset "Wallpapers & Videos $(wallpapers_status_label)")")
     MENU_ITEM_KEYS+=("assets_wallpapers")
     MENU_ITEM_CHECKS+=("$wp_check")
 
@@ -369,14 +372,14 @@ run_master_component_menu() {
         if [ "$is_update" = true ] && ! fcitx_enabled; then
             fcitx_check=0
         fi
-        MENU_ITEM_NAMES+=("$(msg master_item_module "NyxMellow fcitx5 [$(fcitx_status_label)]")")
+        MENU_ITEM_NAMES+=("$(msg master_item_module "NyxMellow fcitx5 $(fcitx_status_label)")")
         MENU_ITEM_KEYS+=("module_fcitx")
         MENU_ITEM_CHECKS+=("$fcitx_check")
     fi
 
     if [ "$mode" = "full" ] || [ "$is_update" = true ]; then
         local greeter_check=0
-        MENU_ITEM_NAMES+=("$(msg master_item_module "Noctalia Greeter [$(greeter_status_label)]")")
+        MENU_ITEM_NAMES+=("$(msg master_item_module "Noctalia Greeter $(greeter_status_label)")")
         MENU_ITEM_KEYS+=("module_greeter")
         MENU_ITEM_CHECKS+=("$greeter_check")
     fi
@@ -415,7 +418,7 @@ run_master_component_menu() {
         msg selective_hint
         local choice=""
         if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -p "> " choice < /dev/tty || choice=""
+            read -r -p "> " choice < /dev/tty || choice=""
         else
             break
         fi
@@ -427,11 +430,11 @@ run_master_component_menu() {
         for num in $choice; do
             if [[ "$num" =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le "${#MENU_ITEM_NAMES[@]}" ]; then
                 local index=$((num-1))
-                if [ "${MENU_ITEM_CHECKS[$index]:--1}" -ne -1 ]; then
-                    if [ "${MENU_ITEM_CHECKS[$index]:-0}" -eq 1 ]; then
-                        MENU_ITEM_CHECKS[$index]=0
+                if [ "${MENU_ITEM_CHECKS[index]:--1}" -ne -1 ]; then
+                    if [ "${MENU_ITEM_CHECKS[index]:-0}" -eq 1 ]; then
+                        MENU_ITEM_CHECKS[index]=0
                     else
-                        MENU_ITEM_CHECKS[$index]=1
+                        MENU_ITEM_CHECKS[index]=1
                     fi
                 fi
             fi
@@ -488,7 +491,7 @@ offer_overwrite_upgrade() {
         echo ""
         local mode_choice=""
         if [ -c /dev/tty ]; then
-            read -p "$(msg overwrite_prompt)" mode_choice < /dev/tty || mode_choice="1"
+            read -r -p "$(msg overwrite_prompt)" mode_choice < /dev/tty || mode_choice="1"
         fi
         mode_choice="${mode_choice:-1}"
 
@@ -520,7 +523,7 @@ offer_overwrite_upgrade() {
                     print_custom_preserved
                     msg overwrite_done
                 else
-                    echo "未选择任何组件"
+                    msg log_no_components_selected
                 fi
                 break
                 ;;
@@ -538,7 +541,7 @@ offer_overwrite_upgrade() {
                 ) | less -R
                 ;;
             4|0|q|skip)
-                echo "已跳过配置部署"
+                msg log_config_deploy_skipped
                 break
                 ;;
             *)
@@ -565,11 +568,11 @@ _phase_preflight_check() {
 
     if [ "$needs_sudo" = true ] || [ "$mode" = "full" ]; then
         msg preflight_express_summary
-        echo -e "  \e[1;36m- 配置组件:\e[0m ${#CHOSEN_CONFIG_ITEMS[@]} 项"
-        [ "$do_wallpapers" = "y" ] && echo -e "  \e[1;36m- 重型资源:\e[0m 全套壁纸包"
-        [ "$do_fcitx" = "y" ] && echo -e "  \e[1;36m- 可选模块:\e[0m $FCITX_THEME fcitx5 皮肤"
-        [ "$do_greeter" = "y" ] && echo -e "  \e[1;36m- 可选模块:\e[0m $GREETER_PKG"
-        [ "$mode" = "full" ] && echo -e "  \e[1;36m- 系统依赖:\e[0m 检查与补全缺失依赖"
+        msg preflight_comp_config "${#CHOSEN_CONFIG_ITEMS[@]}"
+        [ "$do_wallpapers" = "y" ] && msg preflight_comp_assets
+        [ "$do_fcitx" = "y" ] && msg preflight_comp_module_fcitx "$FCITX_THEME"
+        [ "$do_greeter" = "y" ] && msg preflight_comp_module_greeter "$GREETER_PKG"
+        [ "$mode" = "full" ] && msg preflight_comp_deps
     fi
 
     if [ "$needs_sudo" = true ]; then
@@ -578,7 +581,7 @@ _phase_preflight_check() {
             # Sudo cached successfully
             log_msg INFO "Sudo credentials cached upfront during pre-flight."
         else
-            echo -e "\n\e[1;31m[-] 缺少管理员权限。已中止。\e[0m"
+            msg err_sudo_aborted
             exit 1
         fi
     fi
@@ -676,9 +679,10 @@ install_configs() {
         # The prompt was handled upfront or is implied by 'full' install.
         for i in "${!DEPS[@]}"; do
             if [ "${DEP_STATUS[$i]:-0}" -eq 0 ]; then
-                DEP_SELECT[$i]=1
+                DEP_SELECT[i]=1
             else
-                DEP_SELECT[$i]=0
+                # shellcheck disable=SC2034
+                DEP_SELECT[i]=0
             fi
         done
         install_selected_deps || true

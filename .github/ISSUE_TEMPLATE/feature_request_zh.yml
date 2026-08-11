@@ -1,0 +1,24 @@
+name: 功能请求 (中文)
+description: 建议新功能或体验改进
+title: "[Feature] "
+labels: ["enhancement"]
+assignees: ["ech678"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前，请确保建议契合 NyxNiri 的极简与秩序原则（做减法、零熵增）。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 需求背景
+      description: 该功能解决什么具体的痛点或缺陷？
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: 期望方案
+      description: 描述你期望的运作方式或视觉表现。
+    validations:
+      required: true

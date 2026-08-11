@@ -86,7 +86,7 @@ fcitx_deploy_templates() {
     local src_dir
     src_dir="$(fcitx_source_dir)"
     if [ ! -d "$src_dir" ]; then
-        echo "  [跳过] 仓库缺失主题模板源码: $src_dir"
+        msg log_fcitx_template_missing "$src_dir"
         return 1
     fi
     mkdir -p "$FCITX_TEMPLATE_DIR"
@@ -211,12 +211,12 @@ fcitx_uninstall() {
             skip { next }
             { print }
         ' "$FCITX_NOCTALIA_CONFIG" > "$FCITX_NOCTALIA_CONFIG.tmp" && mv "$FCITX_NOCTALIA_CONFIG.tmp" "$FCITX_NOCTALIA_CONFIG"
-        echo "  [-] $THEME_ENGINE 模板注册已移除"
+        msg log_fcitx_template_unregistered "$THEME_ENGINE"
     fi
 
     if [ -d "$FCITX_THEME_DIR" ]; then
         rm -rf "$FCITX_THEME_DIR"
-        echo "  [-] 已删除主题目录: $FCITX_THEME_DIR"
+        msg log_fcitx_theme_dir_removed "$FCITX_THEME_DIR"
     fi
 
     if [ -f "$FCITX_STATE_FILE" ]; then

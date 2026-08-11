@@ -21,7 +21,9 @@ update_ini() {
     
     # Escape special characters in key and val for sed
     local esc_key esc_val
+    # shellcheck disable=SC2016
     esc_key=$(printf '%s\n' "$key" | sed 's/[[\.*^$()]/\\&/g')
+    # shellcheck disable=SC2016
     esc_val=$(printf '%s\n' "$val" | sed 's/[|\&]/\\&/g')
 
     if grep -q "^${esc_key}=" "$file"; then

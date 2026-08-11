@@ -56,7 +56,7 @@ check_all_deps() {
             is_installed=1
         fi
 
-        DEP_STATUS[$i]=$is_installed
+        DEP_STATUS[i]=$is_installed
     done
 }
 
@@ -68,13 +68,13 @@ show_dep_menu() {
         local status=""
         local check=" "
 
-        if [ "${DEP_STATUS[$i]:-0}" -eq 1 ]; then
+        if [ "${DEP_STATUS[i]:-0}" -eq 1 ]; then
             status=$(msg installed)
         else
             status=$(msg missing)
         fi
 
-        if [ "${DEP_SELECT[$i]:-0}" -eq 1 ]; then
+        if [ "${DEP_SELECT[i]:-0}" -eq 1 ]; then
             check="*"
         else
             check=" "
@@ -90,10 +90,10 @@ run_dep_menu_loop() {
     check_all_deps
     DEP_SELECT=()
     for i in "${!DEPS[@]}"; do
-        if [ "${DEP_STATUS[$i]:-0}" -eq 1 ]; then
-            DEP_SELECT[$i]=0
+        if [ "${DEP_STATUS[i]:-0}" -eq 1 ]; then
+            DEP_SELECT[i]=0
         else
-            DEP_SELECT[$i]=1
+            DEP_SELECT[i]=1
         fi
     done
 
@@ -101,7 +101,7 @@ run_dep_menu_loop() {
         show_dep_menu
         local choice=""
         if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -p "> " choice < /dev/tty || choice=""
+            read -r -p "> " choice < /dev/tty || choice=""
         else
             break
         fi
@@ -111,20 +111,20 @@ run_dep_menu_loop() {
         fi
 
         if [[ "$choice" =~ ^[Aa]$ ]]; then
-            for i in "${!DEPS[@]}"; do DEP_SELECT[$i]=1; done
+            for i in "${!DEPS[@]}"; do DEP_SELECT[i]=1; done
             continue
         elif [[ "$choice" =~ ^[Nn]$ ]]; then
-            for i in "${!DEPS[@]}"; do DEP_SELECT[$i]=0; done
+            for i in "${!DEPS[@]}"; do DEP_SELECT[i]=0; done
             continue
         fi
 
         for num in $choice; do
             if [[ "$num" =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le "${#DEPS[@]}" ]; then
                 local index=$((num-1))
-                if [ "${DEP_SELECT[$index]:-0}" -eq 1 ]; then
-                    DEP_SELECT[$index]=0
+                if [ "${DEP_SELECT[index]:-0}" -eq 1 ]; then
+                    DEP_SELECT[index]=0
                 else
-                    DEP_SELECT[$index]=1
+                    DEP_SELECT[index]=1
                 fi
             fi
         done
@@ -238,7 +238,7 @@ install_selected_deps() {
     local repo_install=()
     local aur_install=()
     for i in "${!DEPS[@]}"; do
-        if [ "${DEP_SELECT[$i]:-0}" -eq 1 ]; then
+        if [ "${DEP_SELECT[i]:-0}" -eq 1 ]; then
             local pkg="${DEPS[$i]}"
             local is_aur=0
             for aur in "${AUR_DEPS[@]}"; do
@@ -273,7 +273,7 @@ install_selected_deps() {
     # Install official repo packages
     if [ ${#repo_install[@]} -gt 0 ]; then
         $pkg_manager -S --noconfirm "${repo_install[@]}" || {
-            echo "部分官方源软件包安装失败，继续后续步骤…"
+            msg log_official_pkgs_partial_fail
         }
     fi
 
@@ -285,7 +285,7 @@ install_selected_deps() {
         fi
         if [ "$has_aur_helper" = true ]; then
             $pkg_manager -S --noconfirm "${aur_install[@]}" || {
-                echo "部分 AUR 软件包安装失败，继续后续步骤…"
+                msg log_aur_pkgs_partial_fail
             }
         else
             local aur_list="${aur_install[*]}"
@@ -348,7 +348,7 @@ check_mpvpaper_version() {
             if $mgr -S --noconfirm mpvpaper-git; then
                 msg mpvpaper_upgrade_done
             else
-                echo -e "\e[1;31m[-] mpvpaper-git 安装失败\e[0m"
+                msg err_mpvpaper_git_failed
             fi
         else
             msg mpvpaper_upgrade_skip

@@ -1,0 +1,41 @@
+name: Bug Report (English)
+description: Report an issue with NyxNiri script or configs
+title: "[Bug] "
+labels: ["bug"]
+assignees: ["ech678"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting, it's recommended to run `./install.sh` and select "Generate Bug Report".
+        Need live help? [Telegram](https://t.me/Echoes678)
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: Describe what happened objectively and clearly.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Exact steps to trigger the bug.
+      placeholder: |
+        1. Run ...
+        2. Expected ...
+        3. Actually ...
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostic
+    attributes:
+      label: Diagnostic Report
+      description: Paste the contents of `nyxniri-bug-report-*.md`. If no log is available, provide system and hardware details.
+    validations:
+      required: true
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Screenshots, screen recordings, or other relevant background.

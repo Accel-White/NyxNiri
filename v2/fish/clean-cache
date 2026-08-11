@@ -267,7 +267,7 @@ _mc_check_sudopath() {
     [[ -f "$_mc_canpath" && -x "$_mc_canpath" ]] || { printf 'Warning: non-executable or non-file sudo command %s - Skipping sudo\n' "$_sudo_path" >&2; return 1; }
 
     # Parentdir check - inspect CANON path components to detect symlinks and bad perms
-    local dir statinfo uid gid mode
+    local dir statinfo uid _gid mode
     dir="$_mc_canpath"
 
     while [[ "$dir" != / ]]; do
@@ -275,7 +275,7 @@ _mc_check_sudopath() {
         [[ -L "$dir" ]] && { printf 'Warning: symlink in path %s - Skipping sudo\n' "$dir" >&2; return 1; }
 
         statinfo="$(stat -c '%u:%g:%a' -- "$dir" 2>/dev/null)" || { printf 'Warning: failed to stat %s - Skipping sudo\n' "$dir" >&2; return 1; }
-        IFS=: read -r uid gid mode <<< "$statinfo"
+        IFS=: read -r uid _gid mode <<< "$statinfo"
 
         # reject group-writable or world-writable
         (( 8#$mode & 020 )) && { printf 'Warning: group writable sudo path %s - Skipping sudo\n' "$dir" >&2; return 1; }
@@ -821,7 +821,7 @@ _mc_flatdata() {
             if [[ -d "$HOME/.local/share/flatpak" ]]; then
                 if _mc_confirm "Clean user flatpaks"; then
                     local _tmp _pid
-                    _tmp=$(mktemp)
+                    _tmp=$(mktemp) || return 1
                     { flatpak uninstall --unused --user ; flatpak repair --user ; } >"$_tmp" 2>&1 & _pid="$!"
                     _mc_loading "Working.." "$_pid" || return 1
                     cat "$_tmp" ; rm -f "$_tmp"
@@ -832,7 +832,7 @@ _mc_flatdata() {
             if [[ -d /etc/flatpak/installations.d || -d /var/lib/flatpak ]]; then
                 if _mc_confirm "Clean system flatpaks"; then
                     local _tmp _pid
-                    _tmp=$(mktemp)
+                    _tmp=$(mktemp) || return 1
                     { flatpak uninstall --unused ; _mc_sudo_wrap flatpak repair ; } >"$_tmp" 2>&1 & _pid="$!"
                     _mc_loading "Working.." "$_pid" || return 1
                     cat "$_tmp" ; rm -f "$_tmp"
@@ -843,7 +843,7 @@ _mc_flatdata() {
             if [[ -d "$HOME/.var/app" ]]; then
                 if _mc_confirm "Clear flatpak application data"; then
                     local _tmp _pid
-                    _tmp=$(mktemp)
+                    _tmp=$(mktemp) || return 1
                     flatpak uninstall --delete-data >"$_tmp" 2>&1 & _pid="$!"
                     _mc_loading "Working.." "$_pid" || return 1
                     cat "$_tmp" ; rm -f "$_tmp"
