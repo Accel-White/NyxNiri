@@ -187,7 +187,7 @@ window-rule {
 }
 
 // ==========================================
-// Scratchpad 终端 (Super+G toggle)
+// Scratchpad 终端 (Super+~ toggle)
 // ==========================================
 window-rule {
     match app-id=r"^scratchpad$"

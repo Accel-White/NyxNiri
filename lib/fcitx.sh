@@ -140,6 +140,34 @@ fcitx_trigger_render() {
     fi
 }
 
+# Safely set a key=val pair under a specific [section] in an INI file without corrupting existing sections.
+fcitx_update_ini_setting() {
+    local file="$1" section="$2" key="$3" val="$4"
+    local esc_val
+    esc_val=$(printf '%s\n' "$val" | sed 's/[|&]/\\&/g')
+    if [ ! -f "$file" ]; then
+        mkdir -p "$(dirname "$file")"
+        printf '[%s]\n%s=%s\n' "$section" "$key" "$val" > "$file"
+        return 0
+    fi
+
+    if grep -q "^${key}=" "$file"; then
+        sed -i "s|^${key}=.*|${key}=${esc_val}|" "$file"
+    else
+        if grep -q "^\[${section}\]" "$file"; then
+            sed -i "/^\[${section}\]/a ${key}=${esc_val}" "$file"
+        else
+            printf '\n[%s]\n%s=%s\n' "$section" "$key" "$val" >> "$file"
+        fi
+    fi
+}
+
+fcitx_configure_quickphrase() {
+    local qp_conf="$HOME/.config/fcitx5/conf/quickphrase.conf"
+    fcitx_update_ini_setting "$qp_conf" "Hotkey" "TriggerKey" "Super+semicolon"
+    fcitx_update_ini_setting "$qp_conf" "Hotkey" "AlternativeTriggerKey" ""
+}
+
 fcitx_install() {
     msg fcitx_install_title
     if ! fcitx_deploy_templates; then
@@ -147,6 +175,7 @@ fcitx_install() {
     fi
     if fcitx5_installed; then
         fcitx_set_theme_conf
+        fcitx_configure_quickphrase
         fcitx_trigger_render
         fcitx_restart
         mkdir -p "$(dirname "$FCITX_ENABLED_MARKER")"

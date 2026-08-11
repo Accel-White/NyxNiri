@@ -28,7 +28,7 @@
 - Noctalia V5 pulls colors directly from your wallpaper; an `mpvpaper` hook extracts video frames via `ffmpeg` so live wallpapers generate palettes too.
 - Light/dark sync — GSettings and GTK follow Noctalia theme modes automatically.
 - Eye Care Mode (`Super+N`) for reading sessions: warmer color temperature, zero blur, solid opaque windows.
-- Scratchpad Terminal (`Super+G`) — persistent floating terminal backed by tmux, smooth toggle across workspaces.
+- Scratchpad Terminal (`Super+~`) — persistent floating terminal backed by tmux, smooth toggle across workspaces.
 - Shell & Terminal — Fish aliases for proxy/cache management, Kitty cursor trails, Windows-style shortcuts.
 - NyxMellow — a dynamic fcitx5 skin: mellow rounded geometry with Noctalia Material You color palette.
 
@@ -167,7 +167,7 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>W</kbd> | Static wallpaper picker |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | Live wallpaper picker |
 | <kbd>Super</kbd> + <kbd>N</kbd> | Toggle Eye Care Mode |
-| <kbd>Super</kbd> + <kbd>G</kbd> | Toggle Scratchpad terminal |
+| <kbd>Super</kbd> + <kbd>~</kbd> | Toggle Scratchpad terminal |
 | <kbd>Super</kbd> + <kbd>L</kbd> | Lock screen |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Screenshot |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | Reload Niri |
@@ -275,7 +275,7 @@ EOF'
 - Noctalia V5 直接从壁纸取色；`mpvpaper` 钩子把视频壁纸帧经 `ffmpeg` 送进取色管线，动态壁纸同样参与取色。
 - 明暗模式同步 — GSettings 与 GTK 自动跟随 Noctalia 切换。
 - 护眼模式（Eye Care Mode，`Super+N`）适合长时间阅读：调暖色温、关闭模糊、强制不透明背景。
-- Scratchpad 浮动终端（`Super+G`）— tmux 后台保活的持久化浮动终端，支持跨工作区智能吸附与无感显隐。
+- Scratchpad 浮动终端（`Super+~`）— tmux 后台保活的持久化浮动终端，支持跨工作区智能吸附与无感显隐。
 - 终端与 Shell：Fish 代理/缓存别名，Kitty 光标轨迹，Windows 风格快捷键。
 - NyxMellow 动态 fcitx5 皮肤：mellow 圆角形状，随 Noctalia 自动取色。
 
@@ -414,7 +414,7 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>W</kbd> | 静态壁纸选择 |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | 动态壁纸选择 |
 | <kbd>Super</kbd> + <kbd>N</kbd> | 护眼模式 |
-| <kbd>Super</kbd> + <kbd>G</kbd> | 切换 Scratchpad 浮动终端 |
+| <kbd>Super</kbd> + <kbd>~</kbd> | 切换 Scratchpad 浮动终端 |
 | <kbd>Super</kbd> + <kbd>L</kbd> | 锁屏 |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | 截图 |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | 重载 Niri |

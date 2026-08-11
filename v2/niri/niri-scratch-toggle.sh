@@ -1,6 +1,6 @@
 #!/bin/bash
 # NyxNiri Scratchpad Terminal Toggle (Minimalist & Tmux-backed)
-# Mod+G -> toggle a floating scratchpad terminal
+# Mod+~ -> toggle a floating scratchpad terminal
 #
 # Architecture:
 #   tmux session "scratch" lives in the background.
