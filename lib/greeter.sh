@@ -183,7 +183,7 @@ greeter_apply_polkit_rule() {
     local tmp_rule
     tmp_rule=$(mktemp) || return 0
     register_temp_path "$tmp_rule"
-    cat > "$tmp_rule" <<'EOF'
+    cat > "$tmp_rule" <<EOF
 polkit.addRule(function(action, subject) {
     if (action.id == "org.${THEME_ENGINE}.greeter.apply-appearance" &&
         subject.isInGroup("wheel")) {

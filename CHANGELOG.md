@@ -5,8 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v2.2.2] - 2026-08-11
+## [v2.2.3] - 2026-08-12
 
+### Fixed
+- **鉴权修复**: 修复了切换主题或同步壁纸时意外弹出身份验证要求的问题
+
+## [v2.2.2] - 2026-08-11
 ### Added
 - **Issue 社区模板**: 升级 GitHub 问题与需求提交表单，支持结构化表单填写
 

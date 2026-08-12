@@ -218,7 +218,7 @@ output_path = "/home/user/.local/share/fcitx5/themes/nyxmellow/highlight.svg"
 post_hook = "if pgrep -x fcitx5 >/dev/null 2>&1; then pkill -x fcitx5; sleep 1; fcitx5 -d >/dev/null 2>&1 & fi"
 
 [wallpaper]
-directory = "/home/ray/图片/Wallpapers"
+directory = "/home/user/图片/Wallpapers"
 fill_mode = "crop"
 
 
@@ -244,4 +244,4 @@ type = "noctalia/mpvpaper:mpvpaper"
 [plugin_settings."noctalia/mpvpaper"]
 mpv_options = "--script=~/.config/noctalia/mpv-hook.lua"
 picker_placement = "floating"
-video_directory = "/home/ray/图片/Wallpapers/video"
+video_directory = "/home/user/图片/Wallpapers/video"
