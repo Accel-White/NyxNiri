@@ -28,7 +28,6 @@ DEPS=(
 
 # Packages only available via AUR (not in official repos)
 AUR_DEPS=(
-    "$THEME_ENGINE"
     "mpvpaper"
 )
 

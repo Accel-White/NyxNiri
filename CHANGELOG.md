@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v2.2.3] - 2026-08-12
 
+### Added
+- **官方仓库支持**: 适应 Noctalia V5 进入 Arch 官方仓库，主程序安装不再依赖 AUR helper。
+
 ### Fixed
 - **鉴权修复**: 修复了切换主题或同步壁纸时意外弹出身份验证要求的问题
 
@@ -206,4 +209,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **NyxNiri v2.0 重磅升级**: 基于 Niri 窗口管理器与 Noctalia V5 桌面组件打造全新 Material You 桌面生态。
-

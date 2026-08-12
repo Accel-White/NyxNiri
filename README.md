@@ -36,7 +36,7 @@
 
 - Arch Linux / CachyOS
 - [Niri](https://github.com/YaLTeR/niri) (Wayland compositor)
-- [Noctalia V5](https://noctalia.app) (desktop shell, AUR)
+- [Noctalia V5](https://noctalia.app) (desktop shell, Official Repo)
 - `mpvpaper` (AUR), Kitty, Fish, Starship, `tmux`
 
 ## Install
@@ -72,7 +72,7 @@ cd ~/NyxNiri && ./install.sh
 </details>
 
 > [!NOTE]
-> `install full` boots `paru` if you lack an AUR helper (`noctalia` and `mpvpaper` come from AUR). Existing configs are backed up to `~/.config/NyxNiri/backups/` before deployment. Legacy DMS setup lives on `archive/v1-dms`.
+> `install full` boots `paru` if you lack an AUR helper (`mpvpaper` comes from AUR). Existing configs are backed up to `~/.config/NyxNiri/backups/` before deployment. Legacy DMS setup lives on `archive/v1-dms`.
 
 ## Included Configs
 
@@ -283,7 +283,7 @@ EOF'
 
 - Arch Linux / CachyOS
 - [Niri](https://github.com/YaLTeR/niri)（Wayland 合成器）
-- [Noctalia V5](https://noctalia.app)（桌面 Shell，AUR）
+- [Noctalia V5](https://noctalia.app)（桌面 Shell，官方仓库）
 - `mpvpaper`（AUR）、Kitty、Fish、Starship、`tmux`
 
 ## 安装部署
@@ -319,7 +319,7 @@ cd ~/NyxNiri && ./install.sh
 </details>
 
 > [!NOTE]
-> `install full` 在缺少 AUR helper 时会自动自举 `paru`（`noctalia` 与 `mpvpaper` 均为 AUR 包）。部署前可先将现有配置备份至 `~/.config/NyxNiri/backups/`。旧版 DMS 配置位于 `archive/v1-dms` 分支。
+> `install full` 在缺少 AUR helper 时会自动自举 `paru`（`mpvpaper` 为 AUR 包）。部署前可先将现有配置备份至 `~/.config/NyxNiri/backups/`。旧版 DMS 配置位于 `archive/v1-dms` 分支。
 
 ## 配置一览
 
