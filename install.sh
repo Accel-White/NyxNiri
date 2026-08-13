@@ -41,13 +41,13 @@ clone_repo_bootstrap() {
         fi
 
         if git_clone_timeout "$url" "$target_dir"; then
-            echo -e "\e[1;32m[✓] Fetched successfully from [$tag]\e[0m\n" >&2
+            echo -e "\e[1;32m[✓] Pulled from [$tag]\e[0m\n" >&2
             return 0
         fi
         idx=$((idx + 1))
     done
 
-    echo -e "\e[1;31m[-] All Git mirror attempts failed. Please check network.\e[0m" >&2
+    echo -e "\e[1;31m[✗] All mirror nodes failed. Please check network.\e[0m" >&2
     return 1
 }
 
@@ -66,7 +66,7 @@ exec_main() {
 main() {
     # Prevent running as root
     if [ "$(id -u)" -eq 0 ]; then
-        echo -e "\n\e[1;31m[-] Do not run as root. Re-run as normal user.\e[0m"
+        echo -e "\n\e[1;31m[✗] Do not run as root. Re-run as normal user.\e[0m"
         exit 1
     fi
 
@@ -84,7 +84,7 @@ main() {
 
     # Standalone mode: requires git and cache repository
     if ! command -v git >/dev/null 2>&1; then
-        echo -e "\e[1;31m[-] git is missing. Please install git first.\e[0m"
+        echo -e "\e[1;31m[✗] git is missing. Please install git first.\e[0m"
         exit 1
     fi
 
@@ -98,7 +98,7 @@ main() {
     if [ -f "$CACHE_DIR/lib/main.sh" ]; then
         exec_main "$CACHE_DIR" "$@"
     else
-        echo -e "\e[1;31m[-] Missing lib/main.sh in cache $CACHE_DIR. Remove cache directory and retry.\e[0m"
+        echo -e "\e[1;31m[✗] Missing lib/main.sh in cache $CACHE_DIR. Remove cache directory and retry.\e[0m"
         exit 1
     fi
 }

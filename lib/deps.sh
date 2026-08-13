@@ -66,11 +66,6 @@ show_dep_menu() {
     msg dep_menu_title
     for i in "${!DEPS[@]}"; do
         local status=""
-        local prefix="    "
-        if [ "$i" -eq "$focus" ]; then
-            prefix="  \e[1;36m❯ \e[0m"
-        fi
-
         if [ "${DEP_STATUS[i]:-0}" -eq 1 ]; then
             status=$(msg installed)
         else
@@ -82,11 +77,9 @@ show_dep_menu() {
             check_str="\e[1;32m[✓]\e[0m"
         fi
 
-        if [ "$i" -eq "$focus" ]; then
-            printf "%b%b \e[1;37m%-24s\e[0m %s\n" "$prefix" "$check_str" "${DEPS[$i]}" "$status"
-        else
-            printf "%b%b %-24s %s\n" "$prefix" "$check_str" "${DEPS[$i]}" "$status"
-        fi
+        local is_focus=0
+        [ "$i" -eq "$focus" ] && is_focus=1
+        _render_check_row "$is_focus" "$check_str" "$(_disp_pad "${DEPS[$i]}" 24) $status"
     done
     echo ""
     msg dep_menu_hint

@@ -134,15 +134,9 @@ ensure_repo() {
 show_release_notes() {
     local changelog_file="$1"
     if [ -f "$changelog_file" ]; then
-        echo -e "\n\e[1;35m════════════════════════════════════════════════════════════════\e[0m"
-        if [ "${LANG_MODE:-en}" = "zh" ]; then
-            msg net_changelog_title
-        else
-            echo -e " \e[1;36m:: Latest Release Notes (Changelog)\e[0m"
-        fi
-        echo -e "\e[1;35m════════════════════════════════════════════════════════════════\e[0m\n"
+        echo -e "\n  \e[90m── $(msg net_changelog_title) ──\e[0m\n"
         awk '/^## /{count++} count==1{print} count>=2{exit}' "$changelog_file"
-        echo -e "\e[1;35m════════════════════════════════════════════════════════════════\e[0m\n"
+        echo ""
     fi
 }
 

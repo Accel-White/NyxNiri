@@ -274,20 +274,20 @@ render_completion_screen() {
     if [ "$cfg_count" -gt 0 ] || [ "$mode" = "test" ]; then
         echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_configs_ok "$items_str")"
     else
-        echo -e "    \e[1;33m[-]\e[0m $(msg summary_item_configs_skip)"
+        echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_configs_skip)"
     fi
 
     if [ "${WP_PACK_DEPLOYED:-0}" -eq 1 ] || [ "${DO_WALLPAPERS:-n}" = "y" ]; then
         echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_wallpapers_ok)"
     else
-        echo -e "    \e[1;33m[-]\e[0m $(msg summary_item_wallpapers_skip)"
+        echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_wallpapers_skip)"
     fi
 
     if fcitx5_installed; then
         if [ "${DO_FCITX:-n}" = "y" ] || fcitx_enabled; then
             echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_fcitx_ok)"
         else
-            echo -e "    \e[1;33m[-]\e[0m $(msg summary_item_fcitx_skip)"
+            echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_fcitx_skip)"
         fi
     fi
 
@@ -302,7 +302,7 @@ render_completion_screen() {
         if [ "$left_missing" -eq 0 ]; then
             echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_deps_ok)"
         else
-            echo -e "    \e[1;33m[-]\e[0m $(msg summary_item_deps_skip)"
+            echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_deps_skip)"
         fi
     fi
 
@@ -493,22 +493,14 @@ run_master_component_menu() {
                 continue
             fi
 
-            local prefix="    "
-            if [ "$i" -eq "$cur_focus" ]; then
-                prefix="  \e[1;36m❯ \e[0m"
-            fi
-
             local check_str="\e[90m[ ]\e[0m"
             if [ "${MENU_ITEM_CHECKS[$i]:-0}" -eq 1 ]; then
                 check_str="\e[1;32m[✓]\e[0m"
             fi
 
-            local item_label="${MENU_ITEM_NAMES[$i]}"
-            if [ "$i" -eq "$cur_focus" ]; then
-                printf "%b%b \e[1;37m%s\e[0m\n" "$prefix" "$check_str" "$item_label"
-            else
-                printf "%b%b %s\n" "$prefix" "$check_str" "$item_label"
-            fi
+            local is_focus=0
+            [ "$i" -eq "$cur_focus" ] && is_focus=1
+            _render_check_row "$is_focus" "$check_str" "${MENU_ITEM_NAMES[$i]}"
         done
         echo ""
         msg selective_hint

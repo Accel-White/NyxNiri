@@ -49,7 +49,7 @@ _render_menu_item() {
         if [ "$style" = "warn" ]; then
             printf "%b\e[1;31m%s\e[0m\n" "$prefix" "$label"
         elif [ "$style" = "subtle" ]; then
-            printf "%b\e[1;30m%s\e[0m\n" "$prefix" "$label"
+            printf "%b\e[90m%s\e[0m\n" "$prefix" "$label"
         else
             printf "%b\e[1;37m%s\e[0m\n" "$prefix" "$label"
         fi
@@ -425,7 +425,7 @@ main_menu() {
 main() {
     if [ "$(id -u)" -eq 0 ]; then
         msg err_root_denied
-        echo -e "[-] Do not run as root. Re-run as normal user: ./install.sh\n"
+        echo -e "[✗] Do not run as root. Re-run as normal user: ./install.sh\n"
         exit 1
     fi
 
