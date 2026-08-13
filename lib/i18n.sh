@@ -44,21 +44,16 @@ msg() {
             # Main Menu
             menu_title) echo -e "\n  \e[1;36m── $PROJECT_NAME 控制面板 ──\e[0m\n" ;;
             menu_group_deploy) echo -e "  \e[1;34m部署与安装\e[0m" ;;
-            menu_opt1) echo -e "快速部署 (自动)" ;;
-            menu_opt2) echo -e "自定义部署" ;;
-            menu_opt3) echo -e "检查与安装依赖" ;;
-
-            menu_group_backup) echo -e "\n  \e[1;34m快照与恢复\e[0m" ;;
-            menu_opt4) echo -e "快照管理" ;;
-
+            menu_opt1) echo -e "部署组件 (配置/壁纸/可选模块)" ;;
+            menu_opt2) echo -e "检查与安装依赖" ;;
             menu_group_maint) echo -e "\n  \e[1;34m运维与诊断\e[0m" ;;
-            menu_opt5) echo -e "检查更新与配置覆盖" ;;
-            menu_opt6) echo -e "系统诊断" ;;
-            menu_opt7) echo -e "导出诊断报告 (Bug Report)" ;;
-
             menu_group_system) echo -e "\n  \e[1;34m系统管理\e[0m" ;;
-            menu_opt8) echo -e "卸载与环境复原" ;;
-            menu_opt9) echo -e "可选模块 (Greeter / fcitx5 / 深度清理)" ;;
+            menu_opt3) echo -e "快照管理" ;;
+            menu_opt4) echo -e "检查更新与配置覆盖" ;;
+            menu_opt5) echo -e "系统诊断" ;;
+            menu_opt6) echo -e "导出诊断报告 (Bug Report)" ;;
+            menu_opt7) echo -e "卸载与环境复原" ;;
+            menu_opt8) echo -e "可选模块 (Greeter / fcitx5 / 深度清理)" ;;
             menu_opt0) echo -e "退出" ;;
 
             # Snapshot Management Submenu
@@ -114,16 +109,26 @@ msg() {
             install_step_deps) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 检查与安装依赖…\e[0m" ;;
             install_step_fcitx) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 配置 fcitx5 皮肤…\e[0m" ;;
             install_step_greeter) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 配置 Noctalia Greeter…\e[0m" ;;
-            install_summary_title) echo -e "\n  \e[1;35m── 安装汇总 ──\e[0m\n" ;;
-            summary_configs) echo -e "  \e[1;32m[✓]\e[0m 配置文件:         已部署" ;;
-            summary_wallpapers) echo -e "  \e[1;32m[✓]\e[0m 壁纸:               已同步" ;;
-            summary_wallpapers_pack) echo -e "  \e[1;32m[✓]\e[0m 壁纸:               已同步 (含动态视频)" ;;
-            summary_deps_ok) echo -e "  \e[1;32m[✓]\e[0m 依赖:               已就绪" ;;
-            summary_deps_skip) echo -e "  \e[1;33m[-]\e[0m 依赖:               已跳过 (稍后运行: nyxniri deps)" ;;
-            summary_fcitx_on) echo -e "  \e[1;32m[✓]\e[0m NyxMellow fcitx5 皮肤:已应用" ;;
-            summary_fcitx_off) echo -e "  \e[1;33m[-]\e[0m NyxMellow fcitx5 皮肤:已跳过" ;;
-            summary_greeter_on) echo -e "  \e[1;32m[✓]\e[0m Noctalia Greeter:   已配置" ;;
-            summary_greeter_off) echo -e "  \e[1;33m[-]\e[0m Noctalia Greeter:   已跳过" ;;
+            install_summary_title) echo -e "部署完成" ;;
+            summary_title_install) echo -e "部署完成" ;;
+            summary_title_update) echo -e "更新完成" ;;
+            summary_title_test) echo -e "测试部署完成" ;;
+            summary_section_details) echo -e "部署明细" ;;
+            summary_item_configs_ok) echo -e "核心配置:   部署成功 ($p1)" ;;
+            summary_item_configs_skip) echo -e "核心配置:   已跳过" ;;
+            summary_item_wallpapers_ok) echo -e "壁纸图包:   已同步" ;;
+            summary_item_wallpapers_skip) echo -e "壁纸图包:   已跳过" ;;
+            summary_item_fcitx_ok) echo -e "输入法:     NyxMellow fcitx5 skin" ;;
+            summary_item_fcitx_skip) echo -e "输入法:     已跳过" ;;
+            summary_item_deps_ok) echo -e "系统依赖:   环境已就绪" ;;
+            summary_item_deps_skip) echo -e "系统依赖:   未完全满足" ;;
+            summary_item_greeter_ok) echo -e "登录器:     Noctalia Greeter" ;;
+            summary_item_greeter_skip) echo -e "登录器:     已跳过" ;;
+            summary_section_preserved) echo -e "保留的配置清单 (自动继承)" ;;
+            summary_section_next) echo -e "下一步" ;;
+            summary_next_start) echo -e "启动桌面 : 运行 niri-session" ;;
+            summary_next_manual) echo -e "速查手册 : 运行 nyxhelp" ;;
+            summary_next_panel) echo -e "控制面板 : 运行 nyxniri" ;;
 
             # Test Deploy
             test_start) echo -e "\n\e[1;34m:: [test] 幂等测试部署 (跳过备份与依赖检查)…\e[0m" ;;
@@ -138,12 +143,11 @@ msg() {
             report_done) echo -e "\e[1;32m[+] 诊断报告已导出至:\e[0m $p1\n\e[1;36m提示: 提交 Issue 请附带此文件\nQQ 群: 631425889 | 开发者 QQ: 2040244628 | Telegram: @Echoes678\e[0m" ;;
 
             # Optional Overwrite Upgrade Strings
-            overwrite_title) echo -e "\n  \e[1;36m── NyxNiri 配置覆盖升级 ──\e[0m\n" ;;
-            overwrite_opt1) echo -e "自动覆盖升级 (带安全快照)" ;;
-            overwrite_opt2) echo -e "自定义覆盖" ;;
-            overwrite_opt3) echo -e "查看配置差异 (Diff)" ;;
-            overwrite_opt4) echo -e "仅更新脚本" ;;
-            overwrite_prompt) echo -e "▸ 请选择覆盖模式 [1-4] (默认 1): " ;;
+            overwrite_title) echo -e "\n  \e[1;36m── NyxNiri 配置更新 ──\e[0m\n" ;;
+            overwrite_opt1) echo -e "覆盖/更新组件 (预览清单后确认)" ;;
+            overwrite_opt2) echo -e "查看配置差异 (Diff 对比)" ;;
+            overwrite_opt3) echo -e "暂不覆盖 (仅更新脚本代码)" ;;
+
             selective_hint) echo -e "  \e[90m[↑/↓/j/k] 移动焦点  [Space] 切换  [a] 全选  [n] 清空  [Enter] 确认\e[0m" ;;
             upgrading_selected) echo -e "\n\e[1;34m:: 正在部署选中组件…\e[0m" ;;
             overwrite_done) echo -e "\e[1;32m[+] 选中组件已部署\e[0m" ;;
@@ -257,6 +261,7 @@ msg() {
             dirty_tree_warn) echo -e "\e[1;33m[!] $p1 存在未提交的改动。\e[0m" ;;
             dirty_tree_confirm) echo -e ":: 继续更新将丢弃这些改动。是否继续？[y/N]: " ;;
             update_cancelled_dirty) echo -e "\e[1;34m已取消更新，改动已保留。\e[0m" ;;
+            update_skipped_dev_repo) echo -e "\n\e[1;33m[!] 检测到本地开发仓库 ($p1) 存在未提交修改或分支偏离。\e[0m\n\e[1;36m[+] 已启动开发安全保护屏障，跳过源码强行覆盖。您可以继续进行配置部署。\e[0m\n" ;;
 
             # AUR & mpvpaper
             aur_skip) echo -e "\e[1;33m[!] AUR 软件包 ($p1) 需要 paru 或 yay，已跳过。\e[0m" ;;
@@ -337,21 +342,16 @@ msg() {
             # Main Menu
             menu_title) echo -e "\n  \e[1;36m── $PROJECT_NAME Control Panel ──\e[0m\n" ;;
             menu_group_deploy) echo -e "  \e[1;34mDeployment & Setup\e[0m" ;;
-            menu_opt1) echo -e "Express Deploy (Auto)" ;;
-            menu_opt2) echo -e "Custom Deploy" ;;
-            menu_opt3) echo -e "Check & Install Dependencies" ;;
-
-            menu_group_backup) echo -e "\n  \e[1;34mSnapshots & Recovery\e[0m" ;;
-            menu_opt4) echo -e "Snapshot Management" ;;
-
-            menu_group_maint) echo -e "\n  \e[1;34mMaintenance & Diagnostics\e[0m" ;;
-            menu_opt5) echo -e "Check Updates & Overwrite" ;;
-            menu_opt6) echo -e "System Doctor Diagnostics" ;;
-            menu_opt7) echo -e "Export Diagnostic Report (Bug Report)" ;;
-
-            menu_group_system) echo -e "\n  \e[1;34mSystem Management\e[0m" ;;
-            menu_opt8) echo -e "Uninstall & Restore" ;;
-            menu_opt9) echo -e "Optional Modules (Greeter / fcitx5 / Purge)" ;;
+            menu_opt1) echo -e "Deploy Components (Configs / Wallpapers / Modules)" ;;
+            menu_opt2) echo -e "Check & Install Dependencies" ;;
+            menu_group_maint) echo -e "\n  \e[1;34mMaintenance\e[0m" ;;
+            menu_group_system) echo -e "\n  \e[1;34mSystem\e[0m" ;;
+            menu_opt3) echo -e "Snapshot Management" ;;
+            menu_opt4) echo -e "Check Updates & Overwrite" ;;
+            menu_opt5) echo -e "System Doctor Diagnostics" ;;
+            menu_opt6) echo -e "Export Diagnostic Report (Bug Report)" ;;
+            menu_opt7) echo -e "Uninstall & Restore" ;;
+            menu_opt8) echo -e "Optional Modules (Greeter / fcitx5 / Purge)" ;;
             menu_opt0) echo -e "Exit" ;;
 
             # Snapshot Management Submenu
@@ -407,16 +407,26 @@ msg() {
             install_step_deps) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Checking dependencies…\e[0m" ;;
             install_step_fcitx) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Configuring fcitx5 skin…\e[0m" ;;
             install_step_greeter) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Configuring Noctalia Greeter…\e[0m" ;;
-            install_summary_title) echo -e "\n  \e[1;35m── Install Summary ──\e[0m\n" ;;
-            summary_configs) echo -e "  \e[1;32m[✓]\e[0m Configs:            deployed" ;;
-            summary_wallpapers) echo -e "  \e[1;32m[✓]\e[0m Wallpapers:         synced" ;;
-            summary_wallpapers_pack) echo -e "  \e[1;32m[✓]\e[0m Wallpapers:         synced (with videos)" ;;
-            summary_deps_ok) echo -e "  \e[1;32m[✓]\e[0m Dependencies:       ready" ;;
-            summary_deps_skip) echo -e "  \e[1;33m[-]\e[0m Dependencies:       skipped (run later: nyxniri deps)" ;;
-            summary_fcitx_on) echo -e "  \e[1;32m[✓]\e[0m NyxMellow fcitx5 skin: applied" ;;
-            summary_fcitx_off) echo -e "  \e[1;33m[-]\e[0m NyxMellow fcitx5 skin: skipped" ;;
-            summary_greeter_on) echo -e "  \e[1;32m[✓]\e[0m Noctalia Greeter:   configured" ;;
-            summary_greeter_off) echo -e "  \e[1;33m[-]\e[0m Noctalia Greeter:   skipped" ;;
+            install_summary_title) echo -e "Deployment Complete" ;;
+            summary_title_install) echo -e "Deployment Complete" ;;
+            summary_title_update) echo -e "Update Complete" ;;
+            summary_title_test) echo -e "Test Deployment Complete" ;;
+            summary_section_details) echo -e "Deployment Details" ;;
+            summary_item_configs_ok) echo -e "Core Config:    Deployment Succeeded ($p1)" ;;
+            summary_item_configs_skip) echo -e "Core Config:    Skipped" ;;
+            summary_item_wallpapers_ok) echo -e "Wallpapers:     Synced" ;;
+            summary_item_wallpapers_skip) echo -e "Wallpapers:     Skipped" ;;
+            summary_item_fcitx_ok) echo -e "Input Method:   NyxMellow fcitx5 skin" ;;
+            summary_item_fcitx_skip) echo -e "Input Method:   Skipped" ;;
+            summary_item_deps_ok) echo -e "System Deps:    Environment Ready" ;;
+            summary_item_deps_skip) echo -e "System Deps:    Incomplete" ;;
+            summary_item_greeter_ok) echo -e "Greeter:        Noctalia Greeter" ;;
+            summary_item_greeter_skip) echo -e "Greeter:        Skipped" ;;
+            summary_section_preserved) echo -e "Preserved Configurations (Auto-inherited)" ;;
+            summary_section_next) echo -e "Next Steps" ;;
+            summary_next_start) echo -e "Start Desktop : Run niri-session" ;;
+            summary_next_manual) echo -e "Quick Manual  : Run nyxhelp" ;;
+            summary_next_panel) echo -e "Control Panel : Run nyxniri" ;;
 
             # Test Deploy
             test_start) echo -e "\n\e[1;34m:: [test] Idempotent test deploy (skipped backup & deps)…\e[0m" ;;
@@ -431,12 +441,10 @@ msg() {
             report_done) echo -e "\e[1;32m[+] Bug Report exported to:\e[0m $p1\n\e[1;36mHint: Please attach this file when opening an issue\nQQ Group: 631425889 | Developer QQ: 2040244628 | Telegram: @Echoes678\e[0m" ;;
 
             # Optional Overwrite Upgrade Strings
-            overwrite_title) echo -e "\n  \e[1;36m── NyxNiri Config Overwrite Upgrade ──\e[0m\n" ;;
-            overwrite_opt1) echo -e "  \e[1;32m1)\e[0m Auto Overwrite Upgrade (with safe snapshot)" ;;
-            overwrite_opt2) echo -e "  \e[1;36m2)\e[0m Custom Selective Overwrite" ;;
-            overwrite_opt3) echo -e "  \e[1;33m3)\e[0m View Configuration Differences (Diff)" ;;
-            overwrite_opt4) echo -e "  \e[1;30m4)\e[0m Skip Config Overwrite" ;;
-            overwrite_prompt) echo -e "▸ Select overwrite mode [1-4] (default 1): " ;;
+            overwrite_title) echo -e "\n  \e[1;36m── NyxNiri Config Update ──\e[0m\n" ;;
+            overwrite_opt1) echo -e "Overwrite / Update Components (Review Checklist)" ;;
+            overwrite_opt2) echo -e "View Config Diff" ;;
+            overwrite_opt3) echo -e "Skip Config Overwrite (Code Update Only)" ;;
             selective_hint) echo -e "  \e[90m[↑/↓/j/k] Move  [Space] Toggle  [a] All  [n] None  [Enter] Confirm\e[0m" ;;
             upgrading_selected) echo -e "\n\e[1;34m:: Applying selected components…\e[0m" ;;
             overwrite_done) echo -e "\e[1;32m[+] Selected components deployed\e[0m" ;;
@@ -544,6 +552,7 @@ msg() {
             dirty_tree_warn) echo -e "\e[1;33m[!] Uncommitted local changes detected in $p1.\e[0m" ;;
             dirty_tree_confirm) echo -e ":: Continuing will discard these changes. Continue? [y/N]: " ;;
             update_cancelled_dirty) echo -e "\e[1;34mUpdate cancelled; local changes preserved.\e[0m" ;;
+            update_skipped_dev_repo) echo -e "\n\e[1;33m[!] Local dev repository ($p1) is dirty or diverged.\e[0m\n\e[1;36m[+] Safety shield engaged: skipped forced git reset. Proceeding to component options.\e[0m\n" ;;
 
             # AUR & mpvpaper
             aur_skip) echo -e "\e[1;33m[!] AUR packages ($p1) require paru/yay; skipped.\e[0m" ;;

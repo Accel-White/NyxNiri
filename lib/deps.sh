@@ -154,7 +154,9 @@ run_dep_menu_loop() {
                 fi
                 ;;
             [qQ]|0|ESC)
-                break
+                printf '\e[?25h'
+                msg install_cancelled
+                return 1
                 ;;
         esac
     done

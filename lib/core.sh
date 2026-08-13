@@ -81,7 +81,11 @@ export GREETER_PKG="noctalia-greeter"
 export FCITX_THEME="nyxmellow"
 
 # Global Variables & Paths
-export LANG_MODE="en"
+if [[ "${LANG:-}" == *zh* ]] || [[ "${LC_ALL:-}" == *zh* ]]; then
+    export LANG_MODE="zh"
+else
+    export LANG_MODE="en"
+fi
 CACHE_DIR="$HOME/.cache/$PROJECT_NAME"
 CONFIG_DIR_NAME="v2"
 

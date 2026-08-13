@@ -148,7 +148,19 @@ show_release_notes() {
 
 safe_pull_or_reset() {
     local dir="$1"
-    (cd "$dir" && git -c http.lowSpeedLimit=0 -c http.lowSpeedTime=15 pull --ff-only) 2>/dev/null && return 0
+    local is_repo_mode="${2:-false}"
+
+    if (cd "$dir" && git -c http.lowSpeedLimit=0 -c http.lowSpeedTime=15 pull --ff-only) 2>/dev/null; then
+        return 0
+    fi
+
+    # Developer Safety Shield: If running in local developer repo (RUN_MODE="repo"),
+    # NEVER perform git reset --hard or overwrite local working files!
+    if [ "$is_repo_mode" = true ]; then
+        log_msg WARN "Local dev repo ($dir) has uncommitted changes or diverged. Safety shield engaged."
+        msg update_skipped_dev_repo "$dir"
+        return 2
+    fi
 
     local dirty
     dirty=$(cd "$dir" && git status --porcelain 2>/dev/null || true)
@@ -179,25 +191,38 @@ update_repo_and_script() {
     fi
 
     msg checking_updates
+    local target_dir
+    local is_repo=false
     if [ "${RUN_MODE:-standalone}" = "repo" ]; then
         target_dir="$REPO_DIR"
+        is_repo=true
     else
         target_dir="$CACHE_DIR"
     fi
 
-    if safe_pull_or_reset "$target_dir"; then
-        show_release_notes "$target_dir/CHANGELOG.md"
-        discover_config_items
-        offer_overwrite_upgrade "$flag"
-        msg updating_done
-        if [ -t 0 ] && [ -c /dev/tty ]; then
-            read -r -p "$(msg press_any_key)" -n 1 _k < /dev/tty || sleep 1.5
-        else
-            sleep 1.5
-        fi
-        release_lock
-        exec bash "$target_dir/lib/main.sh" "$@"
-    else
+    local pull_status=0
+    safe_pull_or_reset "$target_dir" "$is_repo" || pull_status=$?
+
+    if [ "$pull_status" -eq 1 ]; then
         msg updating_failed
+        return 1
+    fi
+
+    discover_config_items
+    if offer_overwrite_upgrade "$flag"; then
+        msg updating_done
+    else
+        msg log_config_deploy_skipped
+    fi
+    if [ -t 0 ] && [ -c /dev/tty ]; then
+        read -r -p "$(msg press_any_key)" -n 1 _k < /dev/tty || sleep 1.5
+    else
+        sleep 1.5
+    fi
+    release_lock
+    if [ "${RUN_FROM_MENU:-0}" = "1" ]; then
+        exec bash "$target_dir/lib/main.sh"
+    else
+        exit 0
     fi
 }

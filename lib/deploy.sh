@@ -41,7 +41,8 @@ atomic_replace_item() {
             cp -a "$file" "$tmp_new/$file"
             msg log_keep_custom_file "${dest#"$HOME"/.config/}/${file#./}"
             if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ]; then
-                echo "    - File: $dest/${file#./}" >> "$NYXNIRI_CUSTOM_LOG"
+                # shellcheck disable=SC2088
+                echo "~/.config/${dest#"$HOME"/.config/}/${file#./}" >> "$NYXNIRI_CUSTOM_LOG"
             fi
         done || true)
         # 2. 继承整套自定义目录 (连根提取 *__custom__* 目录及其内部全部文件)
@@ -50,7 +51,8 @@ atomic_replace_item() {
             cp -a "$dir" "$tmp_new/$(dirname "$dir")/"
             msg log_keep_custom_dir "${dest#"$HOME"/.config/}/${dir#./}"
             if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ]; then
-                echo "    - Dir:  $dest/${dir#./}" >> "$NYXNIRI_CUSTOM_LOG"
+                # shellcheck disable=SC2088
+                echo "~/.config/${dest#"$HOME"/.config/}/${dir#./}" >> "$NYXNIRI_CUSTOM_LOG"
             fi
         done || true)
     fi
@@ -97,6 +99,10 @@ _phase_atomic_deployment() {
                 cp "$temp_monitor" "$dest/$MAIN_WM_HARDWARE_CONFIG"
                 rm -f "$temp_monitor" 2>/dev/null || true
                 msg log_keep_monitor_config "$MAIN_WM" "$MAIN_WM_HARDWARE_CONFIG"
+                if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ]; then
+                    # shellcheck disable=SC2088
+                    echo "~/.config/$MAIN_WM/$MAIN_WM_HARDWARE_CONFIG" >> "$NYXNIRI_CUSTOM_LOG"
+                fi
             fi
 
             msg log_deploy_config_item "$item"
@@ -235,19 +241,96 @@ deploy_selected_configs() {
     msg copy_done
 }
 
-# Print the custom-preserved report collected during deploy. Callers render it
-# in their completion summary (install flow / update flow).
-print_custom_preserved() {
+# Render the clean, minimal, zero-entropy TUI Completion Screen according to the TUI Design Charter
+render_completion_screen() {
+    local mode="${1:-install}"
+    clear 2>/dev/null || true
+    show_logo
+
+    local title_str
+    case "$mode" in
+        update) title_str="$(msg summary_title_update)" ;;
+        test)   title_str="$(msg summary_title_test)" ;;
+        *)      title_str="$(msg summary_title_install)" ;;
+    esac
+
+    echo -e "  \e[1;32m$title_str\e[0m\n"
+
+    # Section 1: 部署明细 / Details
+    echo -e "  \e[1;37m$(msg summary_section_details)\e[0m"
+    local cfg_count=0
+    if [ -n "${CHOSEN_CONFIG_ITEMS+x}" ]; then
+        cfg_count=${#CHOSEN_CONFIG_ITEMS[@]}
+    fi
+
+    local items_str=""
+    if [ "$cfg_count" -gt 0 ]; then
+        items_str=$(IFS=', '; echo "${CHOSEN_CONFIG_ITEMS[*]}")
+    else
+        items_str=$(IFS=', '; echo "${CONFIG_ITEMS[*]}")
+    fi
+    items_str="${items_str//,/, }"
+
+    if [ "$cfg_count" -gt 0 ] || [ "$mode" = "test" ]; then
+        echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_configs_ok "$items_str")"
+    else
+        echo -e "    \e[1;33m[-]\e[0m $(msg summary_item_configs_skip)"
+    fi
+
+    if [ "${WP_PACK_DEPLOYED:-0}" -eq 1 ] || [ "${DO_WALLPAPERS:-n}" = "y" ]; then
+        echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_wallpapers_ok)"
+    else
+        echo -e "    \e[1;33m[-]\e[0m $(msg summary_item_wallpapers_skip)"
+    fi
+
+    if fcitx5_installed; then
+        if [ "${DO_FCITX:-n}" = "y" ] || fcitx_enabled; then
+            echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_fcitx_ok)"
+        else
+            echo -e "    \e[1;33m[-]\e[0m $(msg summary_item_fcitx_skip)"
+        fi
+    fi
+
+    if [ "$mode" = "full" ]; then
+        check_all_deps
+        local left_missing=0
+        for stat in "${DEP_STATUS[@]:-}"; do
+            if [ "${stat:-0}" -eq 0 ]; then
+                left_missing=$((left_missing + 1))
+            fi
+        done
+        if [ "$left_missing" -eq 0 ]; then
+            echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_deps_ok)"
+        else
+            echo -e "    \e[1;33m[-]\e[0m $(msg summary_item_deps_skip)"
+        fi
+    fi
+
+    if [ "${DO_GREETER:-n}" = "y" ]; then
+        echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_greeter_ok)"
+    fi
+
+    # Section 2: 保留的配置清单 (自动继承) / Preserved Configs
     if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ] && [ -s "$NYXNIRI_CUSTOM_LOG" ]; then
-        echo -e "\n\e[1;36m──────────────────────────────────────────────────\e[0m"
-        msg preflight_custom_config_kept
-        cat "$NYXNIRI_CUSTOM_LOG"
-        echo -e "\e[1;36m──────────────────────────────────────────────────\e[0m\n"
+        echo ""
+        echo -e "  \e[1;37m$(msg summary_section_preserved)\e[0m"
+        local item
+        while IFS= read -r item; do
+            [ -n "$item" ] && echo -e "    $item"
+        done < <(sort -u "$NYXNIRI_CUSTOM_LOG")
     fi
     if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ]; then
         rm -f "$NYXNIRI_CUSTOM_LOG" 2>/dev/null || true
         unset NYXNIRI_CUSTOM_LOG
     fi
+
+    # Section 3: 下一步 / Next Steps
+    echo ""
+    echo -e "  \e[1;37m$(msg summary_section_next)\e[0m"
+    echo -e "    $(msg summary_next_start)"
+    echo -e "    $(msg summary_next_manual)"
+    echo -e "    $(msg summary_next_panel)"
+    echo ""
 }
 
 # True when the full external wallpaper pack (the video/ marker directory) is
@@ -349,7 +432,7 @@ run_master_component_menu() {
     DO_GREETER="n"
     DO_WALLPAPERS="n"
     DO_BACKUP="nobackup"
-    KEEP_MONITOR=0
+    export KEEP_MONITOR=1
 
     declare -a MENU_ITEM_NAMES=()
     declare -a MENU_ITEM_KEYS=()
@@ -392,12 +475,6 @@ run_master_component_menu() {
         MENU_ITEM_NAMES+=("$(msg master_item_backup)")
         MENU_ITEM_KEYS+=("behavior_backup")
         MENU_ITEM_CHECKS+=(1)
-
-        if [ -f "$HOME/.config/$MAIN_WM/$MAIN_WM_HARDWARE_CONFIG" ]; then
-            MENU_ITEM_NAMES+=("$(msg master_item_monitor)")
-            MENU_ITEM_KEYS+=("behavior_monitor")
-            MENU_ITEM_CHECKS+=(1)
-        fi
     fi
 
     local cur_focus=0
@@ -496,7 +573,13 @@ run_master_component_menu() {
                 fi
                 ;;
             [qQ]|ESC)
-                break
+                CHOSEN_CONFIG_ITEMS=()
+                DO_FCITX="n"
+                DO_GREETER="n"
+                DO_WALLPAPERS="n"
+                KEEP_MONITOR=0
+                printf '\e[?25h'
+                return 1
                 ;;
         esac
     done
@@ -516,20 +599,20 @@ run_master_component_menu() {
                 DO_WALLPAPERS="y"
             elif [ "$key" = "behavior_backup" ]; then
                 DO_BACKUP="backup"
-            elif [ "$key" = "behavior_monitor" ]; then
-                KEEP_MONITOR=1
             fi
         fi
     done
-    export KEEP_MONITOR
+    export KEEP_MONITOR=1
+    return 0
 }
 offer_overwrite_upgrade() {
     local flag="${1:-}"
     if [ "$flag" = "--force" ] || [ "$flag" = "--deploy" ]; then
-        deploy_selected_configs "nobackup"
-        deploy_wallpapers
-        deploy_fcitx_theme
-        print_custom_preserved
+        deploy_selected_configs "backup"
+        deploy_wallpapers "y"
+        fcitx_install || true
+        greeter_install || true
+        render_completion_screen "update"
         return 0
     elif [ "$flag" = "--no-deploy" ]; then
         return 0
@@ -539,22 +622,23 @@ offer_overwrite_upgrade() {
         deploy_selected_configs "nobackup"
         deploy_wallpapers
         deploy_fcitx_theme
-        print_custom_preserved
+        render_completion_screen "update"
         return 0
     fi
 
     local cur_focus=0
-    clear 2>/dev/null || true
 
     while true; do
         printf '\e[?25l\e[H'
         show_logo
         msg overwrite_title
+        if [ -f "${REPO_DIR:-.}/CHANGELOG.md" ]; then
+            show_release_notes "${REPO_DIR:-.}/CHANGELOG.md"
+        fi
 
         _render_menu_item 0 "$(msg overwrite_opt1)" "$cur_focus"
         _render_menu_item 1 "$(msg overwrite_opt2)" "$cur_focus"
-        _render_menu_item 2 "$(msg overwrite_opt3)" "$cur_focus"
-        _render_menu_item 3 "$(msg overwrite_opt4)" "$cur_focus" "subtle"
+        _render_menu_item 2 "$(msg overwrite_opt3)" "$cur_focus" "subtle"
 
         echo ""
         msg submenu_hint
@@ -572,22 +656,22 @@ offer_overwrite_upgrade() {
             case "$key" in
                 UP|[kK])
                     cur_focus=$((cur_focus - 1))
-                    [ "$cur_focus" -lt 0 ] && cur_focus=3
+                    [ "$cur_focus" -lt 0 ] && cur_focus=2
                     ;;
                 DOWN|[jJ])
                     cur_focus=$((cur_focus + 1))
-                    [ "$cur_focus" -gt 3 ] && cur_focus=0
+                    [ "$cur_focus" -gt 2 ] && cur_focus=0
                     ;;
                 ENTER|SPACE)
                     act=$cur_focus
                     ;;
-                [1-4])
+                [1-3])
                     cur_focus=$((key - 1))
                     act=$cur_focus
                     ;;
                 0|[qQ]|ESC)
-                    cur_focus=3
-                    act=3
+                    cur_focus=2
+                    act=2
                     ;;
             esac
             [ "$act" -eq -1 ] && continue
@@ -597,37 +681,29 @@ offer_overwrite_upgrade() {
         printf '\e[?25h'
         case "$mode_choice" in
             1)
-                deploy_selected_configs "backup"
-                deploy_wallpapers
-                deploy_fcitx_theme
-                print_custom_preserved
-                msg overwrite_done
-                break
+                if run_master_component_menu true "full"; then
+                    if [ ${#CHOSEN_CONFIG_ITEMS[@]} -gt 0 ] || [ "$DO_WALLPAPERS" = "y" ] || [ "$DO_FCITX" = "y" ] || [ "$DO_GREETER" = "y" ]; then
+                        msg upgrading_selected
+                        if [ ${#CHOSEN_CONFIG_ITEMS[@]} -gt 0 ]; then
+                            deploy_selected_configs "$DO_BACKUP" "${CHOSEN_CONFIG_ITEMS[@]}"
+                        fi
+                        if [ "$DO_WALLPAPERS" = "y" ]; then
+                            deploy_wallpapers "y"
+                        fi
+                        if [ "$DO_FCITX" = "y" ]; then
+                            fcitx_install || true
+                        fi
+                        if [ "$DO_GREETER" = "y" ]; then
+                            greeter_install || true
+                        fi
+                        render_completion_screen "update"
+                        return 0
+                    else
+                        msg log_no_components_selected
+                    fi
+                fi
                 ;;
             2)
-                run_master_component_menu true "full"
-                if [ ${#CHOSEN_CONFIG_ITEMS[@]} -gt 0 ] || [ "$DO_WALLPAPERS" = "y" ] || [ "$DO_FCITX" = "y" ] || [ "$DO_GREETER" = "y" ]; then
-                    msg upgrading_selected
-                    if [ ${#CHOSEN_CONFIG_ITEMS[@]} -gt 0 ]; then
-                        deploy_selected_configs "nobackup" "${CHOSEN_CONFIG_ITEMS[@]}"
-                    fi
-                    if [ "$DO_WALLPAPERS" = "y" ]; then
-                        deploy_wallpapers "y"
-                    fi
-                    if [ "$DO_FCITX" = "y" ]; then
-                        fcitx_install || true
-                    fi
-                    if [ "$DO_GREETER" = "y" ]; then
-                        greeter_install || true
-                    fi
-                    print_custom_preserved
-                    msg overwrite_done
-                else
-                    msg log_no_components_selected
-                fi
-                break
-                ;;
-            3)
                 msg diff_viewer_title
                 local repo_config_dir="${REPO_DIR:-.}/$CONFIG_DIR_NAME"
                 (
@@ -641,19 +717,21 @@ offer_overwrite_upgrade() {
                 ) | less -R
                 clear 2>/dev/null || true
                 ;;
-            4)
+            3)
                 msg log_config_deploy_skipped
-                break
+                return 1
                 ;;
         esac
     done
     printf '\e[?25h'
+    return 1
 }
 _phase_preflight_check() {
     local mode="$1"
     local fcitx_available="$2"
-    local do_greeter="$3"
-    local do_wallpapers="$4"
+    local do_fcitx="$3"
+    local do_greeter="$4"
+    local do_wallpapers="$5"
 
     # 1. Ask for Sudo upfront if required (Dependencies or Greeter)
     local needs_sudo=false
@@ -709,27 +787,17 @@ install_configs() {
     # Phase 0: Pre-flight checklist (interactive & standardized card)
     # ------------------------------------------------------------------
     if [ -t 0 ] && [ -c /dev/tty ]; then
-        if [ "$mode" = "express" ]; then
-            # Express Install Mode: No menus, just setup defaults
-            mode="full"
-            CHOSEN_CONFIG_ITEMS=("${CONFIG_ITEMS[@]}")
-            do_backup="backup"
-            do_fcitx="y"
-            do_greeter="y"
-            if ! wallpapers_pack_present; then
-                do_wallpapers="y"
-            fi
-        else
-            # Custom Install Mode
-            run_master_component_menu false "$mode"
-            do_fcitx="$DO_FCITX"
-            do_greeter="$DO_GREETER"
-            do_wallpapers="$DO_WALLPAPERS"
-            do_backup="$DO_BACKUP"
-            if [ ${#CHOSEN_CONFIG_ITEMS[@]} -eq 0 ] && [ "$do_wallpapers" = "n" ] && [ "$do_fcitx" = "n" ] && [ "$do_greeter" = "n" ]; then
-                msg install_cancelled
-                return 0
-            fi
+        if ! run_master_component_menu false "$mode"; then
+            msg install_cancelled
+            return 0
+        fi
+        do_fcitx="$DO_FCITX"
+        do_greeter="$DO_GREETER"
+        do_wallpapers="$DO_WALLPAPERS"
+        do_backup="$DO_BACKUP"
+        if [ ${#CHOSEN_CONFIG_ITEMS[@]} -eq 0 ] && [ "$do_wallpapers" = "n" ] && [ "$do_fcitx" = "n" ] && [ "$do_greeter" = "n" ]; then
+            msg install_cancelled
+            return 0
         fi
     else
         CHOSEN_CONFIG_ITEMS=("${CONFIG_ITEMS[@]}")
@@ -739,7 +807,7 @@ install_configs() {
         fi
     fi
 
-    _phase_preflight_check "$mode" "$fcitx_available" "$do_greeter" "$do_wallpapers"
+    _phase_preflight_check "$mode" "$fcitx_available" "$do_fcitx" "$do_greeter" "$do_wallpapers"
 
     # ------------------------------------------------------------------
     # Numbered steps (Uninterrupted Execution Phase)
@@ -749,6 +817,20 @@ install_configs() {
     [ "$fcitx_available" = true ] && step_total=$((step_total + 1))
     [ "$do_greeter" = "y" ] && step_total=$((step_total + 1))
     local cur=0
+
+    if [ "$mode" = "full" ]; then
+        cur=$((cur + 1))
+        msg install_step_deps "$cur/$step_total"
+        for i in "${!DEPS[@]}"; do
+            if [ "${DEP_STATUS[$i]:-0}" -eq 0 ]; then
+                DEP_SELECT[i]=1
+            else
+                # shellcheck disable=SC2034
+                DEP_SELECT[i]=0
+            fi
+        done
+        install_selected_deps || true
+    fi
 
     cur=$((cur + 1))
     msg install_step_configs "$cur/$step_total"
@@ -768,24 +850,6 @@ install_configs() {
         fi
     fi
 
-    if [ "$mode" = "full" ]; then
-        cur=$((cur + 1))
-        msg install_step_deps "$cur/$step_total"
-        
-        # Install all dependencies directly (since this is full/express mode)
-        # In custom mode with full deps, we also just install them since sudo is cached
-        # The prompt was handled upfront or is implied by 'full' install.
-        for i in "${!DEPS[@]}"; do
-            if [ "${DEP_STATUS[$i]:-0}" -eq 0 ]; then
-                DEP_SELECT[i]=1
-            else
-                # shellcheck disable=SC2034
-                DEP_SELECT[i]=0
-            fi
-        done
-        install_selected_deps || true
-    fi
-
     if [ "$do_greeter" = "y" ]; then
         cur=$((cur + 1))
         msg install_step_greeter "$cur/$step_total"
@@ -795,42 +859,7 @@ install_configs() {
     # ------------------------------------------------------------------
     # Completion summary
     # ------------------------------------------------------------------
-    msg install_summary_title
-    msg summary_configs
-    if [ "${WP_PACK_DEPLOYED:-0}" -eq 1 ]; then
-        msg summary_wallpapers_pack
-    else
-        msg summary_wallpapers
-    fi
-    if [ "$fcitx_available" = true ]; then
-        if [ "$do_fcitx" = "y" ]; then
-            msg summary_fcitx_on
-        else
-            msg summary_fcitx_off
-        fi
-    fi
-    if [ "$mode" = "full" ]; then
-        check_all_deps
-        local left_missing=0
-        for stat in "${DEP_STATUS[@]:-}"; do
-            if [ "${stat:-0}" -eq 0 ]; then
-                left_missing=$((left_missing + 1))
-            fi
-        done
-        if [ "$left_missing" -eq 0 ]; then
-            msg summary_deps_ok
-        else
-            msg summary_deps_skip
-        fi
-    fi
-    if [ "$mode" = "full" ]; then
-        if [ "$do_greeter" = "y" ]; then
-            msg summary_greeter_on
-        else
-            msg summary_greeter_off
-        fi
-    fi
-    print_custom_preserved
+    render_completion_screen "$mode"
 }
 
 # Developer test command: fast idempotent re-deploy on the real machine.
@@ -841,6 +870,5 @@ test_deploy() {
     export NYXNIRI_KEEP_MONITOR=1
     deploy_selected_configs "nobackup"
     deploy_wallpapers
-    print_custom_preserved
-    msg test_done
+    render_completion_screen "test"
 }

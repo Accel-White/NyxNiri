@@ -356,20 +356,17 @@ main_menu() {
         msg menu_group_deploy
         _render_menu_item 0 "$(msg menu_opt1)" "$cur_focus"
         _render_menu_item 1 "$(msg menu_opt2)" "$cur_focus"
-        _render_menu_item 2 "$(msg menu_opt3)" "$cur_focus"
-
-        msg menu_group_backup
-        _render_menu_item 3 "$(msg menu_opt4)" "$cur_focus"
 
         msg menu_group_maint
+        _render_menu_item 2 "$(msg menu_opt3)" "$cur_focus"
+        _render_menu_item 3 "$(msg menu_opt4)" "$cur_focus"
         _render_menu_item 4 "$(msg menu_opt5)" "$cur_focus"
         _render_menu_item 5 "$(msg menu_opt6)" "$cur_focus"
-        _render_menu_item 6 "$(msg menu_opt7)" "$cur_focus"
 
         msg menu_group_system
-        _render_menu_item 7 "$(msg menu_opt8)" "$cur_focus" "warn"
-        _render_menu_item 8 "$(msg menu_opt9)" "$cur_focus"
-        _render_menu_item 9 "$(msg menu_opt0)" "$cur_focus" "subtle"
+        _render_menu_item 6 "$(msg menu_opt7)" "$cur_focus" "warn"
+        _render_menu_item 7 "$(msg menu_opt8)" "$cur_focus"
+        _render_menu_item 8 "$(msg menu_opt0)" "$cur_focus" "subtle"
 
         echo ""
         msg menu_hint
@@ -387,38 +384,37 @@ main_menu() {
         case "$key" in
             UP|[kK])
                 cur_focus=$((cur_focus - 1))
-                [ "$cur_focus" -lt 0 ] && cur_focus=9
+                [ "$cur_focus" -lt 0 ] && cur_focus=8
                 ;;
             DOWN|[jJ])
                 cur_focus=$((cur_focus + 1))
-                [ "$cur_focus" -gt 9 ] && cur_focus=0
+                [ "$cur_focus" -gt 8 ] && cur_focus=0
                 ;;
             ENTER|SPACE)
                 action_item=$cur_focus
                 ;;
-            [1-9])
+            [1-8])
                 cur_focus=$((key - 1))
                 action_item=$cur_focus
                 ;;
             0|[qQ]|exit|ESC)
-                cur_focus=9
-                action_item=9
+                cur_focus=8
+                action_item=8
                 ;;
         esac
 
         if [ "$action_item" -ne -1 ]; then
             printf '\e[?25h'
             case "$action_item" in
-                0) install_configs "express"; press_any_key ;;
-                1) install_configs "full"; press_any_key ;;
-                2) run_dep_menu_loop; press_any_key ;;
-                3) snapshot_menu ;;
-                4) update_repo_and_script ""; press_any_key ;;
-                5) run_doctor; press_any_key ;;
-                6) generate_bug_report; press_any_key ;;
-                7) uninstall_nyxniri ""; press_any_key ;;
-                8) optional_modules_menu ;;
-                9) exit 0 ;;
+                0) install_configs "full" || true; press_any_key ;;
+                1) run_dep_menu_loop || true; press_any_key ;;
+                2) snapshot_menu ;;
+                3) RUN_FROM_MENU=1 update_repo_and_script "" || true; press_any_key ;;
+                4) run_doctor; press_any_key ;;
+                5) generate_bug_report; press_any_key ;;
+                6) uninstall_nyxniri ""; press_any_key ;;
+                7) optional_modules_menu ;;
+                8) exit 0 ;;
             esac
             clear 2>/dev/null || true
         fi
@@ -443,7 +439,7 @@ main() {
             install|deploy)
                 shift
                 discover_config_items
-                install_configs "${1:-express}"
+                install_configs "full"
                 exit 0
                 ;;
             snapshot|backup)

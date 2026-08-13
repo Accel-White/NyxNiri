@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.2.4] - 2026-08-13
+
+### Added
+- **全新部署完成页**: 部署结束后展现 Banner 图标、安装组件明细、继承的配置文件与下一步操作提示。
+- **开发仓库安全保护**: 自动识别本地开发目录，防止更新脚本时误删未提交的代码。
+
+### Changed
+- **部署流程调整**: 统一为透明的组件勾选清单，并将依赖安装改为配置部署的前置步骤。
+
+### Fixed
+- **取消按键响应**: 修复了在各级菜单按 ESC 取消时会误触发部署或导致控制面板退出的缺陷。
+- **更新日志不显示**: 修复了查看更新时 Changelog 被菜单刷新覆盖的问题。
+
 ## [v2.2.3] - 2026-08-12
 
 ### Added
