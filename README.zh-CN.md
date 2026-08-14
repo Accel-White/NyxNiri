@@ -1,25 +1,30 @@
+<a id="readme-top"></a>
+
 <div align="right">
-  <a href="README.md">English</a> | 简体中文
+  <a href="README.md">English</a> | <strong>简体中文</strong>
 </div>
 
 <div align="center">
 
-# *NyxNiri*
+<h1>NyxNiri</h1>
 
-<p align="center"><em>基于 Niri 与 Noctalia V5 的 Material You 桌面，适用于 Arch / CachyOS。</em></p>
+<p><strong>基于 Niri 与 Noctalia V5 的 Material You 桌面体验</strong><br />
+<sub>适用于 Arch Linux / CachyOS</sub></p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/License-GPLv3-89B4FA?style=flat-square&logo=gnu" alt="License" />
-  <img src="https://img.shields.io/github/stars/ech678/NyxNiri?style=flat-square&color=F5C2E7&label=stars" alt="Stars" />
-  <img src="https://img.shields.io/badge/CLI-nyxniri-A6E3A1?style=flat-square&logo=gnu-bash&logoColor=black" alt="CLI" />
-  <img src="https://img.shields.io/badge/OS-Arch%20%7C%20CachyOS-1793D1?style=flat-square&logo=arch-linux&logoColor=white" alt="OS" />
-  <img src="https://img.shields.io/badge/WM-Niri-89B4FA?style=flat-square&logo=wayland&logoColor=white" alt="WM" />
+<p>
+  <a href="https://github.com/ech678/NyxNiri/stargazers"><img height="22" src="https://m3-markdown-badges.vercel.app/stars/3/3/ech678/NyxNiri" alt="Stars" /></a>
+  &nbsp;
+  <a href="https://archlinux.org"><img height="22" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Arch/arch2.svg" alt="Arch Linux" /></a>
+  &nbsp;
+  <a href="LICENSE"><img height="22" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/LicenceGPLv3/licencegplv33.svg" alt="GPL-3.0" /></a>
 </p>
 
-<img src="https://github.com/user-attachments/assets/9ef4da30-54c0-491b-916f-2f2a3beac6be" alt="NyxNiri 预览" width="92%" />
+<a href="https://github.com/user-attachments/assets/9ef4da30-54c0-491b-916f-2f2a3beac6be">
+  <img src="https://github.com/user-attachments/assets/9ef4da30-54c0-491b-916f-2f2a3beac6be" alt="NyxNiri 预览" width="92%" />
+</a>
 
-<p align="center">
-  <a href="https://www.bilibili.com/video/BV1c63n6dEEG">Bilibili</a> | <a href="https://www.reddit.com/r/niri/comments/1vf53le/nyxniri_a_material_you_desktop_config_for_niri/">Reddit</a>
+<p>
+  <sub><em>基于 Niri 与 Noctalia V5 运行效果 · 观看 <a href="https://www.bilibili.com/video/BV1c63n6dEEG">Bilibili 演示视频</a> · 参与 <a href="https://www.reddit.com/r/niri/comments/1vf53le/nyxniri_a_material_you_desktop_config_for_niri/">Reddit 社区讨论</a></em></sub>
 </p>
 
 </div>
@@ -28,17 +33,17 @@
 
 - Noctalia V5 直接从壁纸取色；`mpvpaper` 配合 `ffmpeg` 抽取视频帧，动态壁纸也能同步提取配色。
 - 明暗模式同步 — GSettings 与 GTK 自动跟随 Noctalia 切换。
-- 护眼模式（`Super+N`）：调暖色温、关闭模糊、纯色不透明背景。
+- 护眼模式（`Super+N`）— 调暖色温、关闭模糊、纯色不透明背景。
 - Scratchpad 浮动终端（`Super+~`）— 基于 tmux 的持久浮动终端，随时快捷呼出与隐藏。
-- 终端与 Shell：Fish 代理/缓存别名，Kitty 光标轨迹，Windows 风格快捷键。
-- NyxMellow 动态 fcitx5 皮肤：mellow 圆角形状，随 Noctalia 自动取色。
+- 终端与 Shell — Fish 代理/缓存别名，Kitty 光标轨迹，Windows 风格快捷键。
+- NyxMellow 动态 fcitx5 皮肤 — mellow 圆角形状，随 Noctalia 自动取色。
 
 ## 环境要求
 
 - Arch Linux / CachyOS
 - [Niri](https://github.com/YaLTeR/niri)（Wayland 合成器）
 - [Noctalia V5](https://noctalia.app)（桌面 Shell，官方仓库）
-- `mpvpaper`（AUR）、Kitty、Fish、Starship、`tmux`
+- `mpvpaper`（AUR）、`kitty`、`fish`、`starship`、`tmux`
 
 ## 安装
 
@@ -102,7 +107,7 @@ NyxNiri
 `nyxniri` 用于管理安装、快照和系统诊断：
 
 | 指令 | 作用 |
-| --- | --- |
+| :--- | :--- |
 | `nyxniri` | 交互式菜单 |
 | `nyxniri install [full\|config]` | 全量部署，或仅同步配置 |
 | `nyxniri update [--force]` | 更新仓库，可选覆盖配置 |
@@ -123,7 +128,7 @@ NyxNiri
 `nyxhelp` 是基于 `fzf` 的速查手册：
 
 | 指令 | 作用 |
-| --- | --- |
+| :--- | :--- |
 | `nyxhelp` | 双栏交互式速查菜单 |
 | `nyxhelp keys` | Niri 快捷键 |
 | `nyxhelp proxy` | 代理控制（`proxy_on [port]`、`proxy_off`、`proxy_status`） |
@@ -183,11 +188,11 @@ NyxNiri
 **NyxMellow fcitx5 皮肤：** 圆角 mellow 风格，随 Noctalia 自动提取配色（支持明暗自动切换）。运行 `nyxniri fcitx install` 注册为 Noctalia 模板，更换壁纸或切换明暗时自动重新渲染。该皮肤为手动可选安装，不会默认静默启用。
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/3f861e8e-55da-408e-a9d5-7f337a039b74" alt="NyxMellow 皮肤（亮色）" width="372" />
-  <img src="https://github.com/user-attachments/assets/291918e9-4532-480f-b777-7ebe0691eaf9" alt="NyxMellow 皮肤（暗色）" width="372" />
+  <img src="https://github.com/user-attachments/assets/3f861e8e-55da-408e-a9d5-7f337a039b74" alt="NyxMellow 皮肤（亮色）" width="48%" />
+  <img src="https://github.com/user-attachments/assets/291918e9-4532-480f-b777-7ebe0691eaf9" alt="NyxMellow 皮肤（暗色）" width="48%" />
+  <br />
+  <sub><em>NyxMellow 皮肤亮色 / 暗色效果</em></sub>
 </p>
-
-*NyxMellow 皮肤亮色 / 暗色效果。*
 
 **壁纸与动态视频包：** 高清壁纸与动态视频合集（约 100MB）独立存放在 [wallpaper-collection](https://github.com/ech678/wallpaper-collection) 仓库，避免拖累主仓库体积。`install` 时可选拉取，也可随时通过 `nyxniri wallpapers` 按需下载；检测到本地已有 `~/Pictures/Wallpapers/video/` 目录时，重复安装会自动跳过下载。
 
@@ -262,5 +267,5 @@ EOF'
 ---
 
 <div align="right">
-  <a href="#">↑ 返回顶部</a>
+  <a href="#readme-top">↑ 返回顶部</a>
 </div>

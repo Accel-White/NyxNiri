@@ -1,25 +1,30 @@
+<a id="readme-top"></a>
+
 <div align="right">
-  English | <a href="README.zh-CN.md">简体中文</a>
+  <strong>English</strong> | <a href="README.zh-CN.md">简体中文</a>
 </div>
 
 <div align="center">
 
-# *NyxNiri*
+<h1>NyxNiri</h1>
 
-<p align="center"><em>A Material You desktop for Arch / CachyOS, built on Niri and Noctalia V5.</em></p>
+<p><strong>A Material You desktop experience for Arch / CachyOS</strong><br />
+<sub>Built on Niri and Noctalia V5</sub></p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/License-GPLv3-89B4FA?style=flat-square&logo=gnu" alt="License" />
-  <img src="https://img.shields.io/github/stars/ech678/NyxNiri?style=flat-square&color=F5C2E7&label=stars" alt="Stars" />
-  <img src="https://img.shields.io/badge/CLI-nyxniri-A6E3A1?style=flat-square&logo=gnu-bash&logoColor=black" alt="CLI" />
-  <img src="https://img.shields.io/badge/OS-Arch%20%7C%20CachyOS-1793D1?style=flat-square&logo=arch-linux&logoColor=white" alt="OS" />
-  <img src="https://img.shields.io/badge/WM-Niri-89B4FA?style=flat-square&logo=wayland&logoColor=white" alt="WM" />
+<p>
+  <a href="https://github.com/ech678/NyxNiri/stargazers"><img height="22" src="https://m3-markdown-badges.vercel.app/stars/3/3/ech678/NyxNiri" alt="Stars" /></a>
+  &nbsp;
+  <a href="https://archlinux.org"><img height="22" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Arch/arch2.svg" alt="Arch Linux" /></a>
+  &nbsp;
+  <a href="LICENSE"><img height="22" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/LicenceGPLv3/licencegplv33.svg" alt="GPL-3.0" /></a>
 </p>
 
-<img src="https://github.com/user-attachments/assets/9ef4da30-54c0-491b-916f-2f2a3beac6be" alt="NyxNiri Preview" width="92%" />
+<a href="https://github.com/user-attachments/assets/9ef4da30-54c0-491b-916f-2f2a3beac6be">
+  <img src="https://github.com/user-attachments/assets/9ef4da30-54c0-491b-916f-2f2a3beac6be" alt="NyxNiri Preview" width="92%" />
+</a>
 
-<p align="center">
-  <a href="https://www.bilibili.com/video/BV1c63n6dEEG">Bilibili</a> | <a href="https://www.reddit.com/r/niri/comments/1vf53le/nyxniri_a_material_you_desktop_config_for_niri/">Reddit</a>
+<p>
+  <sub><em>NyxNiri on Niri & Noctalia V5 · Watch demo on <a href="https://www.bilibili.com/video/BV1c63n6dEEG">Bilibili</a> · Join discussion on <a href="https://www.reddit.com/r/niri/comments/1vf53le/nyxniri_a_material_you_desktop_config_for_niri/">Reddit</a></em></sub>
 </p>
 
 </div>
@@ -28,7 +33,7 @@
 
 - Noctalia V5 pulls colors directly from your wallpaper; an `mpvpaper` hook extracts video frames via `ffmpeg` so live wallpapers generate palettes too.
 - Light/dark sync — GSettings and GTK follow Noctalia theme modes automatically.
-- Eye Care Mode (`Super+N`) for reading sessions: warmer color temperature, zero blur, solid opaque windows.
+- Eye Care Mode (`Super+N`) — warmer color temperature, zero blur, solid opaque windows for reading sessions.
 - Scratchpad Terminal (`Super+~`) — persistent floating terminal backed by tmux, quick toggle anytime.
 - Shell & Terminal — Fish aliases for proxy/cache management, Kitty cursor trails, Windows-style shortcuts.
 - NyxMellow — a dynamic fcitx5 skin: mellow rounded geometry with Noctalia Material You color palette.
@@ -38,7 +43,7 @@
 - Arch Linux / CachyOS
 - [Niri](https://github.com/YaLTeR/niri) (Wayland compositor)
 - [Noctalia V5](https://noctalia.app) (desktop shell, Official Repo)
-- `mpvpaper` (AUR), Kitty, Fish, Starship, `tmux`
+- `mpvpaper` (AUR), `kitty`, `fish`, `starship`, `tmux`
 
 ## Install
 
@@ -102,7 +107,7 @@ NyxNiri
 `nyxniri` manages install, snapshots and diagnostics:
 
 | Command | Description |
-| --- | --- |
+| :--- | :--- |
 | `nyxniri` | Interactive menu |
 | `nyxniri install [full\|config]` | Deploy everything, or sync configs only |
 | `nyxniri update [--force]` | Update repo, optionally overwrite configs |
@@ -123,7 +128,7 @@ NyxNiri
 `nyxhelp` is a fzf-based cheatsheet:
 
 | Command | Description |
-| --- | --- |
+| :--- | :--- |
 | `nyxhelp` | Interactive dual-panel cheatsheet |
 | `nyxhelp keys` | Niri keybindings |
 | `nyxhelp proxy` | Proxy controls (`proxy_on [port]`, `proxy_off`, `proxy_status`) |
@@ -183,11 +188,11 @@ NyxNiri
 **NyxMellow fcitx5 skin:** mellow rounded shape with colors matching the Noctalia palette (auto light/dark switch). `nyxniri fcitx install` registers it as a Noctalia user template and re-renders it on wallpaper or theme changes. Opt-in only — never enabled automatically.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/3f861e8e-55da-408e-a9d5-7f337a039b74" alt="NyxMellow skin (light)" width="372" />
-  <img src="https://github.com/user-attachments/assets/291918e9-4532-480f-b777-7ebe0691eaf9" alt="NyxMellow skin (dark)" width="372" />
+  <img src="https://github.com/user-attachments/assets/3f861e8e-55da-408e-a9d5-7f337a039b74" alt="NyxMellow skin (light)" width="48%" />
+  <img src="https://github.com/user-attachments/assets/291918e9-4532-480f-b777-7ebe0691eaf9" alt="NyxMellow skin (dark)" width="48%" />
+  <br />
+  <sub><em>NyxMellow skin in light and dark mode</em></sub>
 </p>
-
-*NyxMellow skin in light and dark mode.*
 
 **Wallpaper & video pack:** the full high-res wallpaper and live-video collection (~100MB) lives in a separate [wallpaper-collection](https://github.com/ech678/wallpaper-collection) repo to keep this repo light. During `install`, you can opt in to pull it; `nyxniri wallpapers` fetches it on demand anytime. Once `~/Pictures/Wallpapers/video/` is detected, repeat installs skip the download automatically.
 
@@ -262,5 +267,5 @@ EOF'
 ---
 
 <div align="right">
-  <a href="#">↑ Back to Top</a>
+  <a href="#readme-top">↑ Back to Top</a>
 </div>
