@@ -24,7 +24,7 @@
 </a>
 
 <p>
-  <sub><em>基于 Niri 与 Noctalia V5 运行效果 · 观看 <a href="https://www.bilibili.com/video/BV1c63n6dEEG">Bilibili 演示视频</a> · 参与 <a href="https://www.reddit.com/r/niri/comments/1vf53le/nyxniri_a_material_you_desktop_config_for_niri/">Reddit 社区讨论</a></em></sub>
+  <sub><em>NyxNiri · 观看 <a href="https://www.bilibili.com/video/BV1c63n6dEEG">Bilibili 演示</a> · 参与 <a href="https://www.reddit.com/r/niri/comments/1vf53le/nyxniri_a_material_you_desktop_config_for_niri/">Reddit 讨论</a></em></sub>
 </p>
 
 </div>

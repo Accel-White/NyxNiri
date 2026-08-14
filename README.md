@@ -24,7 +24,7 @@
 </a>
 
 <p>
-  <sub><em>NyxNiri on Niri & Noctalia V5 · Watch demo on <a href="https://www.bilibili.com/video/BV1c63n6dEEG">Bilibili</a> · Join discussion on <a href="https://www.reddit.com/r/niri/comments/1vf53le/nyxniri_a_material_you_desktop_config_for_niri/">Reddit</a></em></sub>
+  <sub><em>NyxNiri · Watch demo on <a href="https://www.bilibili.com/video/BV1c63n6dEEG">Bilibili</a> · Join discussion on <a href="https://www.reddit.com/r/niri/comments/1vf53le/nyxniri_a_material_you_desktop_config_for_niri/">Reddit</a></em></sub>
 </p>
 
 </div>
