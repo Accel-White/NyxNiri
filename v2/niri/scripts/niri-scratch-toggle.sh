@@ -17,9 +17,13 @@ case "$TARGET_APP" in
         APP_ID="scratchpad"
         TMUX_SESSION="scratch"
 
-        read -r win_id is_focused < <(niri msg -j windows 2>/dev/null \
+        ACTIVE_WS=$(niri msg -j workspaces 2>/dev/null \
+            | jq -r '(.[] | select(.is_focused == true) | .id) // (.[] | select(.is_active == true) | .id)' \
+            | head -n1)
+
+        read -r win_id win_ws < <(niri msg -j windows 2>/dev/null \
             | jq -r --arg id "$APP_ID" \
-                '.[] | select(.app_id == $id) | "\(.id) \(.is_focused)"' \
+                '.[] | select(.app_id == $id) | "\(.id) \(.workspace_id)"' \
             | head -n1)
 
         spawn_kitty() {
@@ -35,25 +39,28 @@ case "$TARGET_APP" in
         }
 
         if [ -z "${win_id:-}" ]; then
-            # No scratchpad window -> spawn and attach
             spawn_kitty
-        elif [ "${is_focused:-false}" = "true" ]; then
-            # Window currently focused -> hide (close frontend kitty window)
-            niri msg action close-window --id "$win_id"
-        else
-            # Window exists on another workspace/unfocused -> relocate to current workspace
+        elif [ -n "$ACTIVE_WS" ] && [ -n "${win_ws:-}" ] && [ "$win_ws" != "$ACTIVE_WS" ]; then
+            # Relocate from other workspace to current active workspace
             niri msg action close-window --id "$win_id"
             sleep 0.05
             spawn_kitty
+        else
+            # On current workspace -> toggle off
+            niri msg action close-window --id "$win_id"
         fi
         ;;
 
     missioncenter|monitor|"mission center"|"Mission Center"|MissionCenter)
         APP_ID="io.missioncenter.MissionCenter"
 
-        read -r win_id is_focused < <(niri msg -j windows 2>/dev/null \
+        ACTIVE_WS=$(niri msg -j workspaces 2>/dev/null \
+            | jq -r '(.[] | select(.is_focused == true) | .id) // (.[] | select(.is_active == true) | .id)' \
+            | head -n1)
+
+        read -r win_id win_ws < <(niri msg -j windows 2>/dev/null \
             | jq -r --arg id "$APP_ID" \
-                '.[] | select(.app_id == $id) | "\(.id) \(.is_focused)"' \
+                '.[] | select(.app_id == $id) | "\(.id) \(.workspace_id)"' \
             | head -n1)
 
         if [ -z "${win_id:-}" ]; then
@@ -62,27 +69,31 @@ case "$TARGET_APP" in
             elif command -v flatpak >/dev/null 2>&1 && flatpak info io.missioncenter.MissionCenter >/dev/null 2>&1; then
                 niri msg action spawn -- flatpak run io.missioncenter.MissionCenter
             fi
-        elif [ "${is_focused:-false}" = "true" ]; then
-            niri msg action close-window --id "$win_id"
-        else
+        elif [ -n "$ACTIVE_WS" ] && [ -n "${win_ws:-}" ] && [ "$win_ws" != "$ACTIVE_WS" ]; then
             niri msg action focus-window --id "$win_id"
+        else
+            niri msg action close-window --id "$win_id"
         fi
         ;;
 
     nautilus|files|Nautilus|Files)
         APP_ID="org.gnome.Nautilus"
 
-        read -r win_id is_focused < <(niri msg -j windows 2>/dev/null \
+        ACTIVE_WS=$(niri msg -j workspaces 2>/dev/null \
+            | jq -r '(.[] | select(.is_focused == true) | .id) // (.[] | select(.is_active == true) | .id)' \
+            | head -n1)
+
+        read -r win_id win_ws < <(niri msg -j windows 2>/dev/null \
             | jq -r --arg id "$APP_ID" \
-                '.[] | select(.app_id == $id) | "\(.id) \(.is_focused)"' \
+                '.[] | select(.app_id == $id) | "\(.id) \(.workspace_id)"' \
             | head -n1)
 
         if [ -z "${win_id:-}" ]; then
             niri msg action spawn -- nautilus --new-window
-        elif [ "${is_focused:-false}" = "true" ]; then
-            niri msg action close-window --id "$win_id"
-        else
+        elif [ -n "$ACTIVE_WS" ] && [ -n "${win_ws:-}" ] && [ "$win_ws" != "$ACTIVE_WS" ]; then
             niri msg action focus-window --id "$win_id"
+        else
+            niri msg action close-window --id "$win_id"
         fi
         ;;
 
