@@ -186,6 +186,14 @@ window-rule {
     default-window-height { fixed 925; }
 }
 
+// Mission Center 系统监视器
+window-rule {
+    match app-id="io.missioncenter.MissionCenter"
+    open-floating true
+    default-column-width { proportion 0.65; }
+    default-window-height { proportion 0.70; }
+}
+
 // ==========================================
 // Scratchpad 终端 (Super+~ toggle)
 // ==========================================

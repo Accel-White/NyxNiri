@@ -5,17 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v2.2.5] - Unreleased
+## [v2.3.0] - 2026-08-15
 
 ### Added
-- **独立中文文档**: 新增 `README.zh-CN.md`，实现中英双语页面对称互转。
+- **Material 3 星环启动器**: 新增矢量星环菜单，支持物理动效、文件夹分类、网页直达与配置文件自定义。
+- **启动器配置自动继承**: 升级或重新部署时自动保留用户对启动器菜单的个性化修改。
+- **独立中文文档**: 新增完整中文自述文件，并在页面右上角支持双语一键互转。
 
 ### Changed
-- **自述文件排版焕新**: 升级为 Material Design 3 胶囊徽章体系，优化排版呼吸感与图片自适应展示。
-- **仓库体积减负**: 静态预览媒体移出主仓库，进一步降低克隆体积。
+- **快捷键冲突优化**: 启动器快捷键调整为 `Super + 鼠标前侧键` 与 `Super + S`，释放原生侧键给浏览器前进使用。
+- **自述文档排版更新**: 升级为胶囊徽章体系，优化视觉层级与图片展示。
+- **仓库体积缩减**: 静态预览媒体移出主仓库，大幅降低拉取与克隆体积。
 
 ### Fixed
-- **返回顶部锚点失效**: 修复自述文件底部快速返回顶部链接点击无响应的问题。
+- **文档导航修复**: 修复自述文件底部返回顶部链接点击无响应的问题。
 
 ## [v2.2.4] - 2026-08-13
 

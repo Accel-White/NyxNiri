@@ -55,8 +55,14 @@ binds {
     Mod+Shift+W { spawn "noctalia" "msg" "panel-toggle" "noctalia/mpvpaper:picker"; }
 
     // 切换护眼模式 (调暖色温并关闭透明度/毛玻璃) / Toggle eye-care mode (warmer temp & disable blur/transparency)
-    Mod+N { spawn "~/.config/niri/toggle-eyecare.sh"; }
-    Mod+Grave { spawn "~/.config/niri/niri-scratch-toggle.sh"; }
+    Mod+N { spawn "~/.config/niri/scripts/toggle-eyecare.sh"; }
+
+    // 快速切换 Kitty 专属 Scratchpad 终端 / Toggle Kitty scratchpad terminal
+    Mod+Grave { spawn "~/.config/niri/scripts/niri-scratch-toggle.sh" "kitty"; }
+
+    // 呼出 Scratchpad Material You 星环菜单 (按住 Super 点鼠标前侧键，或键盘 Mod+S) / Open Scratchpad Material 3 radial menu
+    Mod+S repeat=false { spawn "~/.config/niri/scripts/niri-scratch-menu.py"; }
+    Mod+MouseForward repeat=false { spawn "~/.config/niri/scripts/niri-scratch-menu.py"; }
 
     // -------------------------------------------------------------------------
     // 3. 焦点导航与窗口移动 / Focus Navigation & Window Movement

@@ -1,5 +1,14 @@
 # NyxNiri Git Ignore Rules
 
-# Agent instructions document
+# Agent instructions & development notes
 noctalia-docs
 example-widgets
+notes/
+
+# Python cache & bytecode
+__pycache__/
+*.py[cod]
+
+# Temp & backup files
+*.tmp
+*.bak

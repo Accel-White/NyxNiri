@@ -110,15 +110,14 @@ _phase_atomic_deployment() {
     done
 
     # Ensure scripts are executable and initial effects symlink exists
-    if [ -f "$HOME/.config/fish/clean-cache" ]; then
-        chmod +x "$HOME/.config/fish/clean-cache"
-    fi
-    if [ -f "$HOME/.config/$MAIN_WM/toggle-eyecare.sh" ]; then
-        chmod +x "$HOME/.config/$MAIN_WM/toggle-eyecare.sh"
-    fi
-    if [ -f "$HOME/.config/$MAIN_WM/niri-scratch-toggle.sh" ]; then
-        chmod +x "$HOME/.config/$MAIN_WM/niri-scratch-toggle.sh"
-    fi
+    for script_rel in \
+        "fish/clean-cache" \
+        "$THEME_ENGINE/theme-sync.sh" \
+        "$MAIN_WM/scripts/toggle-eyecare.sh" "$MAIN_WM/toggle-eyecare.sh" \
+        "$MAIN_WM/scripts/niri-scratch-toggle.sh" "$MAIN_WM/niri-scratch-toggle.sh" \
+        "$MAIN_WM/scripts/niri-scratch-menu.py" "$MAIN_WM/niri-scratch-menu.py"; do
+        [ -f "$HOME/.config/$script_rel" ] && chmod +x "$HOME/.config/$script_rel"
+    done
     if [ -f "$HOME/.config/$MAIN_WM/effects_normal.kdl" ] && [ ! -e "$HOME/.config/$MAIN_WM/effects.kdl" ]; then
         ln -sfn "$HOME/.config/$MAIN_WM/effects_normal.kdl" "$HOME/.config/$MAIN_WM/effects.kdl"
     fi

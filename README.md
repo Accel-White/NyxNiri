@@ -34,7 +34,7 @@
 - Noctalia V5 pulls colors directly from your wallpaper; an `mpvpaper` hook extracts video frames via `ffmpeg` so live wallpapers generate palettes too.
 - Light/dark sync — GSettings and GTK follow Noctalia theme modes automatically.
 - Eye Care Mode (`Super+N`) — warmer color temperature, zero blur, solid opaque windows for reading sessions.
-- Scratchpad Terminal (`Super+~`) — persistent floating terminal backed by tmux, quick toggle anytime.
+- Scratchpad Terminal (`Super+~`) & Radial Menu (`Super+S` / `Super+MouseForward`) — quick-toggle persistent Kitty terminal or open full M3 radial menu (apps, tools, web links, custom TOML).
 - Shell & Terminal — Fish aliases for proxy/cache management, Kitty cursor trails, Windows-style shortcuts.
 - NyxMellow — a dynamic fcitx5 skin: mellow rounded geometry with Noctalia Material You color palette.
 
@@ -88,7 +88,8 @@ NyxNiri
 ├── Wallpapers/                 # wallpaper library
 ├── fcitx5/                     # NyxMellow fcitx5 skin templates
 └── v2/
-    ├── niri/                   # window manager
+    ├── niri/                   # window manager (.kdl, .toml)
+    │   └── scripts/            # scratchpad & radial menu scripts
     ├── noctalia/               # shell + theme sync
     ├── kitty/                  # terminal
     ├── fish/                   # aliases + functions
@@ -172,7 +173,8 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>W</kbd> | Static wallpaper picker |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | Live wallpaper picker |
 | <kbd>Super</kbd> + <kbd>N</kbd> | Toggle Eye Care Mode |
-| <kbd>Super</kbd> + <kbd>~</kbd> | Toggle Scratchpad terminal |
+| <kbd>Super</kbd> + <kbd>~</kbd> | Toggle Kitty scratchpad terminal |
+| <kbd>Super</kbd> + <kbd>S</kbd> / <kbd>Super</kbd> + <kbd>Mouse Forward</kbd> | Scratchpad M3 radial menu |
 | <kbd>Super</kbd> + <kbd>L</kbd> | Lock screen |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Screenshot |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | Reload Niri |

@@ -21,6 +21,8 @@ DEPS=(
     "tmux"
     "inotify-tools"
     "fzf"
+    "python-gobject"
+    "gtk-layer-shell"
     "ttf-jetbrains-mono"
     "ttf-jetbrains-mono-nerd"
     "noto-fonts-cjk"
@@ -44,6 +46,10 @@ check_all_deps() {
         if command -v pacman >/dev/null 2>&1 && pacman -Qq "$cmd" >/dev/null 2>&1; then
             is_installed=1
         elif [ "$cmd" = "inotify-tools" ] && command -v inotifywait >/dev/null 2>&1; then
+            is_installed=1
+        elif [ "$cmd" = "python-gobject" ] && python3 -c "import gi" >/dev/null 2>&1; then
+            is_installed=1
+        elif [ "$cmd" = "gtk-layer-shell" ] && python3 -c "import gi; gi.require_version('GtkLayerShell', '0.1')" >/dev/null 2>&1; then
             is_installed=1
         elif [ "$cmd" = "ttf-jetbrains-mono" ] && command -v fc-list >/dev/null 2>&1 && fc-list : family 2>/dev/null | grep -qi "JetBrains Mono"; then
             is_installed=1

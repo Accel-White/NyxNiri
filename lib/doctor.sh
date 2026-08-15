@@ -51,52 +51,31 @@ run_doctor() {
         msg doctor_ok "Core Dependencies: All core tools ($MAIN_WM, $THEME_ENGINE, fish, starship) are installed"
     fi
 
-    for script in "theme-sync.sh" "wallpaper-hook.sh" "mpvpaper-sync.sh"; do
-        local path="$HOME/.config/$THEME_ENGINE/$script"
-        if [ -f "$path" ]; then
-            if [ -x "$path" ]; then
-                msg doctor_ok "Scripts: $script is executable"
+    for script_info in \
+        "$THEME_ENGINE/theme-sync.sh:theme-sync.sh" \
+        "$THEME_ENGINE/wallpaper-hook.sh:wallpaper-hook.sh" \
+        "$THEME_ENGINE/mpvpaper-sync.sh:mpvpaper-sync.sh" \
+        "fish/clean-cache:clean-cache" \
+        "$MAIN_WM/scripts/toggle-eyecare.sh:toggle-eyecare.sh" \
+        "$MAIN_WM/scripts/niri-scratch-toggle.sh:niri-scratch-toggle.sh" \
+        "$MAIN_WM/scripts/niri-scratch-menu.py:niri-scratch-menu.py"; do
+        local rel_path="${script_info%%:*}"
+        local name="${script_info##*:}"
+        local full_path="$HOME/.config/$rel_path"
+        if [ ! -f "$full_path" ] && [ -f "$HOME/.config/$MAIN_WM/$name" ]; then
+            full_path="$HOME/.config/$MAIN_WM/$name"
+        fi
+        if [ -f "$full_path" ]; then
+            if [ -x "$full_path" ]; then
+                msg doctor_ok "Scripts: $name is executable"
             else
-                msg doctor_warn "Scripts: $script is not executable. Fixing permissions…"
-                chmod +x "$path"
+                msg doctor_warn "Scripts: $name is not executable. Fixing permissions…"
+                chmod +x "$full_path"
             fi
+        elif [ "$name" = "clean-cache" ]; then
+            msg doctor_err "Scripts: clean-cache is missing from ~/.config/fish/"
         fi
     done
-
-    # Check clean-cache in fish config directory
-    local cc_path="$HOME/.config/fish/clean-cache"
-    if [ -f "$cc_path" ]; then
-        if [ -x "$cc_path" ]; then
-            msg doctor_ok "Scripts: clean-cache is executable"
-        else
-            msg doctor_warn "Scripts: clean-cache is not executable. Fixing permissions…"
-            chmod +x "$cc_path"
-        fi
-    else
-        msg doctor_err "Scripts: clean-cache is missing from ~/.config/fish/"
-    fi
-
-    # Check toggle-eyecare.sh in $MAIN_WM config directory
-    local te_path="$HOME/.config/$MAIN_WM/toggle-eyecare.sh"
-    if [ -f "$te_path" ]; then
-        if [ -x "$te_path" ]; then
-            msg doctor_ok "Scripts: toggle-eyecare.sh is executable"
-        else
-            msg doctor_warn "Scripts: toggle-eyecare.sh is not executable. Fixing permissions…"
-            chmod +x "$te_path"
-        fi
-    fi
-
-    # Check niri-scratch-toggle.sh in $MAIN_WM config directory
-    local st_path="$HOME/.config/$MAIN_WM/niri-scratch-toggle.sh"
-    if [ -f "$st_path" ]; then
-        if [ -x "$st_path" ]; then
-            msg doctor_ok "Scripts: niri-scratch-toggle.sh is executable"
-        else
-            msg doctor_warn "Scripts: niri-scratch-toggle.sh is not executable. Fixing permissions…"
-            chmod +x "$st_path"
-        fi
-    fi
 
     if command -v wlsunset >/dev/null 2>&1; then
         msg doctor_ok "EyeCare Component: wlsunset is installed"
@@ -108,6 +87,12 @@ run_doctor() {
         msg doctor_ok "Scratchpad Component: tmux is installed"
     else
         msg doctor_warn "Scratchpad Component: tmux is missing"
+    fi
+
+    if python3 -c "import gi; gi.require_version('Gtk', '3.0'); gi.require_version('GtkLayerShell', '0.1')" >/dev/null 2>&1; then
+        msg doctor_ok "Radial Menu Component: GtkLayerShell Python runtime is available"
+    else
+        msg doctor_warn "Radial Menu Component: GtkLayerShell Python bindings missing (install python-gobject gtk-layer-shell)"
     fi
 
     local curr_shell="${SHELL:-}"
