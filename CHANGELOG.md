@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **常用软件安装列表**: 新增独立常用的可选软件菜单（Nautilus、Mission Center 与 Fcitx5 雾凇拼音）。
+- **更新后依赖自检**: 每次版本更新完成后自动扫描系统依赖，发现新增项主动提示一键安装。
+- **快捷交互完成卡片**: 部署完成后支持按键直达常用软件、点赞项目或退出。
+
+### Fixed
+- **更新日志缩进**: 修复了控制面板更新菜单中更新日志排版未对齐的问题。
+- **终端导航连贯性**: 移除了子菜单返回与退出时的多余停顿，实现流畅瞬切。
+
 ## [v2.3.0] - 2026-08-15
 
 ### Added

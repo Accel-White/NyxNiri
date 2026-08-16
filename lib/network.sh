@@ -135,7 +135,22 @@ show_release_notes() {
     local changelog_file="$1"
     if [ -f "$changelog_file" ]; then
         echo -e "\n  \e[90m── $(msg net_changelog_title) ──\e[0m\n"
-        awk '/^## /{count++} count==1{print} count>=2{exit}' "$changelog_file"
+        awk '
+            /^## \[/ { count++; if (count >= 2) exit; next }
+            count == 1 {
+                if (/^### /) {
+                    sub(/^### /, "")
+                    printf "    \033[1;36m%s\033[0m\n", $0
+                } else if (/^- /) {
+                    sub(/^- /, "")
+                    printf "      \033[90m•\033[0m %s\n", $0
+                } else if (NF == 0) {
+                    print ""
+                } else {
+                    printf "    %s\n", $0
+                }
+            }
+        ' "$changelog_file"
         echo ""
     fi
 }
@@ -204,8 +219,10 @@ update_repo_and_script() {
 
     discover_config_items
     if offer_overwrite_upgrade "$flag"; then
+        check_new_deps_post_update
         msg updating_done
     else
+        check_new_deps_post_update
         msg log_config_deploy_skipped
     fi
     if [ -t 0 ] && [ -c /dev/tty ]; then

@@ -41,6 +41,36 @@ _render_check_row() {
     fi
 }
 
+_render_menu_item() {
+    local idx="$1"
+    local label="$2"
+    local focus="$3"
+    local style="${4:-normal}"
+
+    local prefix="    "
+    if [ "$idx" -eq "$focus" ]; then
+        prefix="  \e[1;36m❯ \e[0m"
+    fi
+
+    if [ "$idx" -eq "$focus" ]; then
+        if [ "$style" = "warn" ]; then
+            printf "%b\e[1;31m%s\e[0m\n" "$prefix" "$label"
+        elif [ "$style" = "subtle" ]; then
+            printf "%b\e[90m%s\e[0m\n" "$prefix" "$label"
+        else
+            printf "%b\e[1;37m%s\e[0m\n" "$prefix" "$label"
+        fi
+    else
+        if [ "$style" = "warn" ]; then
+            printf "%b\e[31m%s\e[0m\n" "$prefix" "$label"
+        elif [ "$style" = "subtle" ]; then
+            printf "%b\e[90m%s\e[0m\n" "$prefix" "$label"
+        else
+            printf "%b%s\n" "$prefix" "$label"
+        fi
+    fi
+}
+
 msg() {
     local key="$1"
     shift || true
@@ -58,7 +88,7 @@ msg() {
             menu_title) echo -e "\n  \e[1;36m── $PROJECT_NAME 控制面板 ──\e[0m\n" ;;
             menu_group_deploy) echo -e "  \e[1;34m部署与安装\e[0m" ;;
             menu_opt1) echo -e "部署组件" ;;
-            menu_opt2) echo -e "检查与安装依赖" ;;
+            menu_opt2) echo -e "依赖与常用软件" ;;
             menu_group_maint) echo -e "\n  \e[1;34m运维与诊断\e[0m" ;;
             menu_group_system) echo -e "\n  \e[1;34m系统管理\e[0m" ;;
             menu_opt3) echo -e "快照管理" ;;
@@ -107,6 +137,7 @@ msg() {
             status_wallpapers_missing) echo -e "\e[1;33m[未下载]\e[0m" ;;
 
             # Optional Modules Menu Labels & Wallpapers (External Pack)
+            optmod_sub_apps) echo -e "常用软件" ;;
             optmod_sub_fcitx) echo -e "NyxMellow fcitx5 皮肤" ;;
             optmod_sub_wallpapers) echo -e "下载壁纸包（约 100MB）" ;;
             msg_downloading_wallpapers) echo -e "\n\e[1;34m:: 拉取壁纸包…\e[0m" ;;
@@ -122,10 +153,10 @@ msg() {
             install_step_deps) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 检查与安装依赖…\e[0m" ;;
             install_step_fcitx) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 配置 fcitx5 皮肤…\e[0m" ;;
             install_step_greeter) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 配置 Noctalia Greeter…\e[0m" ;;
-            install_summary_title) echo -e "部署完成" ;;
-            summary_title_install) echo -e "部署完成" ;;
-            summary_title_update) echo -e "更新完成" ;;
-            summary_title_test) echo -e "测试部署完成" ;;
+            install_summary_title) echo -e "主人，NyxNiri 装完了喵~" ;;
+            summary_title_install) echo -e "主人，NyxNiri 装完了喵~" ;;
+            summary_title_update) echo -e "主人，NyxNiri 更新完了喵~" ;;
+            summary_title_test) echo -e "测试部署完成喵~" ;;
             summary_section_details) echo -e "部署明细" ;;
             summary_item_configs_ok) echo -e "核心配置:   部署成功 ($p1)" ;;
             summary_item_configs_skip) echo -e "核心配置:   已跳过" ;;
@@ -142,6 +173,14 @@ msg() {
             summary_next_start) echo -e "启动桌面 : 运行 niri-session" ;;
             summary_next_manual) echo -e "速查手册 : 运行 nyxhelp" ;;
             summary_next_panel) echo -e "控制面板 : 运行 nyxniri" ;;
+
+            # Interactive Completion Screen Actions
+            summary_action_title) echo -e "\n  \e[1;36m── 下一步 ──\e[0m\n" ;;
+            summary_action_apps) echo -e "常用软件" ;;
+            summary_action_star) echo -e "给作者 GitHub 点 Star" ;;
+            summary_action_exit) echo -e "退出" ;;
+            summary_action_hint) echo -e "  \e[90m[↑/↓/j/k] 移动焦点  [Enter/Space] 选择  [0/q] 退出\e[0m" ;;
+            msg_star_opened) echo -e "\n  \e[1;32m[✓] 感谢支持！已打开项目主页:\e[0m $p1\n" ;;
 
             # Test Deploy
             test_start) echo -e "\n\e[1;34m:: [test] 幂等测试部署 (跳过备份与依赖检查)…\e[0m" ;;
@@ -204,10 +243,25 @@ msg() {
             delete_done) echo -e "\e[1;32m[✓] 已删除快照 [$p1]，剩余 $p2 个\e[0m" ;;
             delete_invalid_num) echo -e "\e[1;31m[✗] 无效序号，已取消删除\e[0m" ;;
 
-            # Dependency Menu
-            dep_menu_title) echo -e "\n  \e[1;36m── 系统依赖检查与安装 ──\e[0m\n" ;;
-            dep_menu_hint) echo -e "  \e[90m[↑/↓/j/k] 移动焦点  [Space] 切换  [a] 全选  [n] 清空  [Enter] 开始安装\e[0m" ;;
+            # Dependency & Recommended Apps Menu
+            deps_menu_title) echo -e "\n  \e[1;36m── 依赖与常用软件 ──\e[0m\n" ;;
+            deps_sub_core) echo -e "核心依赖" ;;
+            deps_sub_apps) echo -e "常用软件" ;;
+            deps_sub_back) echo -e "返回主菜单" ;;
+            dep_menu_title) echo -e "\n  \e[1;36m── 核心依赖 ──\e[0m\n" ;;
+            dep_menu_hint) echo -e "  \e[90m[↑/↓/j/k] 移动焦点  [Space] 切换  [a] 全选  [n] 清空  [Enter] 安装  [0/q] 返回\e[0m" ;;
             installing_selected) echo -e "\n\e[1;34m:: 正在安装选中依赖…\e[0m" ;;
+            opt_apps_menu_title) echo -e "\n  \e[1;36m── 常用软件 ──\e[0m\n" ;;
+            opt_apps_menu_hint) echo -e "  \e[90m[↑/↓/j/k] 移动焦点  [Space] 切换  [a] 全选  [n] 清空  [Enter] 安装  [0/q] 返回\e[0m" ;;
+            app_nautilus) echo -e "Nautilus (文件管理器)" ;;
+            app_missioncenter) echo -e "Mission Center (系统监视器)" ;;
+            app_fcitx5_rime) echo -e "Fcitx5 + 雾凇拼音 (输入法)" ;;
+            installing_selected_apps) echo -e "\n\e[1;34m:: 正在安装常用软件…\e[0m" ;;
+            opt_apps_install_done) echo -e "\e[1;32m[✓] 常用软件安装完成\e[0m" ;;
+            opt_apps_none_selected) echo -e "\e[90m未选择任何软件。\e[0m" ;;
+            new_deps_detected) echo -e "\n  \e[1;33m[!] 检测到未安装的依赖:\e[0m $p1" ;;
+            prompt_install_missing_deps) echo -e "▸ 是否现在安装？[Y/n]: " ;;
+            deps_install_skipped) echo -e "\e[90m已跳过安装。稍后可运行 nyxniri deps 安装。\e[0m" ;;
 
             # Optional Greeter Module
             greeter_install_title) echo -e "\n\e[1;35m[ 可选模块 ] Noctalia Greeter 安装与配置\e[0m" ;;
@@ -356,7 +410,7 @@ msg() {
             menu_title) echo -e "\n  \e[1;36m── $PROJECT_NAME Control Panel ──\e[0m\n" ;;
             menu_group_deploy) echo -e "  \e[1;34mDeployment & Setup\e[0m" ;;
             menu_opt1) echo -e "Deploy Components (Configs / Wallpapers / Modules)" ;;
-            menu_opt2) echo -e "Check & Install Dependencies" ;;
+            menu_opt2) echo -e "Dependencies & Apps" ;;
             menu_group_maint) echo -e "\n  \e[1;34mMaintenance\e[0m" ;;
             menu_group_system) echo -e "\n  \e[1;34mSystem\e[0m" ;;
             menu_opt3) echo -e "Snapshot Management" ;;
@@ -405,6 +459,7 @@ msg() {
             status_wallpapers_missing) echo -e "\e[1;33m[Not Downloaded]\e[0m" ;;
 
             # Optional Modules Menu Labels & Wallpapers (External Pack)
+            optmod_sub_apps) echo -e "Recommended Apps" ;;
             optmod_sub_fcitx) echo -e "NyxMellow fcitx5 Skin" ;;
             optmod_sub_wallpapers) echo -e "Wallpaper Pack (~100MB)" ;;
             msg_downloading_wallpapers) echo -e "\n\e[1;34m:: Downloading wallpapers…\e[0m" ;;
@@ -420,10 +475,10 @@ msg() {
             install_step_deps) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Checking dependencies…\e[0m" ;;
             install_step_fcitx) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Configuring fcitx5 skin…\e[0m" ;;
             install_step_greeter) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Configuring Noctalia Greeter…\e[0m" ;;
-            install_summary_title) echo -e "Deployment Complete" ;;
-            summary_title_install) echo -e "Deployment Complete" ;;
-            summary_title_update) echo -e "Update Complete" ;;
-            summary_title_test) echo -e "Test Deployment Complete" ;;
+            install_summary_title) echo -e "Master, NyxNiri is all set nya~" ;;
+            summary_title_install) echo -e "Master, NyxNiri is all set nya~" ;;
+            summary_title_update) echo -e "Master, NyxNiri has been updated nya~" ;;
+            summary_title_test) echo -e "Test deploy complete nya~" ;;
             summary_section_details) echo -e "Deployment Details" ;;
             summary_item_configs_ok) echo -e "Core Config:    Deployment Succeeded ($p1)" ;;
             summary_item_configs_skip) echo -e "Core Config:    Skipped" ;;
@@ -440,6 +495,14 @@ msg() {
             summary_next_start) echo -e "Start Desktop : Run niri-session" ;;
             summary_next_manual) echo -e "Quick Manual  : Run nyxhelp" ;;
             summary_next_panel) echo -e "Control Panel : Run nyxniri" ;;
+
+            # Interactive Completion Screen Actions
+            summary_action_title) echo -e "\n  \e[1;36m── Next Steps ──\e[0m\n" ;;
+            summary_action_apps) echo -e "Recommended Apps" ;;
+            summary_action_star) echo -e "Star on GitHub" ;;
+            summary_action_exit) echo -e "Exit" ;;
+            summary_action_hint) echo -e "  \e[90m[↑/↓/j/k] Move  [Enter/Space] Select  [0/q] Exit\e[0m" ;;
+            msg_star_opened) echo -e "\n  \e[1;32m[✓] Thanks for your support! Opened repository:\e[0m $p1\n" ;;
 
             # Test Deploy
             test_start) echo -e "\n\e[1;34m:: [test] Idempotent test deploy (skipped backup & deps)…\e[0m" ;;
@@ -501,9 +564,25 @@ msg() {
             delete_done) echo -e "\e[1;32m[✓] Deleted snapshot [$p1], $p2 snapshot(s) remaining\e[0m" ;;
             delete_invalid_num) echo -e "\e[1;31m[✗] Invalid selection\e[0m" ;;
 
-            # Dependency Menu
-            dep_menu_title) echo -e "\n  \e[1;36m── Dependency Selection ──\e[0m\n" ;;
-            dep_menu_hint) echo -e "  \e[90m[↑/↓/j/k] Move  [Space] Toggle  [a] All  [n] None  [Enter] Install\e[0m" ;;
+            # Dependency & Recommended Apps Menu
+            deps_menu_title) echo -e "\n  \e[1;36m── Dependencies & Apps ──\e[0m\n" ;;
+            deps_sub_core) echo -e "Core Dependencies" ;;
+            deps_sub_apps) echo -e "Recommended Apps" ;;
+            deps_sub_back) echo -e "Back to Main Menu" ;;
+            dep_menu_title) echo -e "\n  \e[1;36m── Core Dependencies ──\e[0m\n" ;;
+            dep_menu_hint) echo -e "  \e[90m[↑/↓/j/k] Move  [Space] Toggle  [a] All  [n] None  [Enter] Install  [0/q] Back\e[0m" ;;
+            installing_selected) echo -e "\n\e[1;34m:: Installing selected dependencies…\e[0m" ;;
+            opt_apps_menu_title) echo -e "\n  \e[1;36m── Recommended Apps ──\e[0m\n" ;;
+            opt_apps_menu_hint) echo -e "  \e[90m[↑/↓/j/k] Move  [Space] Toggle  [a] All  [n] None  [Enter] Install  [0/q] Back\e[0m" ;;
+            app_nautilus) echo -e "Nautilus (File Manager)" ;;
+            app_missioncenter) echo -e "Mission Center (System Monitor)" ;;
+            app_fcitx5_rime) echo -e "Fcitx5 + Rime Ice (Input Method)" ;;
+            installing_selected_apps) echo -e "\n\e[1;34m:: Installing recommended apps…\e[0m" ;;
+            opt_apps_install_done) echo -e "\e[1;32m[✓] Recommended apps installation completed\e[0m" ;;
+            opt_apps_none_selected) echo -e "\e[90mNo apps selected.\e[0m" ;;
+            new_deps_detected) echo -e "\n  \e[1;33m[!] Missing dependencies detected:\e[0m $p1" ;;
+            prompt_install_missing_deps) echo -e "▸ Install now? [Y/n]: " ;;
+            deps_install_skipped) echo -e "\e[90mSkipped installation. Run nyxniri deps to install anytime.\e[0m" ;;
             copy_done) echo -e "\e[1;32mConfigurations deployed\e[0m" ;;
 
             # Optional Greeter Module
@@ -585,7 +664,6 @@ msg() {
 
             # Alerts / Prompts
             preflight_express_summary) echo -e "\n\e[1;34m:: Preparing to install:\e[0m" ;;
-            installing_selected) echo -e "\n\e[1;34m:: Installing selected dependencies…\e[0m" ;;
             backing_up) echo -e "\n\e[1;34m:: Creating configuration snapshot…\e[0m" ;;
             backup_done) echo -e "\e[1;32m[✓] Snapshot created: $p1\e[0m" ;;
             copying_configs) echo -e "\n\e[1;34m:: Deploying configurations…\e[0m" ;;

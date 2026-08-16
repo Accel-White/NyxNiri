@@ -243,8 +243,6 @@ deploy_selected_configs() {
 # Render the clean, minimal, zero-entropy TUI Completion Screen according to the TUI Design Charter
 render_completion_screen() {
     local mode="${1:-install}"
-    clear 2>/dev/null || true
-    show_logo
 
     local title_str
     case "$mode" in
@@ -253,10 +251,6 @@ render_completion_screen() {
         *)      title_str="$(msg summary_title_install)" ;;
     esac
 
-    echo -e "  \e[1;32m$title_str\e[0m\n"
-
-    # Section 1: 部署明细 / Details
-    echo -e "  \e[1;37m$(msg summary_section_details)\e[0m"
     local cfg_count=0
     if [ -n "${CHOSEN_CONFIG_ITEMS+x}" ]; then
         cfg_count=${#CHOSEN_CONFIG_ITEMS[@]}
@@ -270,66 +264,198 @@ render_completion_screen() {
     fi
     items_str="${items_str//,/, }"
 
-    if [ "$cfg_count" -gt 0 ] || [ "$mode" = "test" ]; then
-        echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_configs_ok "$items_str")"
-    else
-        echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_configs_skip)"
-    fi
-
-    if [ "${WP_PACK_DEPLOYED:-0}" -eq 1 ] || [ "${DO_WALLPAPERS:-n}" = "y" ]; then
-        echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_wallpapers_ok)"
-    else
-        echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_wallpapers_skip)"
-    fi
-
-    if fcitx5_installed; then
-        if [ "${DO_FCITX:-n}" = "y" ] || fcitx_enabled; then
-            echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_fcitx_ok)"
-        else
-            echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_fcitx_skip)"
-        fi
-    fi
-
+    local left_missing=0
     if [ "$mode" = "full" ]; then
         check_all_deps
-        local left_missing=0
         for stat in "${DEP_STATUS[@]:-}"; do
             if [ "${stat:-0}" -eq 0 ]; then
                 left_missing=$((left_missing + 1))
             fi
         done
-        if [ "$left_missing" -eq 0 ]; then
-            echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_deps_ok)"
-        else
-            echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_deps_skip)"
-        fi
     fi
 
-    if [ "${DO_GREETER:-n}" = "y" ]; then
-        echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_greeter_ok)"
-    fi
-
-    # Section 2: 保留的配置清单 (自动继承) / Preserved Configs
+    # Read and preserve custom configurations list before clearing
+    local preserved_lines=()
     if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ] && [ -s "$NYXNIRI_CUSTOM_LOG" ]; then
-        echo ""
-        echo -e "  \e[1;37m$(msg summary_section_preserved)\e[0m"
-        local item
         while IFS= read -r item; do
-            [ -n "$item" ] && echo -e "    $item"
+            [ -n "$item" ] && preserved_lines+=("$item")
         done < <(sort -u "$NYXNIRI_CUSTOM_LOG")
-    fi
-    if [ -n "${NYXNIRI_CUSTOM_LOG:-}" ]; then
         rm -f "$NYXNIRI_CUSTOM_LOG" 2>/dev/null || true
         unset NYXNIRI_CUSTOM_LOG
     fi
 
-    # Section 3: 下一步 / Next Steps
-    echo ""
-    echo -e "  \e[1;37m$(msg summary_section_next)\e[0m"
-    echo -e "    $(msg summary_next_start)"
-    echo -e "    $(msg summary_next_manual)"
-    echo -e "    $(msg summary_next_panel)"
-    echo ""
+    # In non-interactive mode or test mode, render minimal static footer and return
+    if [ ! -t 0 ] || [ ! -c /dev/tty ] || [ "$mode" = "test" ]; then
+        clear 2>/dev/null || true
+        show_logo
+        echo -e "  \e[1;32m$title_str\e[0m\n"
+        echo -e "  \e[1;37m$(msg summary_section_details)\e[0m"
+        if [ "$cfg_count" -gt 0 ] || [ "$mode" = "test" ]; then
+            echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_configs_ok "$items_str")"
+        else
+            echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_configs_skip)"
+        fi
+
+        if [ "${WP_PACK_DEPLOYED:-0}" -eq 1 ] || [ "${DO_WALLPAPERS:-n}" = "y" ]; then
+            echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_wallpapers_ok)"
+        else
+            echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_wallpapers_skip)"
+        fi
+
+        if fcitx5_installed; then
+            if [ "${DO_FCITX:-n}" = "y" ] || fcitx_enabled; then
+                echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_fcitx_ok)"
+            else
+                echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_fcitx_skip)"
+            fi
+        fi
+
+        if [ "$mode" = "full" ]; then
+            if [ "$left_missing" -eq 0 ]; then
+                echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_deps_ok)"
+            else
+                echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_deps_skip)"
+            fi
+        fi
+
+        if [ "${DO_GREETER:-n}" = "y" ]; then
+            echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_greeter_ok)"
+        fi
+
+        if [ ${#preserved_lines[@]} -gt 0 ]; then
+            echo ""
+            echo -e "  \e[1;37m$(msg summary_section_preserved)\e[0m"
+            for pline in "${preserved_lines[@]}"; do
+                echo -e "    $pline"
+            done
+        fi
+
+        echo ""
+        echo -e "  \e[1;37m$(msg summary_section_next)\e[0m"
+        echo -e "    $(msg summary_next_start)"
+        echo -e "    $(msg summary_next_manual)"
+        echo -e "    $(msg summary_next_panel)"
+        echo ""
+        return 0
+    fi
+
+    # Interactive shortcut card with smooth in-place redraw
+    local cur_focus=0
+    clear 2>/dev/null || true
+
+    while true; do
+        printf '\e[?25l\e[H'
+        show_logo
+        echo -e "  \e[1;32m$title_str\e[0m\n"
+
+        # Section 1: 部署明细 / Details
+        echo -e "  \e[1;37m$(msg summary_section_details)\e[0m"
+        if [ "$cfg_count" -gt 0 ]; then
+            echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_configs_ok "$items_str")"
+        else
+            echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_configs_skip)"
+        fi
+
+        if [ "${WP_PACK_DEPLOYED:-0}" -eq 1 ] || [ "${DO_WALLPAPERS:-n}" = "y" ]; then
+            echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_wallpapers_ok)"
+        else
+            echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_wallpapers_skip)"
+        fi
+
+        if fcitx5_installed; then
+            if [ "${DO_FCITX:-n}" = "y" ] || fcitx_enabled; then
+                echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_fcitx_ok)"
+            else
+                echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_fcitx_skip)"
+            fi
+        fi
+
+        if [ "$mode" = "full" ]; then
+            if [ "$left_missing" -eq 0 ]; then
+                echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_deps_ok)"
+            else
+                echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_deps_skip)"
+            fi
+        fi
+
+        if [ "${DO_GREETER:-n}" = "y" ]; then
+            echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_greeter_ok)"
+        fi
+
+        # Section 2: 保留的配置清单 (自动继承) / Preserved Configs
+        if [ ${#preserved_lines[@]} -gt 0 ]; then
+            echo ""
+            echo -e "  \e[1;37m$(msg summary_section_preserved)\e[0m"
+            for pline in "${preserved_lines[@]}"; do
+                echo -e "    $pline"
+            done
+        fi
+
+        # Section 3: 下一步 (Next Steps)
+        msg summary_action_title
+        _render_menu_item 0 "$(msg summary_action_apps)" "$cur_focus"
+        _render_menu_item 1 "$(msg summary_action_star)" "$cur_focus"
+        _render_menu_item 2 "$(msg summary_action_exit)" "$cur_focus" "subtle"
+
+        echo ""
+        msg summary_action_hint
+        echo ""
+        printf '\e[J'
+
+        local key
+        key=$(read_key) || break
+
+        local act=-1
+        case "$key" in
+            UP|[kK])
+                cur_focus=$((cur_focus - 1))
+                [ "$cur_focus" -lt 0 ] && cur_focus=2
+                ;;
+            DOWN|[jJ])
+                cur_focus=$((cur_focus + 1))
+                [ "$cur_focus" -gt 2 ] && cur_focus=0
+                ;;
+            ENTER|SPACE)
+                act=$cur_focus
+                ;;
+            1)
+                cur_focus=0
+                act=0
+                ;;
+            2)
+                cur_focus=1
+                act=1
+                ;;
+            0|[qQ]|ESC)
+                cur_focus=2
+                act=2
+                ;;
+        esac
+
+        if [ "$act" -ne -1 ]; then
+            printf '\e[?25h'
+            case "$act" in
+                0)
+                    run_optional_apps_menu_loop || true
+                    clear 2>/dev/null || true
+                    ;;
+                1)
+                    local star_url="${REPO_URL%.git}"
+                    if command -v xdg-open >/dev/null 2>&1; then
+                        xdg-open "$star_url" >/dev/null 2>&1 || true
+                    fi
+                    msg msg_star_opened "$star_url"
+                    sleep 1.2
+                    clear 2>/dev/null || true
+                    ;;
+                2)
+                    return 0
+                    ;;
+            esac
+            [ "$act" -eq 2 ] && break
+        fi
+    done
+    printf '\e[?25h'
 }
 
 # True when the full external wallpaper pack (the video/ marker directory) is

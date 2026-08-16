@@ -120,6 +120,7 @@ NyxNiri
 | `nyxniri purge` | Remove configs, cache and wallpapers |
 | `nyxniri doctor` | Dependency + system health check |
 | `nyxniri deps` | Open dependency check & install menu |
+| `nyxniri apps` | Open recommended apps installer (Nautilus, Mission Center, Fcitx5) |
 | `nyxniri wallpapers` | Download the full wallpaper & video pack from the external repo |
 | `nyxniri bug` / `nyxniri report` | Generate diagnostic bug report |
 | `nyxniri test` | Developer test deploy (no backup, keep monitor.kdl) |

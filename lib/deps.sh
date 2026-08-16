@@ -33,8 +33,17 @@ AUR_DEPS=(
     "mpvpaper"
 )
 
+# Optional recommended software list (isolated from core dependencies)
+OPT_APPS=(
+    "nautilus"
+    "missioncenter"
+    "fcitx5-rime"
+)
+
 declare -a DEP_STATUS=()
 declare -a DEP_SELECT=()
+declare -a OPT_APP_STATUS=()
+declare -a OPT_APP_SELECT=()
 
 check_all_deps() {
     DEP_STATUS=()
@@ -154,8 +163,7 @@ run_dep_menu_loop() {
                 ;;
             [qQ]|0|ESC)
                 printf '\e[?25h'
-                msg install_cancelled
-                return 1
+                return 0
                 ;;
         esac
     done
@@ -383,5 +391,304 @@ check_mpvpaper_version() {
         else
             msg mpvpaper_upgrade_skip
         fi
+    fi
+}
+
+check_all_opt_apps() {
+    OPT_APP_STATUS=()
+    for i in "${!OPT_APPS[@]}"; do
+        local app="${OPT_APPS[$i]}"
+        local is_installed=0
+        case "$app" in
+            nautilus)
+                if command -v nautilus >/dev/null 2>&1 || { command -v pacman >/dev/null 2>&1 && pacman -Qq nautilus >/dev/null 2>&1; }; then
+                    is_installed=1
+                fi
+                ;;
+            missioncenter)
+                if command -v missioncenter >/dev/null 2>&1 || { command -v pacman >/dev/null 2>&1 && pacman -Qq mission-center >/dev/null 2>&1; }; then
+                    is_installed=1
+                fi
+                ;;
+            fcitx5-rime)
+                if command -v fcitx5 >/dev/null 2>&1 && { command -v pacman >/dev/null 2>&1 && pacman -Qq fcitx5-rime >/dev/null 2>&1; }; then
+                    is_installed=1
+                fi
+                ;;
+        esac
+        OPT_APP_STATUS[i]=$is_installed
+    done
+}
+
+get_opt_app_label() {
+    local app="$1"
+    case "$app" in
+        nautilus) msg app_nautilus ;;
+        missioncenter) msg app_missioncenter ;;
+        fcitx5-rime) msg app_fcitx5_rime ;;
+        *) echo "$app" ;;
+    esac
+}
+
+show_optional_apps_menu() {
+    local focus="${1:-0}"
+    printf '\e[?25l\e[H'
+    show_logo
+    msg opt_apps_menu_title
+    for i in "${!OPT_APPS[@]}"; do
+        local status=""
+        if [ "${OPT_APP_STATUS[i]:-0}" -eq 1 ]; then
+            status=$(msg installed)
+        else
+            status=$(msg missing)
+        fi
+
+        local check_str="\e[90m[ ]\e[0m"
+        if [ "${OPT_APP_SELECT[i]:-0}" -eq 1 ]; then
+            check_str="\e[1;32m[✓]\e[0m"
+        fi
+
+        local is_focus=0
+        [ "$i" -eq "$focus" ] && is_focus=1
+        local label
+        label=$(get_opt_app_label "${OPT_APPS[$i]}")
+        _render_check_row "$is_focus" "$check_str" "$(_disp_pad "$label" 36) $status"
+    done
+    echo ""
+    msg opt_apps_menu_hint
+    echo ""
+    printf '\e[J'
+}
+
+run_optional_apps_menu_loop() {
+    check_all_opt_apps
+    OPT_APP_SELECT=()
+    for i in "${!OPT_APPS[@]}"; do
+        OPT_APP_SELECT[i]=0
+    done
+
+    clear 2>/dev/null || true
+    local cur_focus=0
+    while true; do
+        show_optional_apps_menu "$cur_focus"
+
+        if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
+            break
+        fi
+
+        local key
+        key=$(read_key) || break
+
+        case "$key" in
+            UP|[kK])
+                cur_focus=$((cur_focus - 1))
+                [ "$cur_focus" -lt 0 ] && cur_focus=$((${#OPT_APPS[@]} - 1))
+                ;;
+            DOWN|[jJ])
+                cur_focus=$((cur_focus + 1))
+                [ "$cur_focus" -ge "${#OPT_APPS[@]}" ] && cur_focus=0
+                ;;
+            SPACE)
+                if [ "${OPT_APP_SELECT[cur_focus]:-0}" -eq 1 ]; then
+                    OPT_APP_SELECT[cur_focus]=0
+                else
+                    OPT_APP_SELECT[cur_focus]=1
+                fi
+                ;;
+            ENTER|[iI])
+                break
+                ;;
+            [aA])
+                for i in "${!OPT_APPS[@]}"; do OPT_APP_SELECT[i]=1; done
+                ;;
+            [nN])
+                for i in "${!OPT_APPS[@]}"; do OPT_APP_SELECT[i]=0; done
+                ;;
+            [1-9])
+                local idx=$((key - 1))
+                if [ "$idx" -ge 0 ] && [ "$idx" -lt "${#OPT_APPS[@]}" ]; then
+                    cur_focus=$idx
+                    if [ "${OPT_APP_SELECT[idx]:-0}" -eq 1 ]; then
+                        OPT_APP_SELECT[idx]=0
+                    else
+                        OPT_APP_SELECT[idx]=1
+                    fi
+                fi
+                ;;
+            [qQ]|0|ESC)
+                printf '\e[?25h'
+                return 0
+                ;;
+        esac
+    done
+    printf '\e[?25h'
+
+    install_selected_opt_apps
+}
+
+install_selected_opt_apps() {
+    local repo_pkgs=()
+    local aur_pkgs=()
+    local has_fcitx=false
+
+    for i in "${!OPT_APPS[@]}"; do
+        if [ "${OPT_APP_SELECT[i]:-0}" -eq 1 ]; then
+            local app="${OPT_APPS[$i]}"
+            case "$app" in
+                nautilus)
+                    repo_pkgs+=("nautilus")
+                    ;;
+                missioncenter)
+                    repo_pkgs+=("mission-center")
+                    ;;
+                fcitx5-rime)
+                    repo_pkgs+=("fcitx5" "fcitx5-gtk" "fcitx5-qt" "fcitx5-configtool" "fcitx5-rime")
+                    aur_pkgs+=("rime-ice-git")
+                    has_fcitx=true
+                    ;;
+            esac
+        fi
+    done
+
+    if [ ${#repo_pkgs[@]} -eq 0 ] && [ ${#aur_pkgs[@]} -eq 0 ]; then
+        msg opt_apps_none_selected
+        return 0
+    fi
+
+    msg installing_selected_apps
+    local pkg_manager=""
+    local has_aur_helper=false
+    local mgr=""
+    if mgr=$(aur_helper_usable); then
+        pkg_manager="$mgr"
+        has_aur_helper=true
+    else
+        pkg_manager="sudo pacman"
+    fi
+
+    if [ ${#repo_pkgs[@]} -gt 0 ]; then
+        $pkg_manager -S --needed --noconfirm "${repo_pkgs[@]}" || true
+    fi
+
+    if [ ${#aur_pkgs[@]} -gt 0 ]; then
+        if [ "$has_aur_helper" = false ] && ensure_aur_helper; then
+            pkg_manager="paru"
+            has_aur_helper=true
+        fi
+        if [ "$has_aur_helper" = true ]; then
+            $pkg_manager -S --needed --noconfirm "${aur_pkgs[@]}" || true
+        fi
+    fi
+
+    if [ "$has_fcitx" = true ]; then
+        if command -v fcitx5 >/dev/null 2>&1 && [ -n "$(type -t fcitx_install || true)" ]; then
+            fcitx_install || true
+        fi
+    fi
+
+    check_all_opt_apps
+    msg opt_apps_install_done
+}
+
+deps_menu() {
+    local cur_focus=0
+    clear 2>/dev/null || true
+
+    while true; do
+        printf '\e[?25l\e[H'
+        show_logo
+        msg deps_menu_title
+
+        _render_menu_item 0 "$(msg deps_sub_core)" "$cur_focus"
+        _render_menu_item 1 "$(msg deps_sub_apps)" "$cur_focus"
+        _render_menu_item 2 "$(msg deps_sub_back)" "$cur_focus" "subtle"
+
+        echo ""
+        msg submenu_hint
+        echo ""
+        printf '\e[J'
+
+        if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
+            break
+        fi
+
+        local key
+        key=$(read_key) || break
+
+        local act=-1
+        case "$key" in
+            UP|[kK])
+                cur_focus=$((cur_focus - 1))
+                [ "$cur_focus" -lt 0 ] && cur_focus=2
+                ;;
+            DOWN|[jJ])
+                cur_focus=$((cur_focus + 1))
+                [ "$cur_focus" -gt 2 ] && cur_focus=0
+                ;;
+            ENTER|SPACE)
+                act=$cur_focus
+                ;;
+            [1-2])
+                cur_focus=$((key - 1))
+                act=$cur_focus
+                ;;
+            0|[qQ]|ESC)
+                cur_focus=2
+                act=2
+                ;;
+        esac
+
+        if [ "$act" -ne -1 ]; then
+            printf '\e[?25h'
+            case "$act" in
+                0) run_dep_menu_loop || true ;;
+                1) run_optional_apps_menu_loop || true ;;
+                2) return 0 ;;
+            esac
+            clear 2>/dev/null || true
+        fi
+    done
+    printf '\e[?25h'
+}
+
+check_new_deps_post_update() {
+    check_all_deps
+    local missing=()
+    for i in "${!DEPS[@]}"; do
+        if [ "${DEP_STATUS[i]:-0}" -eq 0 ]; then
+            missing+=("${DEPS[$i]}")
+        fi
+    done
+
+    if [ ${#missing[@]} -eq 0 ]; then
+        return 0
+    fi
+
+    msg new_deps_detected "${missing[*]}"
+    if [ ! -t 0 ] || [ ! -c /dev/tty ]; then
+        DEP_SELECT=()
+        for i in "${!DEPS[@]}"; do
+            if [ "${DEP_STATUS[i]:-0}" -eq 0 ]; then
+                DEP_SELECT[i]=1
+            else
+                DEP_SELECT[i]=0
+            fi
+        done
+        install_selected_deps || true
+        return 0
+    fi
+
+    if prompt_confirm prompt_install_missing_deps "y"; then
+        DEP_SELECT=()
+        for i in "${!DEPS[@]}"; do
+            if [ "${DEP_STATUS[i]:-0}" -eq 0 ]; then
+                DEP_SELECT[i]=1
+            else
+                DEP_SELECT[i]=0
+            fi
+        done
+        install_selected_deps || true
+    else
+        msg deps_install_skipped
     fi
 }

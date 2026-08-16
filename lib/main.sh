@@ -34,36 +34,6 @@ press_any_key() {
     fi
 }
 
-_render_menu_item() {
-    local idx="$1"
-    local label="$2"
-    local focus="$3"
-    local style="${4:-normal}"
-
-    local prefix="    "
-    if [ "$idx" -eq "$focus" ]; then
-        prefix="  \e[1;36m❯ \e[0m"
-    fi
-
-    if [ "$idx" -eq "$focus" ]; then
-        if [ "$style" = "warn" ]; then
-            printf "%b\e[1;31m%s\e[0m\n" "$prefix" "$label"
-        elif [ "$style" = "subtle" ]; then
-            printf "%b\e[90m%s\e[0m\n" "$prefix" "$label"
-        else
-            printf "%b\e[1;37m%s\e[0m\n" "$prefix" "$label"
-        fi
-    else
-        if [ "$style" = "warn" ]; then
-            printf "%b\e[31m%s\e[0m\n" "$prefix" "$label"
-        elif [ "$style" = "subtle" ]; then
-            printf "%b\e[90m%s\e[0m\n" "$prefix" "$label"
-        else
-            printf "%b%s\n" "$prefix" "$label"
-        fi
-    fi
-}
-
 snapshot_menu() {
     local cur_focus=0
     clear 2>/dev/null || true
@@ -283,16 +253,18 @@ optional_modules_menu() {
         show_logo
         msg optmod_menu_title
 
-        local label1 label2 label3
+        local label0 label1 label2 label3
+        label0="$(_disp_pad "$(msg optmod_sub_apps)" 26)"
         label1="$(_disp_pad "Noctalia Greeter" 26)$(greeter_status_label)"
         label2="$(_disp_pad "$(msg optmod_sub_fcitx)" 26)$(fcitx_status_label)"
         label3="$(_disp_pad "$(msg optmod_sub_wallpapers)" 26)$(wallpapers_status_label)"
 
-        _render_menu_item 0 "$label1" "$cur_focus"
-        _render_menu_item 1 "$label2" "$cur_focus"
-        _render_menu_item 2 "$label3" "$cur_focus"
-        _render_menu_item 3 "$(msg optmod_purge)" "$cur_focus" "warn"
-        _render_menu_item 4 "$(msg optmod_back)" "$cur_focus" "subtle"
+        _render_menu_item 0 "$label0" "$cur_focus"
+        _render_menu_item 1 "$label1" "$cur_focus"
+        _render_menu_item 2 "$label2" "$cur_focus"
+        _render_menu_item 3 "$label3" "$cur_focus"
+        _render_menu_item 4 "$(msg optmod_purge)" "$cur_focus" "warn"
+        _render_menu_item 5 "$(msg optmod_back)" "$cur_focus" "subtle"
 
         echo ""
         msg submenu_hint
@@ -310,33 +282,34 @@ optional_modules_menu() {
         case "$key" in
             UP|[kK])
                 cur_focus=$((cur_focus - 1))
-                [ "$cur_focus" -lt 0 ] && cur_focus=4
+                [ "$cur_focus" -lt 0 ] && cur_focus=5
                 ;;
             DOWN|[jJ])
                 cur_focus=$((cur_focus + 1))
-                [ "$cur_focus" -gt 4 ] && cur_focus=0
+                [ "$cur_focus" -gt 5 ] && cur_focus=0
                 ;;
             ENTER|SPACE)
                 act=$cur_focus
                 ;;
-            [1-4])
+            [1-5])
                 cur_focus=$((key - 1))
                 act=$cur_focus
                 ;;
             0|[qQ]|ESC)
-                cur_focus=4
-                act=4
+                cur_focus=5
+                act=5
                 ;;
         esac
 
         if [ "$act" -ne -1 ]; then
             printf '\e[?25h'
             case "$act" in
-                0) greeter_menu ;;
-                1) fcitx_menu ;;
-                2) deploy_wallpapers "y"; press_any_key ;;
-                3) discover_config_items; uninstall_nyxniri "purge"; press_any_key ;;
-                4) return 0 ;;
+                0) run_optional_apps_menu_loop || true ;;
+                1) greeter_menu ;;
+                2) fcitx_menu ;;
+                3) deploy_wallpapers "y"; press_any_key ;;
+                4) discover_config_items; uninstall_nyxniri "purge"; press_any_key ;;
+                5) return 0 ;;
             esac
             clear 2>/dev/null || true
         fi
@@ -406,8 +379,8 @@ main_menu() {
         if [ "$action_item" -ne -1 ]; then
             printf '\e[?25h'
             case "$action_item" in
-                0) install_configs "full" || true; press_any_key ;;
-                1) run_dep_menu_loop || true; press_any_key ;;
+                0) install_configs "full" || true ;;
+                1) deps_menu || true ;;
                 2) snapshot_menu ;;
                 3) RUN_FROM_MENU=1 update_repo_and_script "" || true; press_any_key ;;
                 4) run_doctor; press_any_key ;;
@@ -479,7 +452,24 @@ main() {
                 exit 0
                 ;;
             deps)
-                run_dep_menu_loop
+                shift
+                case "${1:-}" in
+                    core)
+                        run_dep_menu_loop
+                        exit 0
+                        ;;
+                    apps|opt|optional)
+                        run_optional_apps_menu_loop
+                        exit 0
+                        ;;
+                    *)
+                        deps_menu
+                        exit 0
+                        ;;
+                esac
+                ;;
+            apps|recommended)
+                run_optional_apps_menu_loop
                 exit 0
                 ;;
             wallpapers|wp)
@@ -551,7 +541,8 @@ main() {
                 echo "  uninstall            Safely uninstall NyxNiri (with auto config archive)"
                 echo "  purge                Deep purge all NyxNiri configs, cache & wallpapers"
                 echo "  doctor               Run System Doctor diagnostics"
-                echo "  deps                 Open the dependency check & install menu"
+                echo "  deps [core|apps]     Open dependency or recommended apps menu"
+                echo "  apps                 Open recommended software installer (Nautilus, Mission Center, Fcitx5)"
                 echo "  wallpapers           Download the full wallpaper & video pack from the external repo"
                 echo "  bug|report           Generate a diagnostic bug report"
                 echo "  test                 Test deploy (no backup, keep monitor.kdl, idempotent)"

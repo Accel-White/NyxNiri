@@ -104,6 +104,7 @@ function nyxhelp --description "NyxNiri Cheatsheet速查手册"
             set_color -o magenta; echo "  NyxNiri CLI & 配置快照"; set_color normal
             set_color -o yellow; echo -n "    nyxniri                  "; set_color green; echo "-> 打开控制面板主菜单"; set_color normal
             set_color -o yellow; echo -n "    nyxniri doctor           "; set_color green; echo "-> 运行系统全要素诊断"; set_color normal
+            set_color -o yellow; echo -n "    nyxniri apps             "; set_color green; echo "-> 常用软件管理 (Nautilus/MissionCenter/Fcitx5)"; set_color normal
             set_color -o yellow; echo -n "    nyxniri snapshot [备注]  "; set_color green; echo "-> 创建配置安全快照"; set_color normal
             set_color -o yellow; echo -n "    nyxniri rollback [序号]  "; set_color green; echo "-> 恢复历史配置快照"; set_color normal
             set_color -o yellow; echo -n "    nyxniri list             "; set_color green; echo "-> 查看所有配置快照"; set_color normal

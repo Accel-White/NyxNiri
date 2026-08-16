@@ -120,6 +120,7 @@ NyxNiri
 | `nyxniri purge` | 清除配置、缓存与壁纸 |
 | `nyxniri doctor` | 依赖与系统健康检查 |
 | `nyxniri deps` | 打开依赖检查与安装菜单 |
+| `nyxniri apps` | 常用软件安装菜单（Nautilus、Mission Center、Fcitx5 雾凇拼音） |
 | `nyxniri wallpapers` | 从外部仓库下载全套壁纸与动态视频包 |
 | `nyxniri bug` / `nyxniri report` | 生成诊断报告 |
 | `nyxniri test` | 开发者实机测试部署（不备份、保留 monitor.kdl） |
