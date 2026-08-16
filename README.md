@@ -34,7 +34,7 @@
 - Noctalia V5 pulls colors directly from your wallpaper; an `mpvpaper` hook extracts video frames via `ffmpeg` so live wallpapers generate palettes too.
 - Light/dark sync — GSettings and GTK follow Noctalia theme modes automatically.
 - Eye Care Mode (`Super+N`) — warmer color temperature, zero blur, solid opaque windows for reading sessions.
-- Scratchpad Terminal (`Super+~`) & Radial Menu (`Super+S` / `Super+MouseForward`) — quick-toggle persistent Kitty terminal or open full M3 radial menu (apps, tools, web links, custom TOML).
+- Scratchpad Terminal (`Super+~`) & Star-Ring Menu (`Super+A` / `Super+MouseForward`) — quick-toggle persistent Kitty terminal or open full M3 star-ring menu with M3E smart search hub (apps, tools, web links, DeepSeek/ChatGPT/Claude/Bing/Google search, custom TOML).
 - Shell & Terminal — Fish aliases for proxy/cache management, Kitty cursor trails, Windows-style shortcuts.
 - NyxMellow — a dynamic fcitx5 skin: mellow rounded geometry with Noctalia Material You color palette.
 

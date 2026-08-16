@@ -5,14 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v2.3.1] - 2026-08-16
 
 ### Added
+- **Android M3E 智能搜索胶囊**: 星环启动器集成 Android 16 / Gemini 风格居中饱满胶囊，支持 DeepSeek、ChatGPT、Claude、Google、Bing 大牌引擎轮盘切换与右键便捷返回。
 - **常用软件安装列表**: 新增常用可选软件菜单（Nautilus、Mission Center 与 Fcitx5 雾凇拼音）。
 - **更新后依赖自检**: 版本更新完成后自动扫描系统依赖，发现新增项主动提示一键安装。
 - **快捷交互完成卡片**: 部署完成后支持快捷直达常用软件、点赞项目或退出。
 
 ### Changed
+- **星环启动器快捷键优化**: 快捷键调整为 `Super+A` 与 `Super+鼠标前侧键`，左手单手按压更自然。
 - **安装器精简与交互统一**: 梳理精简安装与维护脚本，全面统一各级控制面板的按键操作体验。
 
 ### Fixed

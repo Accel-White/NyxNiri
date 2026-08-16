@@ -1,30 +1,74 @@
-# ── NyxNiri 星环启动器 (Star-Ring Radial Menu) 自定义配置 ─────────────────────
-# 配置文件位置: ~/.config/niri/scratchpad-items__custom__.toml
-# (含 __custom__ 标识，更新部署时会被 Dunder Protocol 自动识别并保留个人配置)
+# =============================================================================
+# NyxNiri 星环菜单 · 自定义配置文件 (Dunder Custom Configuration)
+# =============================================================================
+# 遵循 Dunder 协议: 文件名含 `__custom__`，升级与安装时会被自动保留，绝不被覆盖。
 #
-# 支持属性说明:
-# - name       : 主标题文本
-# - desc       : 副标题/描述文本 (可选，留空会自动生成)
-# - icon       : Nerd Font 图标符号 (如 󰞷, 󰓅, 󰉋, 󰊤, 󰖟, 󰘳)
-# - cmd        : 本地应用启动命令或脚本路径 (与 url 互斥)
-# - url        : 网页链接 (例如 "https://github.com"，自动通过默认浏览器打开)
-# - shortcut   : 显示在右上角的数字或字母角标 (如 "1", "2", "3", "4")
-# - mnemonics  : 字母助记列表 (如 ["g", "h"]，按键直接瞬时触发)
-# - color_key  : 动态主题色 (统一 "secondary"，也可根据喜好使用 "primary", "tertiary" 等)
-# - children   : 嵌套子菜单数组 (声明后自动识别为文件夹，支持无限层级下钻)
+# 架构特性:
+# - [search]: 全局搜索配置 (默认引擎、占位符文案等)
+# - [[search_engines]]: 搜索引擎与 AI 轮盘配置 (Tab 键循环切换，Enter 执行搜索)
+# - [[items]]: 星环菜单胶囊项配置 (支持应用、子菜单/文件夹、Web 链接)
+# =============================================================================
 
-# ── 1. 终端应用 (Terminal) ───────────────────────────────────────────────────
+[search]
+# 默认搜索引擎 ID (对应下方 search_engines 中的 id)
+default_engine = "bing"
+# 输入框占位提示符 (英文简洁风)
+placeholder = "Search or ask..."
+
+# -----------------------------------------------------------------------------
+# 搜索引擎与 AI 轮盘列表 (按 Tab 顺时针 / Shift+Tab 逆时针循环切换)
+# 图标说明:
+# - Bing: 󰍉 (Search)
+# - Google: 󰊭 (Google)
+# - DeepSeek: 󰄛 (蓝鲸 · DeepSeek 官方吉祥物)
+# - ChatGPT: 󰚩 (OpenAI / AI)
+# - Claude: 󰣆 (星芒 · Anthropic Claude 官方标识)
+# -----------------------------------------------------------------------------
+[[search_engines]]
+id = "bing"
+name = "Bing"
+icon = "󰍉"
+url = "https://www.bing.com/search?q={query}"
+
+[[search_engines]]
+id = "google"
+name = "Google"
+icon = "󰊭"
+url = "https://www.google.com/search?q={query}"
+
+[[search_engines]]
+id = "deepseek"
+name = "DeepSeek"
+icon = "󰈺"
+url = "https://chat.deepseek.com/?q={query}"
+
+[[search_engines]]
+id = "chatgpt"
+name = "ChatGPT"
+icon = "󰚩"
+url = "https://chatgpt.com/?hints=search&q={query}"
+
+[[search_engines]]
+id = "claude"
+name = "Claude"
+icon = "󰣆"
+url = "https://claude.ai/new?q={query}"
+
+# -----------------------------------------------------------------------------
+# 星环应用菜单项目 (4 颗主星环胶囊，支持 1~4 快捷键秒启)
+# -----------------------------------------------------------------------------
 [[items]]
+id = "kitty"
 name = "Kitty"
-desc = "Tmux Terminal"
+desc = "Terminal"
 icon = "󰞷"
 cmd = "kitty"
 shortcut = "1"
 mnemonics = ["t", "k"]
 color_key = "secondary"
 
-# ── 2. 系统工具箱 (System Tools Folder) ─────────────────────────────────────────
 [[items]]
+id = "tools"
 name = "System Tools"
 desc = "Folder · 3 Tools"
 icon = "󰘳"
@@ -33,6 +77,7 @@ mnemonics = ["s", "t"]
 color_key = "secondary"
 
   [[items.children]]
+  id = "missioncenter"
   name = "Mission Center"
   desc = "System Monitor"
   icon = "󰓅"
@@ -42,6 +87,7 @@ color_key = "secondary"
   color_key = "secondary"
 
   [[items.children]]
+  id = "eyecare"
   name = "Eye Care"
   desc = "Toggle Warmth"
   icon = "󰛨"
@@ -51,6 +97,7 @@ color_key = "secondary"
   color_key = "secondary"
 
   [[items.children]]
+  id = "cache"
   name = "Clean Cache"
   desc = "Free Disk Space"
   icon = "󰃢"
@@ -59,8 +106,8 @@ color_key = "secondary"
   mnemonics = ["c"]
   color_key = "secondary"
 
-# ── 3. 常用网站 (Websites Folder) ──────────────────────────────────────────────
 [[items]]
+id = "websites"
 name = "Websites"
 desc = "Folder · 3 Sites"
 icon = "󰖟"
@@ -69,6 +116,7 @@ mnemonics = ["w"]
 color_key = "secondary"
 
   [[items.children]]
+  id = "zhihu"
   name = "Zhihu"
   desc = "知乎 · 发现更大世界"
   icon = "󰖟"
@@ -78,6 +126,7 @@ color_key = "secondary"
   color_key = "secondary"
 
   [[items.children]]
+  id = "bilibili"
   name = "Bilibili"
   desc = "哔哩哔哩 (゜-゜)つロ"
   icon = "󰕧"
@@ -87,6 +136,7 @@ color_key = "secondary"
   color_key = "secondary"
 
   [[items.children]]
+  id = "github"
   name = "GitHub"
   desc = "Code Repository"
   icon = "󰊤"
@@ -95,8 +145,8 @@ color_key = "secondary"
   mnemonics = ["g"]
   color_key = "secondary"
 
-# ── 4. 文件管理器 (File Manager) ──────────────────────────────────────────────
 [[items]]
+id = "nautilus"
 name = "Nautilus"
 desc = "File Manager"
 icon = "󰉋"

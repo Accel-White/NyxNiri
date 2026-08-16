@@ -37,6 +37,9 @@ atomic_replace_item() {
     if [ -d "$dest" ]; then
         # 1. 继承入口文件 (匹配 *__custom__*，跳过 *__custom__* 目录内部)
         (cd "$dest" && find . -type d -name "*__custom__*" -prune -o \( -type f -o -type l \) -name "*__custom__*" -print0 2>/dev/null | while IFS= read -r -d '' file; do
+            if [ "${NYXNIRI_TEST_MODE:-0}" = "1" ] && [ "${file#./}" = "scratchpad-items__custom__.toml" ]; then
+                continue
+            fi
             mkdir -p "$tmp_new/$(dirname "$file")"
             cp -a "$file" "$tmp_new/$file"
             msg log_keep_custom_file "${dest#"$HOME"/.config/}/${file#./}"
@@ -901,6 +904,7 @@ install_configs() {
 test_deploy() {
     msg test_start
     export NYXNIRI_KEEP_MONITOR=1
+    export NYXNIRI_TEST_MODE=1
     deploy_selected_configs "nobackup"
     deploy_wallpapers
     render_completion_screen "test"

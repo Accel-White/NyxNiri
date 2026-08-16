@@ -34,7 +34,7 @@
 - Noctalia V5 直接从壁纸取色；`mpvpaper` 配合 `ffmpeg` 抽取视频帧，动态壁纸也能同步提取配色。
 - 明暗模式同步 — GSettings 与 GTK 自动跟随 Noctalia 切换。
 - 护眼模式（`Super+N`）— 调暖色温、关闭模糊、纯色不透明背景。
-- Scratchpad 终端（`Super+~`）与星环菜单（`Super+S` / `Super+鼠标前侧键`）— 随时快捷呼出 Kitty 持久浮动终端，或通过 M3 矢量星环菜单快速调度应用、系统工具与常用网页（支持 TOML 自定义）。
+- Scratchpad 终端（`Super+~`）与星环菜单（`Super+A` / `Super+鼠标前侧键`）— 随时快捷呼出 Kitty 持久浮动终端，或通过 M3 矢量星环菜单快速调度应用、系统工具、常用网页与 M3E 智能搜索（DeepSeek、ChatGPT、Claude、Bing、Google 大牌引擎直达，支持 TOML 自定义）。
 - 终端与 Shell — Fish 代理/缓存别名，Kitty 光标轨迹，Windows 风格快捷键。
 - NyxMellow 动态 fcitx5 皮肤 — mellow 圆角形状，随 Noctalia 自动取色。
 
