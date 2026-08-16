@@ -48,27 +48,22 @@ _render_menu_item() {
     local style="${4:-normal}"
 
     local prefix="    "
+    local color=""
     if [ "$idx" -eq "$focus" ]; then
         prefix="  \e[1;36m❯ \e[0m"
-    fi
-
-    if [ "$idx" -eq "$focus" ]; then
-        if [ "$style" = "warn" ]; then
-            printf "%b\e[1;31m%s\e[0m\n" "$prefix" "$label"
-        elif [ "$style" = "subtle" ]; then
-            printf "%b\e[90m%s\e[0m\n" "$prefix" "$label"
-        else
-            printf "%b\e[1;37m%s\e[0m\n" "$prefix" "$label"
-        fi
+        case "$style" in
+            warn)   color="\e[1;31m" ;;
+            subtle) color="\e[90m" ;;
+            *)      color="\e[1;37m" ;;
+        esac
     else
-        if [ "$style" = "warn" ]; then
-            printf "%b\e[31m%s\e[0m\n" "$prefix" "$label"
-        elif [ "$style" = "subtle" ]; then
-            printf "%b\e[90m%s\e[0m\n" "$prefix" "$label"
-        else
-            printf "%b%s\n" "$prefix" "$label"
-        fi
+        case "$style" in
+            warn)   color="\e[31m" ;;
+            subtle) color="\e[90m" ;;
+            *)      color="" ;;
+        esac
     fi
+    printf "%b%b%s\e[0m\n" "$prefix" "$color" "$label"
 }
 
 msg() {
@@ -80,7 +75,6 @@ msg() {
 
     if [ "${LANG_MODE:-en}" = "zh" ]; then
         case "$key" in
-            lang_select) echo -e "\n\e[1;36m:: 请选择语言 / Select Language:\e[0m" ;;
             installed) echo -e "\e[1;32m[已安装]\e[0m" ;;
             missing) echo -e "\e[1;31m[未安装]\e[0m" ;;
 
@@ -153,7 +147,6 @@ msg() {
             install_step_deps) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 检查与安装依赖…\e[0m" ;;
             install_step_fcitx) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 配置 fcitx5 皮肤…\e[0m" ;;
             install_step_greeter) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] 配置 Noctalia Greeter…\e[0m" ;;
-            install_summary_title) echo -e "主人，NyxNiri 装完了喵~" ;;
             summary_title_install) echo -e "主人，NyxNiri 装完了喵~" ;;
             summary_title_update) echo -e "主人，NyxNiri 更新完了喵~" ;;
             summary_title_test) echo -e "测试部署完成喵~" ;;
@@ -167,7 +160,6 @@ msg() {
             summary_item_deps_ok) echo -e "系统依赖:   环境已就绪" ;;
             summary_item_deps_skip) echo -e "系统依赖:   未完全满足" ;;
             summary_item_greeter_ok) echo -e "登录器:     Noctalia Greeter" ;;
-            summary_item_greeter_skip) echo -e "登录器:     已跳过" ;;
             summary_section_preserved) echo -e "保留的配置清单 (自动继承)" ;;
             summary_section_next) echo -e "下一步" ;;
             summary_next_start) echo -e "启动桌面 : 运行 niri-session" ;;
@@ -184,12 +176,9 @@ msg() {
 
             # Test Deploy
             test_start) echo -e "\n\e[1;34m:: [test] 幂等测试部署 (跳过备份与依赖检查)…\e[0m" ;;
-            test_done) echo -e "\n\e[1;32m[✓] 测试部署完成\e[0m" ;;
 
             menu_hint) echo -e "\n  \e[90m[↑/↓/j/k] 移动焦点  [Enter/Space] 选择  [0/q] 退出\e[0m" ;;
             submenu_hint) echo -e "\n  \e[90m[↑/↓/j/k] 移动焦点  [Enter/Space] 选择  [0/q] 返回\e[0m" ;;
-            menu_prompt) echo -e "\n▸ 请选择 [0-9]: " ;;
-            invalid_opt) echo -e "\e[1;31m[✗] 无效选项，请重新选择\e[0m" ;;
             press_any_key) echo -e "\n按任意键继续…" ;;
             generating_report) echo -e "\n\e[1;34m:: 正在收集诊断数据…\e[0m" ;;
             report_done) echo -e "\e[1;32m[✓] 诊断报告已导出至:\e[0m $p1\n\e[1;36m提示: 提交 Issue 请附带此文件\e[0m\n\e[90mQQ 群: 631425889 | Telegram: @Echoes678\e[0m" ;;
@@ -202,7 +191,6 @@ msg() {
 
             selective_hint) echo -e "  \e[90m[↑/↓/j/k] 移动焦点  [Space] 切换  [a] 全选  [n] 清空  [Enter] 确认\e[0m" ;;
             upgrading_selected) echo -e "\n\e[1;34m:: 正在部署选中组件…\e[0m" ;;
-            overwrite_done) echo -e "\e[1;32m[✓] 选中组件已部署\e[0m" ;;
             
             # Master Component Menu
             master_menu_title) echo -e "\n  \e[1;36m── 组件部署清单 ──\e[0m\n" ;;
@@ -211,7 +199,6 @@ msg() {
             master_item_asset) echo -e "重型资源: $p1" ;;
             master_item_behavior) echo -e "\n  ── 部署行为 ──" ;;
             master_item_backup) echo -e "部署前自动创建快照" ;;
-            master_item_monitor) echo -e "保留当前显示器配置 (monitor.kdl)" ;;
             diff_viewer_title) echo -e "\n\e[1;36m:: 配置差异对比 (按 q 退出)\e[0m" ;;
 
             # Uninstallation & Restore
@@ -220,7 +207,6 @@ msg() {
             uninstall_opt2) echo -e "环境复原 (恢复至初始备份)" ;;
             uninstall_opt3) echo -e "深度清理 (清除所有配置、快照、缓存与壁纸)" ;;
             uninstall_opt4) echo -e "取消返回" ;;
-            uninstall_prompt) echo -e "▸ 请选择卸载模式 [1-4]: " ;;
             uninstall_archived) echo -e "\e[1;32m[✓] 当前配置已归档至:\e[0m $p1" ;;
             uninstall_done) echo -e "\e[1;32m[✓] NyxNiri 卸载完成\e[0m" ;;
             purge_done) echo -e "\e[1;32m[✓] 深度清理完成\e[0m" ;;
@@ -356,7 +342,6 @@ msg() {
             preflight_comp_module_fcitx) echo -e "  \e[1;36m- 可选模块:\e[0m $p1 fcitx5 皮肤" ;;
             preflight_comp_module_greeter) echo -e "  \e[1;36m- 可选模块:\e[0m $p1" ;;
             preflight_comp_deps) echo -e "  \e[1;36m- 系统依赖:\e[0m 检查与补全缺失依赖" ;;
-            preflight_custom_config_kept) echo -e "\e[1;36m[ 保留了自定义配置 ]\e[0m" ;;
             err_sudo_aborted) echo -e "\n\e[1;31m[✗] 缺少管理员权限。已中止。\e[0m" ;;
             err_aborted_code) echo -e "\n\e[1;31m[✗] 异常终止 (退出码: $p1)\e[0m" ;;
             err_already_running) echo -e "\n\e[1;33m[!] 进程已在运行 (PID: $p1)\e[0m" ;;
@@ -402,7 +387,6 @@ msg() {
         esac
     else
         case "$key" in
-            lang_select) echo -e "\n\e[1;36m:: Select Language / 请选择语言:\e[0m" ;;
             installed) echo -e "\e[1;32m[Installed]\e[0m" ;;
             missing) echo -e "\e[1;31m[Missing]\e[0m" ;;
 
@@ -475,7 +459,6 @@ msg() {
             install_step_deps) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Checking dependencies…\e[0m" ;;
             install_step_fcitx) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Configuring fcitx5 skin…\e[0m" ;;
             install_step_greeter) echo -e "\n\e[1;34m:: [\e[1;36m$p1\e[0m] Configuring Noctalia Greeter…\e[0m" ;;
-            install_summary_title) echo -e "Master, NyxNiri is all set nya~" ;;
             summary_title_install) echo -e "Master, NyxNiri is all set nya~" ;;
             summary_title_update) echo -e "Master, NyxNiri has been updated nya~" ;;
             summary_title_test) echo -e "Test deploy complete nya~" ;;
@@ -489,7 +472,6 @@ msg() {
             summary_item_deps_ok) echo -e "System Deps:    Environment Ready" ;;
             summary_item_deps_skip) echo -e "System Deps:    Incomplete" ;;
             summary_item_greeter_ok) echo -e "Greeter:        Noctalia Greeter" ;;
-            summary_item_greeter_skip) echo -e "Greeter:        Skipped" ;;
             summary_section_preserved) echo -e "Preserved Configurations (Auto-inherited)" ;;
             summary_section_next) echo -e "Next Steps" ;;
             summary_next_start) echo -e "Start Desktop : Run niri-session" ;;
@@ -506,12 +488,9 @@ msg() {
 
             # Test Deploy
             test_start) echo -e "\n\e[1;34m:: [test] Idempotent test deploy (skipped backup & deps)…\e[0m" ;;
-            test_done) echo -e "\n\e[1;32m[✓] Test deploy complete\e[0m" ;;
 
             menu_hint) echo -e "\n  \e[90m[↑/↓/j/k] Move  [Enter/Space] Select  [0/q] Exit\e[0m" ;;
             submenu_hint) echo -e "\n  \e[90m[↑/↓/j/k] Move  [Enter/Space] Select  [0/q] Back\e[0m" ;;
-            menu_prompt) echo -e "\n▸ Select option [0-9]: " ;;
-            invalid_opt) echo -e "\e[1;31m[✗] Invalid option\e[0m" ;;
             press_any_key) echo -e "\nPress any key to continue…" ;;
             generating_report) echo -e "\n\e[1;34m:: Collecting diagnostic data…\e[0m" ;;
             report_done) echo -e "\e[1;32m[✓] Bug Report exported to:\e[0m $p1\n\e[1;36mHint: Please attach this file when opening an issue\e[0m\n\e[90mQQ Group: 631425889 | Telegram: @Echoes678\e[0m" ;;
@@ -523,7 +502,6 @@ msg() {
             overwrite_opt3) echo -e "Code Update Only" ;;
             selective_hint) echo -e "  \e[90m[↑/↓/j/k] Move  [Space] Toggle  [a] All  [n] None  [Enter] Confirm\e[0m" ;;
             upgrading_selected) echo -e "\n\e[1;34m:: Applying selected components…\e[0m" ;;
-            overwrite_done) echo -e "\e[1;32m[✓] Selected components deployed\e[0m" ;;
             
             # Master Component Menu
             master_menu_title) echo -e "\n  \e[1;36m── Deployment Checklist ──\e[0m\n" ;;
@@ -532,7 +510,6 @@ msg() {
             master_item_asset) echo -e "Heavy Asset: $p1" ;;
             master_item_behavior) echo -e "\n  ── Deployment Behaviors ──" ;;
             master_item_backup) echo -e "Auto-create safe snapshot before deploy" ;;
-            master_item_monitor) echo -e "Keep existing monitor hardware config (monitor.kdl)" ;;
             diff_viewer_title) echo -e "\n\e[1;36m:: Configuration Diff (Press \'q\' to quit)\e[0m" ;;
 
             # Uninstall Strings
@@ -541,7 +518,6 @@ msg() {
             uninstall_opt2) echo -e "  \e[1;36m2)\e[0m Restore to Original State" ;;
             uninstall_opt3) echo -e "  \e[1;31m3)\e[0m Deep Purge (Remove configs, snapshots, cache & wallpapers)" ;;
             uninstall_opt4) echo -e "  \e[90m4)\e[0m Cancel" ;;
-            uninstall_prompt) echo -e "▸ Select uninstall mode [1-4]: " ;;
             uninstall_archived) echo -e "\e[1;32m[✓] Configs archived to:\e[0m $p1" ;;
             uninstall_done) echo -e "\e[1;32m[✓] Uninstall complete\e[0m" ;;
             purge_done) echo -e "\e[1;32m[✓] Deep purge complete\e[0m" ;;

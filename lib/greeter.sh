@@ -79,13 +79,10 @@ greeter_rule_present() {
 
 greeter_install_packages() {
     msg greeter_install_pkgs
-    local pkg_manager="" has_aur=false mgr=""
-    if mgr=$(aur_helper_usable); then
-        pkg_manager="$mgr"
-        has_aur=true
-    else
-        pkg_manager="sudo pacman"
-    fi
+    local pkg_manager
+    pkg_manager=$(get_preferred_pkg_manager)
+    local has_aur=false
+    [ "$pkg_manager" != "sudo pacman" ] && has_aur=true
 
     if greeter_greetd_missing; then
         $pkg_manager -S --noconfirm greetd || msg greeter_pkg_failed "greetd"

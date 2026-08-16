@@ -26,6 +26,20 @@ discover_config_items() {
     fi
 }
 
+_stage_existing_configs() {
+    local target_dir="$1"
+    local log_msg_flag="${2:-0}"
+    for item in "${CONFIG_ITEMS[@]}"; do
+        if [ -e "$HOME/.config/$item" ]; then
+            cp -rP "$HOME/.config/$item" "$target_dir/"
+            if [ "$log_msg_flag" = "1" ]; then
+                msg log_backup_item "$item"
+            fi
+        fi
+    done
+    return 0
+}
+
 backup_configs() {
     local note="${1:-}"
 
@@ -38,12 +52,7 @@ backup_configs() {
     tmp_snap=$(mktemp -d) || return 1
     register_temp_path "$tmp_snap"
 
-    for item in "${CONFIG_ITEMS[@]}"; do
-        if [ -e "$HOME/.config/$item" ]; then
-            cp -rP "$HOME/.config/$item" "$tmp_snap/"
-            msg log_backup_item "$item"
-        fi
-    done
+    _stage_existing_configs "$tmp_snap" 1
 
     if [ -n "$note" ]; then
         echo "$note" > "$tmp_snap/note.txt"
@@ -137,11 +146,7 @@ rollback_configs() {
     local pre_tmp
     pre_tmp=$(mktemp -d) || return 1
     register_temp_path "$pre_tmp"
-    for item in "${CONFIG_ITEMS[@]}"; do
-        if [ -e "$HOME/.config/$item" ]; then
-            cp -rP "$HOME/.config/$item" "$pre_tmp/"
-        fi
-    done
+    _stage_existing_configs "$pre_tmp" 0
     echo "pre-rollback safety snapshot" > "$pre_tmp/note.txt"
     mkdir -p "$BACKUP_BASE_DIR"
     mv "$pre_tmp" "$pre_dir"
@@ -232,33 +237,12 @@ uninstall_nyxniri() {
 
             local key
             key=$(read_key) || return 0
+            handle_menu_key "$key" "$cur_focus" 3
+            cur_focus="$_MENU_FOCUS"
 
-            local act=-1
-            case "$key" in
-                UP|[kK])
-                    cur_focus=$((cur_focus - 1))
-                    [ "$cur_focus" -lt 0 ] && cur_focus=3
-                    ;;
-                DOWN|[jJ])
-                    cur_focus=$((cur_focus + 1))
-                    [ "$cur_focus" -gt 3 ] && cur_focus=0
-                    ;;
-                ENTER|SPACE)
-                    act=$cur_focus
-                    ;;
-                [1-4])
-                    cur_focus=$((key - 1))
-                    act=$cur_focus
-                    ;;
-                0|[qQ]|ESC)
-                    cur_focus=3
-                    act=3
-                    ;;
-            esac
-
-            if [ "$act" -ne -1 ]; then
+            if [ "$_MENU_ACTION" -ne -1 ]; then
                 printf '\e[?25h'
-                mode=$((act + 1))
+                mode=$((_MENU_ACTION + 1))
                 break
             fi
         done
@@ -273,11 +257,7 @@ uninstall_nyxniri() {
             local temp_stage
             temp_stage=$(mktemp -d) || return 1
             register_temp_path "$temp_stage"
-            for item in "${CONFIG_ITEMS[@]}"; do
-                if [ -e "$HOME/.config/$item" ]; then
-                    cp -rP "$HOME/.config/$item" "$temp_stage/"
-                fi
-            done
+            _stage_existing_configs "$temp_stage" 0
             tar -czf "$archive_file" -C "$temp_stage" . 2>/dev/null || true
             rm -rf "$temp_stage" 2>/dev/null || true
             msg uninstall_archived "$archive_file"

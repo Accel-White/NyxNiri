@@ -207,3 +207,41 @@ read_key() {
     printf '%s' "$key"
 }
 
+# Pure helper to calculate menu focus & action from key event.
+# Sets globals _MENU_FOCUS and _MENU_ACTION (-1 for move, >=0 for selected/exit)
+handle_menu_key() {
+    local key="$1" focus="$2" max_idx="$3"
+    _MENU_FOCUS="$focus"
+    _MENU_ACTION=-1
+
+    case "$key" in
+        UP|[kK]|LEFT)
+            _MENU_FOCUS=$((focus - 1))
+            if [ "$_MENU_FOCUS" -lt 0 ]; then
+                _MENU_FOCUS="$max_idx"
+            fi
+            ;;
+        DOWN|[jJ]|RIGHT)
+            _MENU_FOCUS=$((focus + 1))
+            if [ "$_MENU_FOCUS" -gt "$max_idx" ]; then
+                _MENU_FOCUS=0
+            fi
+            ;;
+        ENTER|SPACE)
+            _MENU_ACTION="$focus"
+            ;;
+        [1-9])
+            local num=$((key - 1))
+            if [ "$num" -le "$max_idx" ]; then
+                _MENU_FOCUS="$num"
+                _MENU_ACTION="$num"
+            fi
+            ;;
+        0|[qQ]|ESC)
+            _MENU_FOCUS="$max_idx"
+            _MENU_ACTION="$max_idx"
+            ;;
+    esac
+    return 0
+}
+

@@ -188,6 +188,16 @@ aur_helper_usable() {
     return 1
 }
 
+# Resolve active package manager (prefers usable AUR helper, falls back to sudo pacman)
+get_preferred_pkg_manager() {
+    local mgr=""
+    if mgr=$(aur_helper_usable); then
+        echo "$mgr"
+    else
+        echo "sudo pacman"
+    fi
+}
+
 # Bootstrap an AUR helper (paru) when none is usable. Runs as the normal user
 # (never root); `makepkg -si` handles the privileged install via sudo.
 # Strategy: prefer the official repo package (ABI always matches the local
@@ -299,15 +309,10 @@ install_selected_deps() {
     fi
 
     msg installing_selected
-    local pkg_manager=""
+    local pkg_manager
+    pkg_manager=$(get_preferred_pkg_manager)
     local has_aur_helper=false
-    local mgr=""
-    if mgr=$(aur_helper_usable); then
-        pkg_manager="$mgr"
-        has_aur_helper=true
-    else
-        pkg_manager="sudo pacman"
-    fi
+    [ "$pkg_manager" != "sudo pacman" ] && has_aur_helper=true
 
     # Install official repo packages
     if [ ${#repo_install[@]} -gt 0 ]; then
@@ -556,15 +561,10 @@ install_selected_opt_apps() {
     fi
 
     msg installing_selected_apps
-    local pkg_manager=""
+    local pkg_manager
+    pkg_manager=$(get_preferred_pkg_manager)
     local has_aur_helper=false
-    local mgr=""
-    if mgr=$(aur_helper_usable); then
-        pkg_manager="$mgr"
-        has_aur_helper=true
-    else
-        pkg_manager="sudo pacman"
-    fi
+    [ "$pkg_manager" != "sudo pacman" ] && has_aur_helper=true
 
     if [ ${#repo_pkgs[@]} -gt 0 ]; then
         $pkg_manager -S --needed --noconfirm "${repo_pkgs[@]}" || true
@@ -614,33 +614,12 @@ deps_menu() {
 
         local key
         key=$(read_key) || break
+        handle_menu_key "$key" "$cur_focus" 2
+        cur_focus="$_MENU_FOCUS"
 
-        local act=-1
-        case "$key" in
-            UP|[kK])
-                cur_focus=$((cur_focus - 1))
-                [ "$cur_focus" -lt 0 ] && cur_focus=2
-                ;;
-            DOWN|[jJ])
-                cur_focus=$((cur_focus + 1))
-                [ "$cur_focus" -gt 2 ] && cur_focus=0
-                ;;
-            ENTER|SPACE)
-                act=$cur_focus
-                ;;
-            [1-2])
-                cur_focus=$((key - 1))
-                act=$cur_focus
-                ;;
-            0|[qQ]|ESC)
-                cur_focus=2
-                act=2
-                ;;
-        esac
-
-        if [ "$act" -ne -1 ]; then
+        if [ "$_MENU_ACTION" -ne -1 ]; then
             printf '\e[?25h'
-            case "$act" in
+            case "$_MENU_ACTION" in
                 0) run_dep_menu_loop || true ;;
                 1) run_optional_apps_menu_loop || true ;;
                 2) return 0 ;;

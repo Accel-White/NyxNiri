@@ -113,6 +113,8 @@ _phase_atomic_deployment() {
     for script_rel in \
         "fish/clean-cache" \
         "$THEME_ENGINE/theme-sync.sh" \
+        "$THEME_ENGINE/wallpaper-hook.sh" \
+        "$THEME_ENGINE/mpvpaper-sync.sh" \
         "$MAIN_WM/scripts/toggle-eyecare.sh" "$MAIN_WM/toggle-eyecare.sh" \
         "$MAIN_WM/scripts/niri-scratch-toggle.sh" "$MAIN_WM/niri-scratch-toggle.sh" \
         "$MAIN_WM/scripts/niri-scratch-menu.py" "$MAIN_WM/niri-scratch-menu.py"; do
@@ -137,10 +139,10 @@ _phase_render_templates() {
         esc_wp_video_dest=$(printf '%s\n' "$wp_dest/video" | sed 's/[|&]/\\&/g')
         sed -i "s|^directory = \".*\"|directory = \"${esc_wp_dest}\"|" "$HOME/.config/$THEME_ENGINE/noctalia-config.toml"
         sed -i "s|^video_directory = \".*\"|video_directory = \"${esc_wp_video_dest}\"|" "$HOME/.config/$THEME_ENGINE/noctalia-config.toml"
-        sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/$THEME_ENGINE/noctalia-config.toml"
+        sed -i -E "s|/home/[^/]+|${esc_home}|g" "$HOME/.config/$THEME_ENGINE/noctalia-config.toml"
     fi
     if [ -f "$HOME/.config/$MAIN_WM/config.kdl" ]; then
-        sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/$MAIN_WM/config.kdl"
+        sed -i -E "s|/home/[^/]+|${esc_home}|g" "$HOME/.config/$MAIN_WM/config.kdl"
         local pics_dir rel_pics_dir esc_rel_pics_dir
         pics_dir="$(get_pics_dir)"
         if [[ "$pics_dir" == "$HOME"* ]]; then
@@ -152,7 +154,7 @@ _phase_render_templates() {
         sed -i -E "s|^[[:space:]]*(//)?[[:space:]]*screenshot-path .*|screenshot-path \"${esc_rel_pics_dir}/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png\"|g" "$HOME/.config/$MAIN_WM/config.kdl"
     fi
     if [ -f "$HOME/.config/fish/fish_variables" ]; then
-        sed -i "s|/home/[^/]\+|${esc_home}|g" "$HOME/.config/fish/fish_variables"
+        sed -i -E "s|/home/[^/]+|${esc_home}|g" "$HOME/.config/fish/fish_variables"
     fi
 }
 
@@ -284,10 +286,7 @@ render_completion_screen() {
         unset NYXNIRI_CUSTOM_LOG
     fi
 
-    # In non-interactive mode or test mode, render minimal static footer and return
-    if [ ! -t 0 ] || [ ! -c /dev/tty ] || [ "$mode" = "test" ]; then
-        clear 2>/dev/null || true
-        show_logo
+    _render_summary_body() {
         echo -e "  \e[1;32m$title_str\e[0m\n"
         echo -e "  \e[1;37m$(msg summary_section_details)\e[0m"
         if [ "$cfg_count" -gt 0 ] || [ "$mode" = "test" ]; then
@@ -329,7 +328,13 @@ render_completion_screen() {
                 echo -e "    $pline"
             done
         fi
+    }
 
+    # In non-interactive mode or test mode, render minimal static footer and return
+    if [ ! -t 0 ] || [ ! -c /dev/tty ] || [ "$mode" = "test" ]; then
+        clear 2>/dev/null || true
+        show_logo
+        _render_summary_body
         echo ""
         echo -e "  \e[1;37m$(msg summary_section_next)\e[0m"
         echo -e "    $(msg summary_next_start)"
@@ -346,50 +351,7 @@ render_completion_screen() {
     while true; do
         printf '\e[?25l\e[H'
         show_logo
-        echo -e "  \e[1;32m$title_str\e[0m\n"
-
-        # Section 1: 部署明细 / Details
-        echo -e "  \e[1;37m$(msg summary_section_details)\e[0m"
-        if [ "$cfg_count" -gt 0 ]; then
-            echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_configs_ok "$items_str")"
-        else
-            echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_configs_skip)"
-        fi
-
-        if [ "${WP_PACK_DEPLOYED:-0}" -eq 1 ] || [ "${DO_WALLPAPERS:-n}" = "y" ]; then
-            echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_wallpapers_ok)"
-        else
-            echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_wallpapers_skip)"
-        fi
-
-        if fcitx5_installed; then
-            if [ "${DO_FCITX:-n}" = "y" ] || fcitx_enabled; then
-                echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_fcitx_ok)"
-            else
-                echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_fcitx_skip)"
-            fi
-        fi
-
-        if [ "$mode" = "full" ]; then
-            if [ "$left_missing" -eq 0 ]; then
-                echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_deps_ok)"
-            else
-                echo -e "    \e[1;33m[!]\e[0m $(msg summary_item_deps_skip)"
-            fi
-        fi
-
-        if [ "${DO_GREETER:-n}" = "y" ]; then
-            echo -e "    \e[1;32m[✓]\e[0m $(msg summary_item_greeter_ok)"
-        fi
-
-        # Section 2: 保留的配置清单 (自动继承) / Preserved Configs
-        if [ ${#preserved_lines[@]} -gt 0 ]; then
-            echo ""
-            echo -e "  \e[1;37m$(msg summary_section_preserved)\e[0m"
-            for pline in "${preserved_lines[@]}"; do
-                echo -e "    $pline"
-            done
-        fi
+        _render_summary_body
 
         # Section 3: 下一步 (Next Steps)
         msg summary_action_title
@@ -404,37 +366,12 @@ render_completion_screen() {
 
         local key
         key=$(read_key) || break
+        handle_menu_key "$key" "$cur_focus" 2
+        cur_focus="$_MENU_FOCUS"
 
-        local act=-1
-        case "$key" in
-            UP|[kK])
-                cur_focus=$((cur_focus - 1))
-                [ "$cur_focus" -lt 0 ] && cur_focus=2
-                ;;
-            DOWN|[jJ])
-                cur_focus=$((cur_focus + 1))
-                [ "$cur_focus" -gt 2 ] && cur_focus=0
-                ;;
-            ENTER|SPACE)
-                act=$cur_focus
-                ;;
-            1)
-                cur_focus=0
-                act=0
-                ;;
-            2)
-                cur_focus=1
-                act=1
-                ;;
-            0|[qQ]|ESC)
-                cur_focus=2
-                act=2
-                ;;
-        esac
-
-        if [ "$act" -ne -1 ]; then
+        if [ "$_MENU_ACTION" -ne -1 ]; then
             printf '\e[?25h'
-            case "$act" in
+            case "$_MENU_ACTION" in
                 0)
                     run_optional_apps_menu_loop || true
                     clear 2>/dev/null || true
@@ -452,7 +389,7 @@ render_completion_screen() {
                     return 0
                     ;;
             esac
-            [ "$act" -eq 2 ] && break
+            [ "$_MENU_ACTION" -eq 2 ] && break
         fi
     done
     printf '\e[?25h'
@@ -768,31 +705,10 @@ offer_overwrite_upgrade() {
         else
             local key
             key=$(read_key) || break
-
-            local act=-1
-            case "$key" in
-                UP|[kK])
-                    cur_focus=$((cur_focus - 1))
-                    [ "$cur_focus" -lt 0 ] && cur_focus=2
-                    ;;
-                DOWN|[jJ])
-                    cur_focus=$((cur_focus + 1))
-                    [ "$cur_focus" -gt 2 ] && cur_focus=0
-                    ;;
-                ENTER|SPACE)
-                    act=$cur_focus
-                    ;;
-                [1-3])
-                    cur_focus=$((key - 1))
-                    act=$cur_focus
-                    ;;
-                0|[qQ]|ESC)
-                    cur_focus=2
-                    act=2
-                    ;;
-            esac
-            [ "$act" -eq -1 ] && continue
-            mode_choice=$((act + 1))
+            handle_menu_key "$key" "$cur_focus" 2
+            cur_focus="$_MENU_FOCUS"
+            [ "$_MENU_ACTION" -eq -1 ] && continue
+            mode_choice=$((_MENU_ACTION + 1))
         fi
 
         printf '\e[?25h'

@@ -12,14 +12,23 @@ REAL_SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_
 LIB_DIR="$(cd "$(dirname "$REAL_SCRIPT_PATH")" 2>/dev/null && pwd)"
 
 # Source all sibling lib modules
+# shellcheck source=lib/core.sh
 source "$LIB_DIR/core.sh"
+# shellcheck source=lib/i18n.sh
 source "$LIB_DIR/i18n.sh"
+# shellcheck source=lib/network.sh
 source "$LIB_DIR/network.sh"
+# shellcheck source=lib/deps.sh
 source "$LIB_DIR/deps.sh"
+# shellcheck source=lib/backup.sh
 source "$LIB_DIR/backup.sh"
+# shellcheck source=lib/deploy.sh
 source "$LIB_DIR/deploy.sh"
+# shellcheck source=lib/doctor.sh
 source "$LIB_DIR/doctor.sh"
+# shellcheck source=lib/greeter.sh
 source "$LIB_DIR/greeter.sh"
+# shellcheck source=lib/fcitx.sh
 source "$LIB_DIR/fcitx.sh"
 
 init_environment_paths
@@ -60,33 +69,12 @@ snapshot_menu() {
 
         local key
         key=$(read_key) || break
+        handle_menu_key "$key" "$cur_focus" 4
+        cur_focus="$_MENU_FOCUS"
 
-        local act=-1
-        case "$key" in
-            UP|[kK])
-                cur_focus=$((cur_focus - 1))
-                [ "$cur_focus" -lt 0 ] && cur_focus=4
-                ;;
-            DOWN|[jJ])
-                cur_focus=$((cur_focus + 1))
-                [ "$cur_focus" -gt 4 ] && cur_focus=0
-                ;;
-            ENTER|SPACE)
-                act=$cur_focus
-                ;;
-            [1-4])
-                cur_focus=$((key - 1))
-                act=$cur_focus
-                ;;
-            0|[qQ]|ESC)
-                cur_focus=4
-                act=4
-                ;;
-        esac
-
-        if [ "$act" -ne -1 ]; then
+        if [ "$_MENU_ACTION" -ne -1 ]; then
             printf '\e[?25h'
-            case "$act" in
+            case "$_MENU_ACTION" in
                 0)
                     discover_config_items
                     local note_in=""
@@ -143,33 +131,12 @@ greeter_menu() {
 
         local key
         key=$(read_key) || break
+        handle_menu_key "$key" "$cur_focus" 3
+        cur_focus="$_MENU_FOCUS"
 
-        local act=-1
-        case "$key" in
-            UP|[kK])
-                cur_focus=$((cur_focus - 1))
-                [ "$cur_focus" -lt 0 ] && cur_focus=3
-                ;;
-            DOWN|[jJ])
-                cur_focus=$((cur_focus + 1))
-                [ "$cur_focus" -gt 3 ] && cur_focus=0
-                ;;
-            ENTER|SPACE)
-                act=$cur_focus
-                ;;
-            [1-3])
-                cur_focus=$((key - 1))
-                act=$cur_focus
-                ;;
-            0|[qQ]|ESC)
-                cur_focus=3
-                act=3
-                ;;
-        esac
-
-        if [ "$act" -ne -1 ]; then
+        if [ "$_MENU_ACTION" -ne -1 ]; then
             printf '\e[?25h'
-            case "$act" in
+            case "$_MENU_ACTION" in
                 0) greeter_install; press_any_key ;;
                 1) greeter_status; press_any_key ;;
                 2) greeter_uninstall; press_any_key ;;
@@ -206,33 +173,12 @@ fcitx_menu() {
 
         local key
         key=$(read_key) || break
+        handle_menu_key "$key" "$cur_focus" 3
+        cur_focus="$_MENU_FOCUS"
 
-        local act=-1
-        case "$key" in
-            UP|[kK])
-                cur_focus=$((cur_focus - 1))
-                [ "$cur_focus" -lt 0 ] && cur_focus=3
-                ;;
-            DOWN|[jJ])
-                cur_focus=$((cur_focus + 1))
-                [ "$cur_focus" -gt 3 ] && cur_focus=0
-                ;;
-            ENTER|SPACE)
-                act=$cur_focus
-                ;;
-            [1-3])
-                cur_focus=$((key - 1))
-                act=$cur_focus
-                ;;
-            0|[qQ]|ESC)
-                cur_focus=3
-                act=3
-                ;;
-        esac
-
-        if [ "$act" -ne -1 ]; then
+        if [ "$_MENU_ACTION" -ne -1 ]; then
             printf '\e[?25h'
-            case "$act" in
+            case "$_MENU_ACTION" in
                 0) fcitx_install; press_any_key ;;
                 1) fcitx_status; press_any_key ;;
                 2) fcitx_uninstall; press_any_key ;;
@@ -277,33 +223,12 @@ optional_modules_menu() {
 
         local key
         key=$(read_key) || break
+        handle_menu_key "$key" "$cur_focus" 5
+        cur_focus="$_MENU_FOCUS"
 
-        local act=-1
-        case "$key" in
-            UP|[kK])
-                cur_focus=$((cur_focus - 1))
-                [ "$cur_focus" -lt 0 ] && cur_focus=5
-                ;;
-            DOWN|[jJ])
-                cur_focus=$((cur_focus + 1))
-                [ "$cur_focus" -gt 5 ] && cur_focus=0
-                ;;
-            ENTER|SPACE)
-                act=$cur_focus
-                ;;
-            [1-5])
-                cur_focus=$((key - 1))
-                act=$cur_focus
-                ;;
-            0|[qQ]|ESC)
-                cur_focus=5
-                act=5
-                ;;
-        esac
-
-        if [ "$act" -ne -1 ]; then
+        if [ "$_MENU_ACTION" -ne -1 ]; then
             printf '\e[?25h'
-            case "$act" in
+            case "$_MENU_ACTION" in
                 0) run_optional_apps_menu_loop || true ;;
                 1) greeter_menu ;;
                 2) fcitx_menu ;;
@@ -352,33 +277,12 @@ main_menu() {
 
         local key
         key=$(read_key) || break
+        handle_menu_key "$key" "$cur_focus" 8
+        cur_focus="$_MENU_FOCUS"
 
-        local action_item=-1
-        case "$key" in
-            UP|[kK])
-                cur_focus=$((cur_focus - 1))
-                [ "$cur_focus" -lt 0 ] && cur_focus=8
-                ;;
-            DOWN|[jJ])
-                cur_focus=$((cur_focus + 1))
-                [ "$cur_focus" -gt 8 ] && cur_focus=0
-                ;;
-            ENTER|SPACE)
-                action_item=$cur_focus
-                ;;
-            [1-8])
-                cur_focus=$((key - 1))
-                action_item=$cur_focus
-                ;;
-            0|[qQ]|exit|ESC)
-                cur_focus=8
-                action_item=8
-                ;;
-        esac
-
-        if [ "$action_item" -ne -1 ]; then
+        if [ "$_MENU_ACTION" -ne -1 ]; then
             printf '\e[?25h'
-            case "$action_item" in
+            case "$_MENU_ACTION" in
                 0) install_configs "full" || true ;;
                 1) deps_menu || true ;;
                 2) snapshot_menu ;;
