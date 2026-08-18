@@ -316,7 +316,7 @@ main() {
             install|deploy)
                 shift
                 discover_config_items
-                install_configs "full"
+                install_configs "${1:-full}"
                 exit 0
                 ;;
             snapshot|backup)

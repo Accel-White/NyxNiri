@@ -24,17 +24,18 @@
 </a>
 
 <p>
-  <sub><em>NyxNiri · Watch demo on <a href="https://www.bilibili.com/video/BV1c63n6dEEG">Bilibili</a> · Join discussion on <a href="https://www.reddit.com/r/niri/comments/1vf53le/nyxniri_a_material_you_desktop_config_for_niri/">Reddit</a></em></sub>
+  <sub><em><a href="https://nyxniri.com">Website</a> · Watch demo on <a href="https://www.bilibili.com/video/BV1c63n6dEEG">Bilibili</a> · Join discussion on <a href="https://www.reddit.com/r/niri/comments/1vf53le/nyxniri_a_material_you_desktop_config_for_niri/">Reddit</a></em></sub>
 </p>
 
 </div>
 
 ## Features
 
-- Noctalia V5 pulls colors directly from your wallpaper; an `mpvpaper` hook extracts video frames via `ffmpeg` so live wallpapers generate palettes too.
+- Wallpaper Color Sync — Noctalia V5 extracts palettes directly from wallpaper; an `mpvpaper` hook extracts video frames via `ffmpeg` for live wallpapers.
 - Light/dark sync — GSettings and GTK follow Noctalia theme modes automatically.
 - Eye Care Mode (`Super+N`) — warmer color temperature, zero blur, solid opaque windows for reading sessions.
-- Scratchpad Terminal (`Super+~`) & Orbit Launcher (`Super+A` / `Super+MouseForward`) — quick-toggle persistent Kitty terminal or open full Orbit M3E vector radial launcher with Gemini search hub (apps, tools, web links, DeepSeek/ChatGPT/Claude/Bing/Google search, custom TOML).
+- Scratchpad Terminal (`Super+~`) — quick-toggle persistent Kitty floating terminal anytime.
+- Orbit Launcher (`Super+A` / `Super+MouseForward`) — vector radial launcher for apps, tools, web links, and AI/search dial (fully configurable via TOML).
 - Shell & Terminal — Fish aliases for proxy/cache management, Kitty cursor trails, Windows-style shortcuts.
 - NyxMellow — a dynamic fcitx5 skin: mellow rounded geometry with Noctalia Material You color palette.
 
@@ -77,7 +78,7 @@ cd ~/NyxNiri && ./install.sh
 </details>
 
 > [!NOTE]
-> `install full` installs `paru` if no AUR helper is found (`mpvpaper` comes from AUR). Existing configs are backed up to `~/.config/NyxNiri/backups/` before deployment. Legacy DMS setup lives on `archive/v1-dms`.
+> `install full` auto-installs `paru` if no AUR helper is found. Existing configs are backed up to `~/.config/NyxNiri/backups/` before deployment. Legacy DMS lives on `archive/v1-dms`.
 
 ## Included Configs
 
@@ -99,9 +100,9 @@ NyxNiri
 ```
 
 > [!NOTE]
-> Configs are replaced atomically on update. To keep personal tweaks:
-> - files matching `*__custom__*` (e.g. `__custom__.kdl`, `01__custom__.fish`) are preserved — number prefixes control load order
-> - any `*__custom__*` folder (e.g. `~/.config/niri/__custom__/`) is kept as-is
+> Configs update atomically. Personal tweaks are preserved via Dunder protocol:
+> - files matching `*__custom__*` (e.g. `01__custom__.kdl`) are preserved (number prefixes control load order)
+> - folders matching `*__custom__*` (e.g. `~/.config/niri/__custom__/`) are kept intact
 
 ## Tooling
 
@@ -188,7 +189,7 @@ NyxNiri
 
 ## Optional Modules
 
-**NyxMellow fcitx5 skin:** mellow rounded shape with colors matching the Noctalia palette (auto light/dark switch). `nyxniri fcitx install` registers it as a Noctalia user template and re-renders it on wallpaper or theme changes. Opt-in only — never enabled automatically.
+**NyxMellow fcitx5 skin:** mellow rounded shape matching Noctalia color palette (auto light/dark switch). `nyxniri fcitx install` registers it as a template and re-renders on wallpaper/theme changes. Opt-in only.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/3f861e8e-55da-408e-a9d5-7f337a039b74" alt="NyxMellow skin (light)" width="48%" />
@@ -197,16 +198,16 @@ NyxNiri
   <sub><em>NyxMellow skin in light and dark mode</em></sub>
 </p>
 
-**Wallpaper & video pack:** the full high-res wallpaper and live-video collection (~100MB) lives in a separate [wallpaper-collection](https://github.com/ech678/wallpaper-collection) repo to keep this repo light. During `install`, you can opt in to pull it; `nyxniri wallpapers` fetches it on demand anytime. Once `~/Pictures/Wallpapers/video/` is detected, repeat installs skip the download automatically.
+**Wallpaper & video pack:** high-res wallpapers and live videos (~100MB) live in [wallpaper-collection](https://github.com/ech678/wallpaper-collection). Opt-in during `install` or download anytime via `nyxniri wallpapers`.
 
-**Noctalia Greeter:** a greetd login screen matching Noctalia style. `nyxniri greeter install` pulls `greetd` + `noctalia-greeter` from AUR, backs up `/etc/greetd/config.toml`, and writes a Polkit rule. It does not disable pre-existing display managers.
+**Noctalia Greeter:** greetd login screen matching Noctalia style. `nyxniri greeter install` installs `greetd` + `noctalia-greeter` (AUR), backs up `/etc/greetd/config.toml`, and configures Polkit rules. Does not disable existing display managers.
 
 ## Troubleshooting
 
 <details>
 <summary><b>Noctalia hangs on startup</b> — <code>ddcutil</code> can time out scanning the I2C bus (common on NVIDIA).</summary>
 
-**Warning:** Disable `ddcutil` in `~/.config/noctalia/noctalia-config.toml`:
+Disable `ddcutil` in `~/.config/noctalia/noctalia-config.toml`:
 
 ```toml
 [brightness]
@@ -230,7 +231,7 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 <details>
 <summary><b>Greeter sync asks for a password</b> — add a Polkit rule (<code>nyxniri greeter install</code> does this for you).</summary>
 
-**Tip:** Run this to install the Polkit rule manually if needed:
+Install the Polkit rule manually if needed:
 
 ```bash
 sudo bash -c 'cat > /etc/polkit-1/rules.d/50-noctalia-greeter.rules << EOF
@@ -255,12 +256,18 @@ EOF'
 - Sponsor: [Afdian](https://afdian.com/a/Echoes678)
 - Bug reports: [GitHub Issues](https://github.com/ech678/NyxNiri/issues)
 
+**Special Thanks & Contributors:**
+
+- [@zhuhuaian](https://github.com/zhuhuaian), [@Krits03](https://github.com/Krits03), [@Yulljie](https://github.com/Yulljie) — community management & support
+- [@TyhLxxxhLrqTq](https://github.com/TyhLxxxhLrqTq) — companion wallpaper site (in development)
+
 **Thanks to:**
 
 - [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) — blur effects reference
 - [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri) — heavily referenced
 - [sanweiya/fcitx5-mellow-themes](https://github.com/sanweiya/fcitx5-mellow-themes) — mellow shape source for NyxMellow skin
 - [StarWhiteIsBusy/Round-Simple-Fcitx5-Skin](https://github.com/StarWhiteIsBusy/Round-Simple-Fcitx5-Skin) — Noctalia color-sync pattern reference
+- [doctorlogix](https://github.com/doctorlogix) — website design inspiration
 
 **Recommended:**
 

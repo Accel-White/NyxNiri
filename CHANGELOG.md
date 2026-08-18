@@ -5,17 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v2.3.2] - Unreleased
+## [v2.3.2] - 2026-08-18
 
 ### Added
 - **Orbit 启动器甩手瞬发**: 支持按住快捷键顺势滑向图标松手直达应用，按任意字母键直接键入搜索。
+- **社区与贡献鸣谢**: 自述文件中新增社区管理、配套壁纸站与设计参考致谢。
 
 ### Changed
-- **Orbit 启动器命名规范**: 统一组件命名为 Orbit 启动器，配置文件平滑迁移为 `orbit-items__custom__.toml`。
+- **自述文档精简与降噪**: 优化排版结构与信息密度，置顶官方网站入口。
 
 ### Fixed
-- **Scratchpad 浮动终端历史滚动**: 修复了浮动终端无法使用鼠标滚轮翻阅历史记录的问题。
-- **Orbit 启动器子菜单返回**: 修复了在分类文件夹中右键返回上一级时偶发的界面闪烁与误触发。
+- **浮动终端历史滚动**: 修复了 Scratchpad 浮动终端无法使用鼠标滚轮翻阅历史记录的问题。
+- **纯配置安装模式**: 修复了通过命令行运行配置同步时被误识别为全量安装的问题。
 
 ## [v2.3.1] - 2026-08-16
 

@@ -24,17 +24,18 @@
 </a>
 
 <p>
-  <sub><em>NyxNiri · 观看 <a href="https://www.bilibili.com/video/BV1c63n6dEEG">Bilibili 演示</a> · 参与 <a href="https://www.reddit.com/r/niri/comments/1vf53le/nyxniri_a_material_you_desktop_config_for_niri/">Reddit 讨论</a></em></sub>
+  <sub><em><a href="https://nyxniri.com">官网</a> · 观看 <a href="https://www.bilibili.com/video/BV1c63n6dEEG">Bilibili 演示</a> · 参与 <a href="https://www.reddit.com/r/niri/comments/1vf53le/nyxniri_a_material_you_desktop_config_for_niri/">Reddit 讨论</a></em></sub>
 </p>
 
 </div>
 
 ## 特性
 
-- Noctalia V5 直接从壁纸取色；`mpvpaper` 配合 `ffmpeg` 抽取视频帧，动态壁纸也能同步提取配色。
+- 壁纸色彩联动 — Noctalia V5 直接从壁纸取色；`mpvpaper` 配合 `ffmpeg` 抽取视频帧，动态壁纸亦实时生成调色板。
 - 明暗模式同步 — GSettings 与 GTK 自动跟随 Noctalia 切换。
 - 护眼模式（`Super+N`）— 调暖色温、关闭模糊、纯色不透明背景。
-- Scratchpad 终端（`Super+~`）与 Orbit 启动器（`Super+A` / `Super+鼠标前侧键`）— 随时快捷呼出 Kitty 持久浮动终端，或通过 Orbit 矢量星环启动器快速调度应用、系统工具、常用网页与 M3E 智能搜索（DeepSeek、ChatGPT、Claude、Bing、Google 大牌引擎直达，支持 TOML 自定义）。
+- Scratchpad 终端（`Super+~`）— 随时快捷呼出 Kitty 持久浮动终端。
+- Orbit 启动器（`Super+A` / `Super+鼠标前侧键`）— 矢量星环启动器，聚合应用、工具、网页与 AI/搜索引擎轮盘（全 TOML 自定义）。
 - 终端与 Shell — Fish 代理/缓存别名，Kitty 光标轨迹，Windows 风格快捷键。
 - NyxMellow 动态 fcitx5 皮肤 — mellow 圆角形状，随 Noctalia 自动取色。
 
@@ -77,7 +78,7 @@ cd ~/NyxNiri && ./install.sh
 </details>
 
 > [!NOTE]
-> `install full` 在缺少 AUR helper 时会自动安装 `paru`（`mpvpaper` 依赖 AUR）。安装时会自动将现有配置备份至 `~/.config/NyxNiri/backups/`。旧版 DMS 配置保留在 `archive/v1-dms` 分支。
+> 缺少 AUR helper 时 `install full` 会自动补全 `paru`；部署前现有配置备份至 `~/.config/NyxNiri/backups/`。旧版 DMS 保留在 `archive/v1-dms` 分支。
 
 ## 包含配置
 
@@ -99,9 +100,9 @@ NyxNiri
 ```
 
 > [!NOTE]
-> 更新时配置目录会被原子替换。个人改动可通过以下方式保留：
-> - 文件名含 `*__custom__*` 的文件（如 `__custom__.kdl`、`01__custom__.fish`）会被保留，数字前缀控制加载顺序
-> - 任何 `*__custom__*` 文件夹（如 `~/.config/niri/__custom__/`）整体保留
+> 更新时采用原子替换。个人改动通过 Dunder 协议保留：
+> - 含 `*__custom__*` 的文件自动保留（如 `01__custom__.kdl`，数字前缀控制加载顺序）
+> - 含 `*__custom__*` 的目录整体保留（如 `~/.config/niri/__custom__/`）
 
 ## 工具
 
@@ -188,7 +189,7 @@ NyxNiri
 
 ## 可选模块
 
-**NyxMellow fcitx5 皮肤：** 圆角 mellow 风格，随 Noctalia 自动提取配色（支持明暗自动切换）。运行 `nyxniri fcitx install` 注册为 Noctalia 模板，更换壁纸或切换明暗时自动重新渲染。该皮肤为手动可选安装，不会默认静默启用。
+**NyxMellow fcitx5 皮肤：** 圆角 mellow 风格，随 Noctalia 自动提取配色并同步明暗。`nyxniri fcitx install` 注册为模板并随主题自动重绘；按需启用，不覆盖现有配置。
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/3f861e8e-55da-408e-a9d5-7f337a039b74" alt="NyxMellow 皮肤（亮色）" width="48%" />
@@ -197,16 +198,16 @@ NyxNiri
   <sub><em>NyxMellow 皮肤亮色 / 暗色效果</em></sub>
 </p>
 
-**壁纸与动态视频包：** 高清壁纸与动态视频合集（约 100MB）独立存放在 [wallpaper-collection](https://github.com/ech678/wallpaper-collection) 仓库，避免拖累主仓库体积。`install` 时可选拉取，也可随时通过 `nyxniri wallpapers` 按需下载；检测到本地已有 `~/Pictures/Wallpapers/video/` 目录时，重复安装会自动跳过下载。
+**壁纸与动态视频包：** 高清壁纸与动态视频（约 100MB）独立存放于 [wallpaper-collection](https://github.com/ech678/wallpaper-collection) 仓库。`install` 时可选拉取，或随时通过 `nyxniri wallpapers` 按需下载。
 
-**Noctalia Greeter：** 与 Noctalia 主题一致的 greetd 登录界面。运行 `nyxniri greeter install` 安装 `greetd` + `noctalia-greeter`（AUR），备份 `/etc/greetd/config.toml`，写入 Polkit 免密规则。不会禁用任何已有显示管理器。
+**Noctalia Greeter：** 与 Noctalia 主题一致的 greetd 登录界面。`nyxniri greeter install` 安装 `greetd` + `noctalia-greeter`（AUR）、备份现有配置并配置 Polkit 规则；不禁用已有显示管理器。
 
 ## 故障排除
 
 <details>
 <summary><b>Noctalia 启动卡死</b> — 多为 <code>ddcutil</code> 扫描 I2C 总线超时（NVIDIA 常见）。</summary>
 
-**警告：** 在 `~/.config/noctalia/noctalia-config.toml` 中禁用：
+在 `~/.config/noctalia/noctalia-config.toml` 中禁用 `ddcutil`：
 
 ```toml
 [brightness]
@@ -230,7 +231,7 @@ git -C ~/.local/state/noctalia/plugins/sources/official/repo reset --hard HEAD
 <details>
 <summary><b>Greeter 同步需要输密码</b> — 添加 Polkit 免密规则（<code>nyxniri greeter install</code> 会自动写入）。</summary>
 
-**提示：** 手动安装 Polkit 规则：
+如需手动添加 Polkit 规则：
 
 ```bash
 sudo bash -c 'cat > /etc/polkit-1/rules.d/50-noctalia-greeter.rules << EOF
@@ -255,12 +256,18 @@ EOF'
 - 赞助支持：[爱发电](https://afdian.com/a/Echoes678)
 - 问题反馈：[GitHub Issues](https://github.com/ech678/NyxNiri/issues)
 
+**协助与鸣谢：**
+
+- [@zhuhuaian](https://github.com/zhuhuaian) · [@Krits03](https://github.com/Krits03) · [@Yulljie](https://github.com/Yulljie) — 社区管理与情感支持
+- [@TyhLxxxhLrqTq](https://github.com/TyhLxxxhLrqTq) — 配套壁纸站支持（开发中）
+
 **致谢：**
 
 - [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) — 参考了 blur 效果
 - [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri) — 抄了很多！
 - [sanweiya/fcitx5-mellow-themes](https://github.com/sanweiya/fcitx5-mellow-themes) — NyxMellow 皮肤圆角形状的来源
 - [StarWhiteIsBusy/Round-Simple-Fcitx5-Skin](https://github.com/StarWhiteIsBusy/Round-Simple-Fcitx5-Skin) — Noctalia 取色联动方案参考
+- [doctorlogix](https://github.com/doctorlogix) — 官网网页设计借鉴与参考
 
 **推荐项目：**
 
