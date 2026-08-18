@@ -1,5 +1,5 @@
 # =============================================================================
-# NyxNiri 星环菜单 · 自定义配置文件 (Dunder Custom Configuration)
+# NyxNiri Orbit Launcher (星环启动器) · 自定义配置文件 (Dunder Custom Configuration)
 # =============================================================================
 # 遵循 Dunder 协议: 文件名含 `__custom__`，升级与安装时会被自动保留，绝不被覆盖。
 #
@@ -64,7 +64,6 @@ desc = "Terminal"
 icon = "󰞷"
 cmd = "kitty"
 shortcut = "1"
-mnemonics = ["t", "k"]
 color_key = "secondary"
 
 [[items]]
@@ -73,7 +72,6 @@ name = "System Tools"
 desc = "Folder · 3 Tools"
 icon = "󰘳"
 shortcut = "2"
-mnemonics = ["s", "t"]
 color_key = "secondary"
 
   [[items.children]]
@@ -83,7 +81,6 @@ color_key = "secondary"
   icon = "󰓅"
   cmd = "missioncenter"
   shortcut = "1"
-  mnemonics = ["m"]
   color_key = "secondary"
 
   [[items.children]]
@@ -93,7 +90,6 @@ color_key = "secondary"
   icon = "󰛨"
   cmd = "~/.config/niri/scripts/toggle-eyecare.sh"
   shortcut = "2"
-  mnemonics = ["e"]
   color_key = "secondary"
 
   [[items.children]]
@@ -103,7 +99,6 @@ color_key = "secondary"
   icon = "󰃢"
   cmd = "~/.config/fish/clean-cache"
   shortcut = "3"
-  mnemonics = ["c"]
   color_key = "secondary"
 
 [[items]]
@@ -112,7 +107,6 @@ name = "Websites"
 desc = "Folder · 3 Sites"
 icon = "󰖟"
 shortcut = "3"
-mnemonics = ["w"]
 color_key = "secondary"
 
   [[items.children]]
@@ -122,7 +116,6 @@ color_key = "secondary"
   icon = "󰖟"
   url = "https://www.zhihu.com"
   shortcut = "1"
-  mnemonics = ["z"]
   color_key = "secondary"
 
   [[items.children]]
@@ -132,7 +125,6 @@ color_key = "secondary"
   icon = "󰕧"
   url = "https://www.bilibili.com"
   shortcut = "2"
-  mnemonics = ["b"]
   color_key = "secondary"
 
   [[items.children]]
@@ -142,7 +134,6 @@ color_key = "secondary"
   icon = "󰊤"
   url = "https://github.com"
   shortcut = "3"
-  mnemonics = ["g"]
   color_key = "secondary"
 
 [[items]]
@@ -152,5 +143,4 @@ desc = "File Manager"
 icon = "󰉋"
 cmd = "nautilus"
 shortcut = "4"
-mnemonics = ["n", "f"]
 color_key = "secondary"

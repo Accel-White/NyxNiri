@@ -58,6 +58,7 @@ run_doctor() {
         "fish/clean-cache:clean-cache" \
         "$MAIN_WM/scripts/toggle-eyecare.sh:toggle-eyecare.sh" \
         "$MAIN_WM/scripts/niri-scratch-toggle.sh:niri-scratch-toggle.sh" \
+        "$MAIN_WM/scripts/orbit-launcher.py:orbit-launcher.py" \
         "$MAIN_WM/scripts/niri-scratch-menu.py:niri-scratch-menu.py"; do
         local rel_path="${script_info%%:*}"
         local name="${script_info##*:}"
@@ -90,9 +91,9 @@ run_doctor() {
     fi
 
     if python3 -c "import gi; gi.require_version('Gtk', '3.0'); gi.require_version('GtkLayerShell', '0.1')" >/dev/null 2>&1; then
-        msg doctor_ok "Radial Menu Component: GtkLayerShell Python runtime is available"
+        msg doctor_ok "Orbit Launcher Component: GtkLayerShell Python runtime is available"
     else
-        msg doctor_warn "Radial Menu Component: GtkLayerShell Python bindings missing (install python-gobject gtk-layer-shell)"
+        msg doctor_warn "Orbit Launcher Component: GtkLayerShell Python bindings missing (install python-gobject gtk-layer-shell)"
     fi
 
     local curr_shell="${SHELL:-}"

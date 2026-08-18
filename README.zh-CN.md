@@ -34,7 +34,7 @@
 - Noctalia V5 直接从壁纸取色；`mpvpaper` 配合 `ffmpeg` 抽取视频帧，动态壁纸也能同步提取配色。
 - 明暗模式同步 — GSettings 与 GTK 自动跟随 Noctalia 切换。
 - 护眼模式（`Super+N`）— 调暖色温、关闭模糊、纯色不透明背景。
-- Scratchpad 终端（`Super+~`）与星环菜单（`Super+A` / `Super+鼠标前侧键`）— 随时快捷呼出 Kitty 持久浮动终端，或通过 M3 矢量星环菜单快速调度应用、系统工具、常用网页与 M3E 智能搜索（DeepSeek、ChatGPT、Claude、Bing、Google 大牌引擎直达，支持 TOML 自定义）。
+- Scratchpad 终端（`Super+~`）与 Orbit 启动器（`Super+A` / `Super+鼠标前侧键`）— 随时快捷呼出 Kitty 持久浮动终端，或通过 Orbit 矢量星环启动器快速调度应用、系统工具、常用网页与 M3E 智能搜索（DeepSeek、ChatGPT、Claude、Bing、Google 大牌引擎直达，支持 TOML 自定义）。
 - 终端与 Shell — Fish 代理/缓存别名，Kitty 光标轨迹，Windows 风格快捷键。
 - NyxMellow 动态 fcitx5 皮肤 — mellow 圆角形状，随 Noctalia 自动取色。
 
@@ -89,7 +89,7 @@ NyxNiri
 ├── fcitx5/                     # NyxMellow fcitx5 皮肤模板
 └── v2/
     ├── niri/                   # 窗口管理器 (.kdl, .toml)
-    │   └── scripts/            # 星环菜单与 Scratchpad 脚本
+    │   └── scripts/            # Orbit 启动器与 Scratchpad 脚本
     ├── noctalia/               # 桌面 Shell 与主题同步
     ├── kitty/                  # 终端
     ├── fish/                   # 别名与函数
@@ -175,7 +175,7 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | 动态壁纸选择 |
 | <kbd>Super</kbd> + <kbd>N</kbd> | 护眼模式 |
 | <kbd>Super</kbd> + <kbd>~</kbd> | 切换 Kitty Scratchpad 浮动终端 |
-| <kbd>Super</kbd> + <kbd>S</kbd> / <kbd>Super</kbd> + <kbd>鼠标前侧键</kbd> | Scratchpad M3 星环菜单 |
+| <kbd>Super</kbd> + <kbd>A</kbd> / <kbd>Super</kbd> + <kbd>鼠标前侧键</kbd> | Orbit M3E 矢量星环启动器 |
 | <kbd>Super</kbd> + <kbd>L</kbd> | 锁屏 |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | 截图 |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | 重载 Niri |

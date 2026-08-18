@@ -37,7 +37,7 @@ atomic_replace_item() {
     if [ -d "$dest" ]; then
         # 1. 继承入口文件 (匹配 *__custom__*，跳过 *__custom__* 目录内部)
         (cd "$dest" && find . -type d -name "*__custom__*" -prune -o \( -type f -o -type l \) -name "*__custom__*" -print0 2>/dev/null | while IFS= read -r -d '' file; do
-            if [ "${NYXNIRI_TEST_MODE:-0}" = "1" ] && [ "${file#./}" = "scratchpad-items__custom__.toml" ]; then
+            if [ "${NYXNIRI_TEST_MODE:-0}" = "1" ] && { [ "${file#./}" = "scratchpad-items__custom__.toml" ] || [ "${file#./}" = "orbit-items__custom__.toml" ]; }; then
                 continue
             fi
             mkdir -p "$tmp_new/$(dirname "$file")"
@@ -120,6 +120,7 @@ _phase_atomic_deployment() {
         "$THEME_ENGINE/mpvpaper-sync.sh" \
         "$MAIN_WM/scripts/toggle-eyecare.sh" "$MAIN_WM/toggle-eyecare.sh" \
         "$MAIN_WM/scripts/niri-scratch-toggle.sh" "$MAIN_WM/niri-scratch-toggle.sh" \
+        "$MAIN_WM/scripts/orbit-launcher.py" "$MAIN_WM/orbit-launcher.py" \
         "$MAIN_WM/scripts/niri-scratch-menu.py" "$MAIN_WM/niri-scratch-menu.py"; do
         [ -f "$HOME/.config/$script_rel" ] && chmod +x "$HOME/.config/$script_rel"
     done

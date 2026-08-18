@@ -7,8 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v2.3.2] - Unreleased
 
+### Added
+- **Orbit 启动器甩手瞬发**: 支持按住快捷键顺势滑向图标松手直达应用，按任意字母键直接键入搜索。
+
+### Changed
+- **Orbit 启动器命名规范**: 统一组件命名为 Orbit 启动器，配置文件平滑迁移为 `orbit-items__custom__.toml`。
+
 ### Fixed
 - **Scratchpad 浮动终端历史滚动**: 修复了浮动终端无法使用鼠标滚轮翻阅历史记录的问题。
+- **Orbit 启动器子菜单返回**: 修复了在分类文件夹中右键返回上一级时偶发的界面闪烁与误触发。
 
 ## [v2.3.1] - 2026-08-16
 

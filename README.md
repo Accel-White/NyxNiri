@@ -34,7 +34,7 @@
 - Noctalia V5 pulls colors directly from your wallpaper; an `mpvpaper` hook extracts video frames via `ffmpeg` so live wallpapers generate palettes too.
 - Light/dark sync — GSettings and GTK follow Noctalia theme modes automatically.
 - Eye Care Mode (`Super+N`) — warmer color temperature, zero blur, solid opaque windows for reading sessions.
-- Scratchpad Terminal (`Super+~`) & Star-Ring Menu (`Super+A` / `Super+MouseForward`) — quick-toggle persistent Kitty terminal or open full M3 star-ring menu with M3E smart search hub (apps, tools, web links, DeepSeek/ChatGPT/Claude/Bing/Google search, custom TOML).
+- Scratchpad Terminal (`Super+~`) & Orbit Launcher (`Super+A` / `Super+MouseForward`) — quick-toggle persistent Kitty terminal or open full Orbit M3E vector radial launcher with Gemini search hub (apps, tools, web links, DeepSeek/ChatGPT/Claude/Bing/Google search, custom TOML).
 - Shell & Terminal — Fish aliases for proxy/cache management, Kitty cursor trails, Windows-style shortcuts.
 - NyxMellow — a dynamic fcitx5 skin: mellow rounded geometry with Noctalia Material You color palette.
 
@@ -89,7 +89,7 @@ NyxNiri
 ├── fcitx5/                     # NyxMellow fcitx5 skin templates
 └── v2/
     ├── niri/                   # window manager (.kdl, .toml)
-    │   └── scripts/            # scratchpad & radial menu scripts
+    │   └── scripts/            # Orbit launcher & scratchpad scripts
     ├── noctalia/               # shell + theme sync
     ├── kitty/                  # terminal
     ├── fish/                   # aliases + functions
@@ -175,7 +175,7 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | Live wallpaper picker |
 | <kbd>Super</kbd> + <kbd>N</kbd> | Toggle Eye Care Mode |
 | <kbd>Super</kbd> + <kbd>~</kbd> | Toggle Kitty scratchpad terminal |
-| <kbd>Super</kbd> + <kbd>S</kbd> / <kbd>Super</kbd> + <kbd>Mouse Forward</kbd> | Scratchpad M3 radial menu |
+| <kbd>Super</kbd> + <kbd>A</kbd> / <kbd>Super</kbd> + <kbd>Mouse Forward</kbd> | Orbit M3E vector radial launcher |
 | <kbd>Super</kbd> + <kbd>L</kbd> | Lock screen |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Screenshot |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | Reload Niri |

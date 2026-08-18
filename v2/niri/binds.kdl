@@ -60,9 +60,9 @@ binds {
     // 快速切换 Kitty 专属 Scratchpad 终端 / Toggle Kitty scratchpad terminal
     Mod+Grave { spawn "~/.config/niri/scripts/niri-scratch-toggle.sh" "kitty"; }
 
-    // 呼出 Scratchpad Material You 星环菜单 (按住 Super 点鼠标前侧键，或键盘 Mod+A) / Open Scratchpad Material 3 radial menu
-    Mod+A repeat=false { spawn "~/.config/niri/scripts/niri-scratch-menu.py"; }
-    Mod+MouseForward repeat=false { spawn "~/.config/niri/scripts/niri-scratch-menu.py"; }
+    // 呼出 Orbit Launcher M3E 矢量星环启动器 (按住 Super 点鼠标前侧键，或键盘 Mod+A) / Open Orbit Launcher M3E radial menu
+    Mod+A repeat=false { spawn "~/.config/niri/scripts/orbit-launcher.py"; }
+    Mod+MouseForward repeat=false { spawn "~/.config/niri/scripts/orbit-launcher.py"; }
 
     // -------------------------------------------------------------------------
     // 3. 焦点导航与窗口移动 / Focus Navigation & Window Movement
