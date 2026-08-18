@@ -31,7 +31,10 @@ case "$TARGET_APP" in
                 niri msg action spawn -- \
                     kitty --app-id "$APP_ID" --title "Scratchpad" \
                     tmux new-session -A -D -s "$TMUX_SESSION" \
-                    "fish -C 'function fish_greeting; end' -C 'set -g fish_history scratchpad'" \; set-option status off
+                    "fish -C 'function fish_greeting; end' -C 'set -g fish_history scratchpad'" \
+                    \; set-option status off \
+                    \; set-option mouse on \
+                    \; set-option history-limit 50000
             else
                 niri msg action spawn -- \
                     kitty --app-id "$APP_ID" --title "Scratchpad"
