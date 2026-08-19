@@ -427,6 +427,21 @@ main() {
                         ;;
                 esac
                 ;;
+            theme)
+                shift
+                local sync_script="$HOME/.config/$THEME_ENGINE/theme-sync.sh"
+                if [ ! -f "$sync_script" ] && [ -f "${REPO_DIR:-.}/$CONFIG_DIR_NAME/$THEME_ENGINE/theme-sync.sh" ]; then
+                    sync_script="${REPO_DIR:-.}/$CONFIG_DIR_NAME/$THEME_ENGINE/theme-sync.sh"
+                fi
+                if [ -f "$sync_script" ]; then
+                    chmod +x "$sync_script" 2>/dev/null || true
+                    bash "$sync_script" "${1:-toggle}"
+                    exit $?
+                else
+                    echo "[✗] theme-sync.sh not found." >&2
+                    exit 1
+                fi
+                ;;
             update)
                 shift
                 update_repo_and_script "${1:-}"
@@ -448,6 +463,7 @@ main() {
                 echo "  deps [core|apps]     Open dependency or recommended apps menu"
                 echo "  apps                 Open recommended software installer (Nautilus, Mission Center, Fcitx5)"
                 echo "  wallpapers           Download the full wallpaper & video pack from the external repo"
+                echo "  theme [toggle|dark|light|sync|status] Switch or sync system dark/light theme"
                 echo "  bug|report           Generate a diagnostic bug report"
                 echo "  test                 Test deploy (no backup, keep monitor.kdl, idempotent)"
                 echo "  greeter [install|status|uninstall]  Optional Noctalia Greeter (greetd login) setup"

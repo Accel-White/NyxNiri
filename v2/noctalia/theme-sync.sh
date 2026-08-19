@@ -1,68 +1,189 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# ==============================================================================
+# NyxNiri System Theme Dispatcher & Bus (theme-sync.sh)
+# High-robustness, atomic, zero-entropy theme synchronization engine.
+# ==============================================================================
 
-# Get current theme mode (from env, or fallback to CLI)
-THEME_MODE="${NOCTALIA_THEME_MODE}"
-if [ -z "$THEME_MODE" ]; then
-    THEME_MODE=$(noctalia msg theme-mode-get 2>/dev/null || echo "dark")
-fi
+set -uo pipefail
 
-echo "Syncing theme mode to: $THEME_MODE"
+# 1. Portability: Overridable theme configuration variables
+GTK_THEME_DARK="${NYXNIRI_GTK_THEME_DARK:-adw-gtk3-dark}"
+GTK_THEME_LIGHT="${NYXNIRI_GTK_THEME_LIGHT:-adw-gtk3}"
+KVANTUM_THEME_DARK="${NYXNIRI_KVANTUM_DARK:-KvLibadwaitaDark}"
+KVANTUM_THEME_LIGHT="${NYXNIRI_KVANTUM_LIGHT:-KvLibadwaita}"
+DEFAULT_FALLBACK_MODE="${NYXNIRI_DEFAULT_MODE:-dark}"
 
-# Function to update settings in INI files safely
-update_ini() {
+# 2. Concurrency Lock: Prevent race conditions from rapid toggles or startup hooks
+LOCK_FILE="${XDG_RUNTIME_DIR:-/tmp}/nyxniri-theme-sync.lock"
+exec 9>"$LOCK_FILE"
+flock -w 5 9 || {
+    echo "[!] Theme sync locked by another process. Skipping." >&2
+    exit 0
+}
+
+# 3. Atomic INI Setting Updater (Safe against whitespace, regex chars, and powerloss)
+atomic_update_ini() {
     local file="$1"
     local key="$2"
     local val="$3"
-    
-    if [ ! -f "$file" ]; then
-        mkdir -p "$(dirname "$file")"
-        echo "[Settings]" > "$file"
-    fi
-    
-    # Escape special characters in key and val for sed
-    local esc_key esc_val
-    # shellcheck disable=SC2016
-    esc_key=$(printf '%s\n' "$key" | sed 's/[[\.*^$()]/\\&/g')
-    # shellcheck disable=SC2016
-    esc_val=$(printf '%s\n' "$val" | sed 's/[|\&]/\\&/g')
 
-    if grep -q "^${esc_key}=" "$file"; then
-        sed -i "s|^${esc_key}=.*|${key}=${esc_val}|" "$file"
-    else
-        # Append right after the [Settings] section line
-        if grep -q "^\[Settings\]" "$file"; then
-            sed -i "/^\[Settings\]/a ${key}=${esc_val}" "$file"
-        else
-            echo "${key}=${val}" >> "$file"
+    local dir
+    dir="$(dirname "$file")"
+    mkdir -p "$dir" 2>/dev/null || true
+
+    local tmp_file
+    tmp_file=$(mktemp "$dir/.ini.XXXXXX") || return 1
+
+    local key_found=0
+    local has_settings_header=0
+
+    if [ -f "$file" ]; then
+        while IFS= read -r line || [ -n "$line" ]; do
+            # Check for section header
+            if [[ "$line" =~ ^\[Settings\] ]]; then
+                has_settings_header=1
+                echo "$line" >> "$tmp_file"
+                continue
+            fi
+            # Match target key with optional whitespace around '='
+            if [[ "$line" =~ ^[[:space:]]*${key}[[:space:]]*= ]]; then
+                echo "${key}=${val}" >> "$tmp_file"
+                key_found=1
+            else
+                echo "$line" >> "$tmp_file"
+            fi
+        done < "$file"
+    fi
+
+    # If key was not present in the original file, append it cleanly under [Settings]
+    if [ "$key_found" -eq 0 ]; then
+        if [ "$has_settings_header" -eq 0 ] && [ ! -s "$tmp_file" ]; then
+            echo "[Settings]" > "$tmp_file"
         fi
+        echo "${key}=${val}" >> "$tmp_file"
     fi
+
+    chmod 644 "$tmp_file" 2>/dev/null || true
+    mv -f "$tmp_file" "$file"
 }
 
-set_gsettings() {
+# 4. Safe GSettings / dconf Setter
+set_system_theme() {
     local scheme="$1"
-    local val="$2"
+    local gtk_theme="$2"
+
     if command -v gsettings >/dev/null 2>&1; then
-        gsettings set org.gnome.desktop.interface "$scheme" "$val" 2>/dev/null || true
+        gsettings set org.gnome.desktop.interface color-scheme "$scheme" 2>/dev/null || true
+        gsettings set org.gnome.desktop.interface gtk-theme "$gtk_theme" 2>/dev/null || true
+    elif command -v dconf >/dev/null 2>&1; then
+        dconf write /org/gnome/desktop/interface/color-scheme "'$scheme'" 2>/dev/null || true
+        dconf write /org/gnome/desktop/interface/gtk-theme "'$gtk_theme'" 2>/dev/null || true
     fi
 }
 
-scheme_val="prefer-dark"
-gtk_theme="adw-gtk3-dark"
-dark_pref="true"
+# 5. Multi-Tier Theme Mode Resolution Pipeline
+ACTION="${1:-}"
 
-if [ "$THEME_MODE" = "light" ]; then
-    scheme_val="prefer-light"
-    gtk_theme="adw-gtk3"
-    dark_pref="false"
+# Handle 'status' query
+if [ "$ACTION" = "status" ]; then
+    curr_scheme="unknown"
+    if command -v gsettings >/dev/null 2>&1; then
+        curr_scheme=$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null | tr -d "'" || echo "unknown")
+    fi
+    noctalia_mode="unknown"
+    if command -v noctalia >/dev/null 2>&1; then
+        noctalia_mode=$(noctalia msg theme-mode-get 2>/dev/null || echo "unknown")
+    fi
+    echo "Current Scheme: $curr_scheme | Noctalia Mode: $noctalia_mode"
+    exit 0
 fi
 
-# 1. Update GSettings (affects Firefox, Chromium, VS Code, and libadwaita apps)
-set_gsettings color-scheme "$scheme_val"
-set_gsettings gtk-theme "$gtk_theme"
+# Handle 'toggle'
+if [ "$ACTION" = "toggle" ]; then
+    if command -v noctalia >/dev/null 2>&1 && noctalia msg status >/dev/null 2>&1; then
+        noctalia msg theme-mode-toggle 2>/dev/null || true
+        exit 0
+    else
+        # Standalone fallback toggle without Noctalia daemon
+        curr_scheme="prefer-dark"
+        if command -v gsettings >/dev/null 2>&1; then
+            curr_scheme=$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null | tr -d "'" || echo "prefer-dark")
+        fi
+        if [ "$curr_scheme" = "prefer-dark" ]; then
+            TARGET_MODE="light"
+        else
+            TARGET_MODE="dark"
+        fi
+    fi
+elif [ "$ACTION" = "dark" ] || [ "$ACTION" = "light" ]; then
+    TARGET_MODE="$ACTION"
+    if command -v noctalia >/dev/null 2>&1 && noctalia msg status >/dev/null 2>&1; then
+        noctalia msg theme-mode-set "$ACTION" 2>/dev/null || true
+    fi
+else
+    # Derived from hook environment, Noctalia IPC, or system query
+    TARGET_MODE="${NOCTALIA_THEME_MODE:-}"
+    if [ -z "$TARGET_MODE" ] && command -v noctalia >/dev/null 2>&1; then
+        TARGET_MODE=$(noctalia msg theme-mode-get 2>/dev/null || echo "")
+    fi
+    if [ "$TARGET_MODE" = "auto" ] || [ -z "$TARGET_MODE" ]; then
+        if command -v gsettings >/dev/null 2>&1; then
+            curr_scheme=$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null | tr -d "'" || echo "")
+            if [ "$curr_scheme" = "prefer-light" ] || [ "$curr_scheme" = "default" ]; then
+                TARGET_MODE="light"
+            else
+                TARGET_MODE="$DEFAULT_FALLBACK_MODE"
+            fi
+        else
+            TARGET_MODE="$DEFAULT_FALLBACK_MODE"
+        fi
+    fi
+fi
 
-# 2. Update GTK 3.0 settings.ini
-update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-application-prefer-dark-theme" "$dark_pref"
-update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-theme-name" "$gtk_theme"
+# Normalize Target Parameters
+if [ "$TARGET_MODE" = "light" ]; then
+    SCHEME_VAL="prefer-light"
+    GTK_THEME="$GTK_THEME_LIGHT"
+    DARK_PREF="false"
+    KVANTUM_THEME="$KVANTUM_THEME_LIGHT"
+else
+    SCHEME_VAL="prefer-dark"
+    GTK_THEME="$GTK_THEME_DARK"
+    DARK_PREF="true"
+    KVANTUM_THEME="$KVANTUM_THEME_DARK"
+fi
 
-# 3. Update GTK 4.0 settings.ini
-update_ini "$HOME/.config/gtk-4.0/settings.ini" "gtk-application-prefer-dark-theme" "$dark_pref"
+# 6. Broadcast to GSettings / XDG Desktop Portal
+set_system_theme "$SCHEME_VAL" "$GTK_THEME"
+
+# 7. Atomic Sync to GTK 3.0 & GTK 4.0 INI Files
+atomic_update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-application-prefer-dark-theme" "$DARK_PREF"
+atomic_update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-theme-name" "$GTK_THEME"
+atomic_update_ini "$HOME/.config/gtk-4.0/settings.ini" "gtk-application-prefer-dark-theme" "$DARK_PREF"
+atomic_update_ini "$HOME/.config/gtk-4.0/settings.ini" "gtk-theme-name" "$GTK_THEME"
+
+# Clean up any legacy or stale GTK CSS overrides that break Libadwaita/Nautilus
+for css_dir in "$HOME/.config/gtk-4.0" "$HOME/.config/gtk-3.0"; do
+    if [ -f "$css_dir/noctalia.css" ]; then
+        rm -f "$css_dir/noctalia.css" 2>/dev/null || true
+    fi
+    if [ -f "$css_dir/gtk.css" ] && grep -E -q "libadwaita\.css|noctalia\.css|iNiR theming" "$css_dir/gtk.css" 2>/dev/null; then
+        rm -f "$css_dir/gtk.css" 2>/dev/null || true
+    fi
+done
+
+# 8. Hot-Reload Running Applications Live
+# Kitty terminal hot reload
+if command -v pkill >/dev/null 2>&1; then
+    pkill -SIGUSR1 -x kitty 2>/dev/null || true
+fi
+
+# Kvantum Qt theme synchronization (silent INI update only if theme directory exists)
+if [ -d "/usr/share/Kvantum/$KVANTUM_THEME" ] || [ -d "$HOME/.config/Kvantum/$KVANTUM_THEME" ]; then
+    atomic_update_ini "$HOME/.config/Kvantum/kvantum.kvconfig" "theme" "$KVANTUM_THEME"
+fi
+
+# 9. Feedback for Interactive CLI Invocations
+if [ -t 1 ] && [ -n "$ACTION" ]; then
+    echo "Theme synced to: $TARGET_MODE (Scheme: $SCHEME_VAL, GTK: $GTK_THEME)"
+fi

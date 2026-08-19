@@ -32,7 +32,7 @@
 ## Features
 
 - Wallpaper Color Sync — Noctalia V5 extracts palettes directly from wallpaper; an `mpvpaper` hook extracts video frames via `ffmpeg` for live wallpapers.
-- Light/dark sync — GSettings and GTK follow Noctalia theme modes automatically.
+- Light/dark sync — Full-system theme bus: GSettings, GTK 3/4, XDG Desktop Portal, Kitty terminal, and browsers (Brave, Chromium, Firefox) follow theme changes live.
 - Eye Care Mode (`Super+N`) — warmer color temperature, zero blur, solid opaque windows for reading sessions.
 - Scratchpad Terminal (`Super+~`) — quick-toggle persistent Kitty floating terminal anytime.
 - Orbit Launcher (`Super+A` / `Super+MouseForward`) — vector radial launcher for apps, tools, web links, and AI/search dial (fully configurable via TOML).
@@ -92,6 +92,7 @@ NyxNiri
     ├── niri/                   # window manager (.kdl, .toml)
     │   └── scripts/            # Orbit launcher & scratchpad scripts
     ├── noctalia/               # shell + theme sync
+    ├── xdg-desktop-portal/     # portal routing (Settings / screencast)
     ├── kitty/                  # terminal
     ├── fish/                   # aliases + functions
     ├── fastfetch/              # system info
@@ -123,6 +124,7 @@ NyxNiri
 | `nyxniri deps` | Open dependency check & install menu |
 | `nyxniri apps` | Open recommended apps installer (Nautilus, Mission Center, Fcitx5) |
 | `nyxniri wallpapers` | Download the full wallpaper & video pack from the external repo |
+| `nyxniri theme [toggle\|dark\|light\|sync\|status]` | Switch or sync system dark/light theme |
 | `nyxniri bug` / `nyxniri report` | Generate diagnostic bug report |
 | `nyxniri test` | Developer test deploy (no backup, keep monitor.kdl) |
 | `nyxniri fcitx [install\|status\|uninstall]` | NyxMellow fcitx5 skin |
@@ -244,6 +246,21 @@ polkit.addRule(function(action, subject) {
     }
 });
 EOF'
+```
+
+</details>
+
+<details>
+<summary><b>Nautilus or Libadwaita apps stuck in light mode</b> — leftover user CSS overrides dark mode.</summary>
+
+If Noctalia's built-in GTK templates or old tools generated `noctalia.css` or `gtk.css` in `~/.config/gtk-4.0/`, GTK4 forces those CSS color definitions over system dark mode.
+
+Run theme sync or remove the stale override files:
+
+```bash
+nyxniri theme sync
+# Or manually:
+rm -f ~/.config/gtk-4.0/gtk.css ~/.config/gtk-4.0/noctalia.css ~/.config/gtk-3.0/gtk.css ~/.config/gtk-3.0/noctalia.css
 ```
 
 </details>

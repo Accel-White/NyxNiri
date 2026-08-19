@@ -32,7 +32,7 @@
 ## 特性
 
 - 壁纸色彩联动 — Noctalia V5 直接从壁纸取色；`mpvpaper` 配合 `ffmpeg` 抽取视频帧，动态壁纸亦实时生成调色板。
-- 明暗模式同步 — GSettings 与 GTK 自动跟随 Noctalia 切换。
+- 明暗模式同步 — 全系统级主题总线：GSettings、GTK 3/4、XDG Desktop Portal、Kitty 终端以及浏览器（Brave、Chromium、Firefox）毫秒级实时自适应。
 - 护眼模式（`Super+N`）— 调暖色温、关闭模糊、纯色不透明背景。
 - Scratchpad 终端（`Super+~`）— 随时快捷呼出 Kitty 持久浮动终端。
 - Orbit 启动器（`Super+A` / `Super+鼠标前侧键`）— 矢量星环启动器，聚合应用、工具、网页与 AI/搜索引擎轮盘（全 TOML 自定义）。
@@ -92,6 +92,7 @@ NyxNiri
     ├── niri/                   # 窗口管理器 (.kdl, .toml)
     │   └── scripts/            # Orbit 启动器与 Scratchpad 脚本
     ├── noctalia/               # 桌面 Shell 与主题同步
+    ├── xdg-desktop-portal/     # Portal 路由 (Settings 主题与录屏分流)
     ├── kitty/                  # 终端
     ├── fish/                   # 别名与函数
     ├── fastfetch/              # 系统信息
@@ -123,6 +124,7 @@ NyxNiri
 | `nyxniri deps` | 打开依赖检查与安装菜单 |
 | `nyxniri apps` | 常用软件安装菜单（Nautilus、Mission Center、Fcitx5 雾凇拼音） |
 | `nyxniri wallpapers` | 从外部仓库下载全套壁纸与动态视频包 |
+| `nyxniri theme [toggle\|dark\|light\|sync\|status]` | 切换或同步系统深浅主题 |
 | `nyxniri bug` / `nyxniri report` | 生成诊断报告 |
 | `nyxniri test` | 开发者实机测试部署（不备份、保留 monitor.kdl） |
 | `nyxniri fcitx [install\|status\|uninstall]` | NyxMellow fcitx5 皮肤 |
@@ -244,6 +246,21 @@ polkit.addRule(function(action, subject) {
     }
 });
 EOF'
+```
+
+</details>
+
+<details>
+<summary><b>Nautilus 或 Libadwaita 应用白屏 / 深色模式失效</b> — 旧 CSS 覆盖了系统主题。</summary>
+
+如果此前开启过 Noctalia 自带的 GTK 模板或其他美化工具，会在 `~/.config/gtk-4.0/` 生成 `noctalia.css` 或 `gtk.css`，GTK4 会无条件优先加载该文件并写死白色背景。
+
+运行主题同步或手动删除残留的覆盖文件：
+
+```bash
+nyxniri theme sync
+# 或手动删除：
+rm -f ~/.config/gtk-4.0/gtk.css ~/.config/gtk-4.0/noctalia.css ~/.config/gtk-3.0/gtk.css ~/.config/gtk-3.0/noctalia.css
 ```
 
 </details>

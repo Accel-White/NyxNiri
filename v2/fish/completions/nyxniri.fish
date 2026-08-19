@@ -10,7 +10,9 @@ complete -c nyxniri -f -n "__fish_use_subcommand" -a uninstall -d "Safely uninst
 complete -c nyxniri -f -n "__fish_use_subcommand" -a purge     -d "Deep purge configs, cache & wallpapers"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a doctor    -d "Run System Doctor diagnostics"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a deps      -d "Open dependency check & install menu"
+complete -c nyxniri -f -n "__fish_use_subcommand" -a apps      -d "Recommended apps installer (Nautilus/Fcitx5)"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a wallpapers -d "Download full wallpaper & video pack"
+complete -c nyxniri -f -n "__fish_use_subcommand" -a theme     -d "Switch/sync system dark/light theme (toggle|dark|light|sync|status)"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a bug       -d "Generate a diagnostic bug report"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a report    -d "Generate a diagnostic bug report"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a test      -d "Test deploy (no backup, keep monitor.kdl)"
@@ -22,6 +24,13 @@ complete -c nyxniri -f -n "__fish_use_subcommand" -a help      -d "Show help"
 # install 子参数
 complete -c nyxniri -f -n "__fish_seen_subcommand_from install deploy" -a full   -d "Full setup (deps + configs + optional)"
 complete -c nyxniri -f -n "__fish_seen_subcommand_from install deploy" -a config -d "Configs only"
+
+# theme 子参数
+complete -c nyxniri -f -n "__fish_seen_subcommand_from theme" -a toggle -d "Toggle between dark and light"
+complete -c nyxniri -f -n "__fish_seen_subcommand_from theme" -a dark   -d "Switch to dark theme"
+complete -c nyxniri -f -n "__fish_seen_subcommand_from theme" -a light  -d "Switch to light theme"
+complete -c nyxniri -f -n "__fish_seen_subcommand_from theme" -a sync   -d "Sync theme to current Noctalia mode"
+complete -c nyxniri -f -n "__fish_seen_subcommand_from theme" -a status -d "Show current theme scheme & mode"
 
 # snapshot 子参数
 complete -c nyxniri -f -n "__fish_seen_subcommand_from snapshot backup" -a delete -d "Delete a snapshot"

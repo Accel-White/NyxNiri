@@ -128,6 +128,10 @@ run_doctor() {
         msg doctor_warn "Desktop Portal: xdg-desktop-portal-gtk is missing"
     fi
 
+    if [ -f "$HOME/.config/xdg-desktop-portal/niri-portals.conf" ] || [ -f "$HOME/.config/xdg-desktop-portal/portals.conf" ]; then
+        msg doctor_ok "Desktop Portal: niri-portals.conf routing is configured"
+    fi
+
     # Free disk space on $HOME (10 GiB threshold)
     local disk_free_kb=""
     disk_free_kb=$(df -k --output=avail "$HOME" 2>/dev/null | awk 'NR==2{print $1}' || true)
