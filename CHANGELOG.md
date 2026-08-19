@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **浮动窗口焦点切换**: 新增 `Super+Shift+T` 快捷键，支持通过键盘在平铺与浮动窗口之间转移焦点。
 
 ### Changed
+- **极简 Fastfetch 终端名片**: 全新排版与信息降噪，并新增 STAY LIBRE 顶部标语。
 - **退出桌面快捷键调整**: 退出 Niri 由 `Super+Shift+E` 改为 `Super+Shift+Q`，避免与打开文件管理器误触。
 - **同列窗口位置微调**: `Super+Shift+上下方向键` 支持在同一列内调换窗口的上下排布顺序。
 
