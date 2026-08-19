@@ -43,7 +43,7 @@
 
 - Arch Linux / CachyOS
 - [Niri](https://github.com/YaLTeR/niri)（Wayland 合成器）
-- [Noctalia V5](https://noctalia.app)（桌面 Shell，官方仓库）
+- [Noctalia V5](https://github.com/noctalia-dev/noctalia)（桌面 Shell，官方仓库）
 - `mpvpaper`（AUR）、`kitty`、`fish`、`starship`、`tmux`
 
 ## 安装
