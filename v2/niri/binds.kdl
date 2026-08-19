@@ -15,8 +15,8 @@ binds {
     // 关闭当前获得焦点的窗口 / Close active focused window
     Mod+Q { close-window; }
 
-    // 退出 Niri 桌面会话 / Quit Niri desktop session
-    Mod+Shift+E { quit; }
+    // 退出 Niri 桌面会话 (对齐 Mod+Q，避免与 Mod+E 文件管理器误触) / Quit Niri desktop session
+    Mod+Shift+Q { quit; }
 
     // 重新加载 Niri 配置文件 / Reload Niri configuration file
     Mod+Shift+R { spawn "niri" "msg" "action" "load-config-file"; }
@@ -54,6 +54,9 @@ binds {
     // 切换 Noctalia 动态壁纸选择器 (mpvpaper) / Toggle Noctalia live wallpaper picker (mpvpaper)
     Mod+Shift+W { spawn "noctalia" "msg" "panel-toggle" "noctalia/mpvpaper:picker"; }
 
+    // 免打扰随机切换下一张壁纸 (主题取色自动跟随更新) / Switch to a random wallpaper immediately
+    Mod+Ctrl+W { spawn "noctalia" "msg" "wallpaper-random"; }
+
     // 切换护眼模式 (调暖色温并关闭透明度/毛玻璃) / Toggle eye-care mode (warmer temp & disable blur/transparency)
     Mod+N { spawn "~/.config/niri/scripts/toggle-eyecare.sh"; }
 
@@ -73,11 +76,9 @@ binds {
     Mod+Down  { focus-window-or-workspace-down; }
     Mod+Up    { focus-window-or-workspace-up; }
 
-    // 左手单手焦点控制 / One-handed Left-hand Focus Controls
+    // 列焦点快速横滑 (左 / 右) / Column focus left / right
     Mod+Z { focus-column-left; }
     Mod+C { focus-column-right; }
-    Mod+J { focus-window-down; }
-    Mod+K { focus-window-up; }
 
     // 智能窗口/列搬运 (推至边缘时自动搬运至相邻显示器或工作区) / Smart movement (auto move to monitor & workspace)
     Mod+Ctrl+Left  { move-column-left-or-to-monitor-left; }
@@ -85,11 +86,13 @@ binds {
     Mod+Ctrl+Down  { move-window-down-or-to-workspace-down; }
     Mod+Ctrl+Up    { move-window-up-or-to-workspace-up; }
 
-    // Shift 辅助精准移动 / Movement with Shift modifier
+    // Shift 辅助精准移动 (4 方向完整对称) / Precision movement with Shift modifier
     Mod+Shift+Left  { move-column-left; }
     Mod+Shift+Right { move-column-right; }
+    Mod+Shift+Down  { move-window-down; }
+    Mod+Shift+Up    { move-window-up; }
 
-    // 工作区方向导航 / Workspace Navigation
+    // 工作区方向导航 (Down / Up) / Workspace Navigation
     Mod+D { focus-workspace-down; }
     Mod+U { focus-workspace-up; }
 
@@ -104,6 +107,12 @@ binds {
     // -------------------------------------------------------------------------
     // 切换当前窗口的浮动/平铺状态 / Toggle window floating state
     Mod+T { toggle-window-floating; }
+
+    // 平铺与浮动窗口之间穿透转移焦点 / Switch focus between floating and tiling layout
+    Mod+Shift+T { switch-focus-between-floating-and-tiling; }
+
+    // 切换当前列为标签页分组模式 (Tabbed Group) / Toggle column tabbed display
+    Mod+G { toggle-column-tabbed-display; }
 
     // 最大化当前列宽度 / Maximize column width
     Mod+F { maximize-column; }

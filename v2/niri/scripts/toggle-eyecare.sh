@@ -122,5 +122,5 @@ fi
 if [ "$IS_TURNING_ON" = "true" ]; then
     notify-send -t 2000 "Eye Care : On"
 else
-    notify-send -t 2000 "Eye Care : OFF"
+    notify-send -t 2000 "Eye Care : Off"
 fi

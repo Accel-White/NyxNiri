@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.3.3] - Unreleased
+
+### Added
+- **一键随机切壁纸**: 新增 `Super+Ctrl+W` 快捷键，无需打开选择器即可直接切换下一张壁纸。
+- **列标签页模式**: 新增 `Super+G` 快捷键，支持将同一列内的多个窗口折叠为标签页显示。
+- **浮动窗口焦点切换**: 新增 `Super+Shift+T` 快捷键，支持通过键盘在平铺与浮动窗口之间转移焦点。
+
+### Changed
+- **退出桌面快捷键调整**: 退出 Niri 由 `Super+Shift+E` 改为 `Super+Shift+Q`，避免与打开文件管理器误触。
+- **同列窗口位置微调**: `Super+Shift+上下方向键` 支持在同一列内调换窗口的上下排布顺序。
+
 ## [v2.3.2] - 2026-08-18
 
 ### Added
