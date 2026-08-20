@@ -43,7 +43,7 @@
 
 - Arch Linux / CachyOS
 - [Niri](https://github.com/YaLTeR/niri) (Wayland compositor)
-- [Noctalia V5](https://noctalia.app) (desktop shell, Official Repo)
+- [Noctalia V5](https://github.com/noctalia-dev/noctalia) (desktop shell, Official Repo)
 - `mpvpaper` (AUR), `kitty`, `fish`, `starship`, `tmux`
 
 ## Install
