@@ -121,7 +121,8 @@ _phase_atomic_deployment() {
         "$MAIN_WM/scripts/toggle-eyecare.sh" "$MAIN_WM/toggle-eyecare.sh" \
         "$MAIN_WM/scripts/niri-scratch-toggle.sh" "$MAIN_WM/niri-scratch-toggle.sh" \
         "$MAIN_WM/scripts/orbit-launcher.py" "$MAIN_WM/orbit-launcher.py" \
-        "$MAIN_WM/scripts/niri-scratch-menu.py" "$MAIN_WM/niri-scratch-menu.py"; do
+        "$MAIN_WM/scripts/niri-scratch-menu.py" "$MAIN_WM/niri-scratch-menu.py" \
+        "$MAIN_WM/scripts/wallpaper-picker.py" "$MAIN_WM/wallpaper-picker.py"; do
         [ -f "$HOME/.config/$script_rel" ] && chmod +x "$HOME/.config/$script_rel"
     done
     if [ -f "$HOME/.config/$MAIN_WM/effects_normal.kdl" ] && [ ! -e "$HOME/.config/$MAIN_WM/effects.kdl" ]; then

@@ -31,6 +31,7 @@
 
 ## 特性
 
+- 壁纸选择器（`Super+W`）— 聚合静态与动态壁纸，支持实时搜索与分类。
 - 壁纸色彩联动 — Noctalia V5 直接从壁纸取色；`mpvpaper` 配合 `ffmpeg` 抽取视频帧，动态壁纸亦实时生成调色板。
 - 明暗模式同步 — 全系统级主题总线：GSettings、GTK 3/4、XDG Desktop Portal、Kitty 终端以及浏览器（Brave、Chromium、Firefox）毫秒级实时自适应。
 - 护眼模式（`Super+N`）— 调暖色温、关闭模糊、纯色不透明背景。
@@ -90,7 +91,7 @@ NyxNiri
 ├── fcitx5/                     # NyxMellow fcitx5 皮肤模板
 └── v2/
     ├── niri/                   # 窗口管理器 (.kdl, .toml)
-    │   └── scripts/            # Orbit 启动器与 Scratchpad 脚本
+    │   └── scripts/            # Orbit 启动器、壁纸选择器与 Scratchpad 脚本
     ├── noctalia/               # 桌面 Shell 与主题同步
     ├── xdg-desktop-portal/     # Portal 路由 (Settings 主题与录屏分流)
     ├── kitty/                  # 终端
@@ -175,12 +176,11 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>X</kbd> | 电源菜单 |
 | <kbd>Super</kbd> + <kbd>I</kbd> | 控制中心 |
 | <kbd>Super</kbd> + <kbd>V</kbd> | 剪贴板 |
-| <kbd>Super</kbd> + <kbd>W</kbd> | 静态壁纸选择 |
-| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | 动态壁纸选择 |
+| <kbd>Super</kbd> + <kbd>W</kbd> | 壁纸选择器（静态与动态） |
 | <kbd>Super</kbd> + <kbd>Ctrl</kbd> + <kbd>W</kbd> | 免打扰随机切换壁纸 |
 | <kbd>Super</kbd> + <kbd>N</kbd> | 护眼模式 |
 | <kbd>Super</kbd> + <kbd>~</kbd> | 切换 Kitty Scratchpad 浮动终端 |
-| <kbd>Super</kbd> + <kbd>A</kbd> / <kbd>Super</kbd> + <kbd>鼠标前侧键</kbd> | Orbit M3E 矢量星环启动器 |
+| <kbd>Super</kbd> + <kbd>A</kbd> / <kbd>Super</kbd> + <kbd>鼠标前侧键</kbd> | Orbit 矢量星环启动器 |
 | <kbd>Super</kbd> + <kbd>L</kbd> | 锁屏 |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | 截图 |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | 重载 Niri |

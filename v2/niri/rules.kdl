@@ -69,6 +69,20 @@ window-rule {
     draw-border-with-background false
 }
 
+// Wine / Proton / Windows 占位与系统托盘窗口规避 (防止 explorer.exe 托盘在屏幕中央显示 160x20 / 166x52 小黑条/占位横幅)
+window-rule {
+    match app-id=r"(?i)^explorer\.exe$" title=r"^$"
+    match app-id=r"(?i)^explorer\.exe$" title=r"(?i)^Wine System Tray$"
+    match app-id=r"(?i)^explorer\.exe$" title=r"^Wine$"
+    match app-id=r"(?i)^(wineboot|services)\.exe$"
+    match title=r"(?i)^Wine System Tray$"
+    open-floating true
+    open-focused false
+    opacity 0.0
+    default-floating-position x=-9999 y=-9999
+    shadow { off; }
+}
+
 // 从 glassy-niri 复制的特定应用美化规则（纯 blur，无 xray）
 window-rule {
     match app-id="org.pwmt.zathura"

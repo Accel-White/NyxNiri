@@ -5,9 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v2.3.4] - Unreleased
+## [v2.3.4] - 2026-08-21
+
+### Added
+- **全新壁纸选择器**: 聚合静态与动态壁纸，支持模糊搜索、分类过滤与中文输入法精准定位。
+- **星环启动器壁纸入口**: Orbit 启动器主轮盘新增壁纸库直达胶囊。
+- **Windows 占位黑条规避**: 自动隐藏 Wine 与 Proton 程序在屏幕正中央生成的托盘小黑条。
 
 ### Changed
+- **壁纸快捷键整合**: `Super+W` 统一呼出全新壁纸选择器，移除多余的 `Super+Shift+W`。
 - **Starship 终端提示符焕新**: 升级为双行 Pawlette 结构，与 Fastfetch 统一色调，并支持 CachyOS 专属图标识别。
 
 ## [v2.3.3] - 2026-08-19

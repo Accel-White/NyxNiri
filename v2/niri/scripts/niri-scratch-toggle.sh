@@ -100,6 +100,17 @@ case "$TARGET_APP" in
         fi
         ;;
 
+    wallpaper|wallpapers|"wallpaper-picker"|WallpaperPicker|*wallpaper-picker.py)
+        if [ -f "$HOME/.config/niri/scripts/wallpaper-picker.py" ]; then
+            niri msg action spawn -- "$HOME/.config/niri/scripts/wallpaper-picker.py"
+        elif [ -f "${BASH_SOURCE%/*}/wallpaper-picker.py" ]; then
+            niri msg action spawn -- "${BASH_SOURCE%/*}/wallpaper-picker.py"
+        else
+            niri msg action spawn -- wallpaper-picker.py
+        fi
+        ;;
+
+
     *)
         # Custom command or script execution
         if [[ "$TARGET_APP" =~ ^~.* ]]; then

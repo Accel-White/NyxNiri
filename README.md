@@ -31,6 +31,7 @@
 
 ## Features
 
+- Wallpaper Picker (`Super+W`) — Unified static and live wallpaper picker with search and category filters.
 - Wallpaper Color Sync — Noctalia V5 extracts palettes directly from wallpaper; an `mpvpaper` hook extracts video frames via `ffmpeg` for live wallpapers.
 - Light/dark sync — Full-system theme bus: GSettings, GTK 3/4, XDG Desktop Portal, Kitty terminal, and browsers (Brave, Chromium, Firefox) follow theme changes live.
 - Eye Care Mode (`Super+N`) — warmer color temperature, zero blur, solid opaque windows for reading sessions.
@@ -90,7 +91,7 @@ NyxNiri
 ├── fcitx5/                     # NyxMellow fcitx5 skin templates
 └── v2/
     ├── niri/                   # window manager (.kdl, .toml)
-    │   └── scripts/            # Orbit launcher & scratchpad scripts
+    │   └── scripts/            # Orbit launcher, wallpaper picker & scratchpad scripts
     ├── noctalia/               # shell + theme sync
     ├── xdg-desktop-portal/     # portal routing (Settings / screencast)
     ├── kitty/                  # terminal
@@ -175,12 +176,11 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>X</kbd> | Power menu |
 | <kbd>Super</kbd> + <kbd>I</kbd> | Control center |
 | <kbd>Super</kbd> + <kbd>V</kbd> | Clipboard history |
-| <kbd>Super</kbd> + <kbd>W</kbd> | Static wallpaper picker |
-| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>W</kbd> | Live wallpaper picker |
+| <kbd>Super</kbd> + <kbd>W</kbd> | Wallpaper picker (static & live) |
 | <kbd>Super</kbd> + <kbd>Ctrl</kbd> + <kbd>W</kbd> | Switch to random wallpaper |
 | <kbd>Super</kbd> + <kbd>N</kbd> | Toggle Eye Care Mode |
 | <kbd>Super</kbd> + <kbd>~</kbd> | Toggle Kitty scratchpad terminal |
-| <kbd>Super</kbd> + <kbd>A</kbd> / <kbd>Super</kbd> + <kbd>Mouse Forward</kbd> | Orbit M3E vector radial launcher |
+| <kbd>Super</kbd> + <kbd>A</kbd> / <kbd>Super</kbd> + <kbd>Mouse Forward</kbd> | Orbit vector radial launcher |
 | <kbd>Super</kbd> + <kbd>L</kbd> | Lock screen |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Screenshot |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | Reload Niri |

@@ -40,12 +40,14 @@
 | `v2/` | Dotfiles 配置源码（niri、noctalia 等的 `.kdl` / 配置模板） |
 | `lib/` | Shell 部署 / 诊断 / 备份引擎（`deploy.sh`、`main.sh` 等） |
 | `install.sh` | 统一入口点，仅负责环境预检并 `exec` 转入 `lib/main.sh` |
+| `fcitx5/` | Fcitx5 动态皮肤（NyxMellow）模板源码 |
+| `Wallpapers/` | 本地内置默认壁纸（离线 fallback） |
 
 **物理隔离**：仓库源码与 `~/.config/` 隔离，仅允许通过 `lib/deploy.sh`
 的 `atomic_replace_item` 机制复制/替换，禁止 `ln -s` 软链接进 `~/.config/`
 （`~/.config/` 内部文件之间的软链接，如运行时主题切换，不受此限）。
 
-**Dunder Protocol**：文件名含 `__custom__`（如 `01__custom__.kdl`）或
+**Dunder Protocol**：文件名或目录名含 `__custom__`（如 `01__custom__.kdl`、自定义子目录）或
 `~/.config/niri/monitor.kdl` 在更新时会被原子替换引擎识别并保留。
 
 ---
@@ -53,26 +55,21 @@
 ## 3. 关键命令
 
 ```bash
-# 语法与静态检查（改动后必跑）
-bash -n install.sh lib/*.sh v2/niri/*.sh v2/noctalia/*.sh
+# 语法与静态检查（改动后必跑，零网络秒级）
+for f in install.sh lib/*.sh v2/niri/scripts/*.sh v2/noctalia/*.sh; do bash -n "$f"; done
 shellcheck install.sh lib/*.sh
 
-# 测试与诊断
-HOME=$(mktemp -d) ./install.sh deploy config     # 沙箱隔离测试
-./install.sh deploy config < /dev/null           # 实机非交互部署
-./install.sh doctor                              # 系统诊断
-./install.sh test                                # 实机测试
+# 沙箱隔离部署测试（极速、不污染实机、不下载外部大包）
+HOME=$(mktemp -d) ./install.sh test
+
+# 系统诊断
+./install.sh doctor
 ```
 
-**提交前验证（按改动风险分级，非一刀切）**：
+**提交前验证**：
 
-| 改动类型 | 必须做的 |
-|---|---|
-| 任何改动 | 语法检查 `bash -n` + `shellcheck`（成本极低，无例外） |
-| 逻辑/流程改动（非纯文档/注释/Changelog） | 追加沙箱部署测试 |
-| 涉及路径替换、GPU 检测、快照/回滚、权限相关逻辑 | 沙箱测试 + 实机验证都不能省 |
-
-不确定改动属于哪一档时，按更高档处理。
+1. **代码修改**：跑语法检查 `bash -n`（或 Python `py_compile`）+ `shellcheck`（成本极低，无例外）。
+2. **逻辑/流程改动**：追加沙箱部署测试 `HOME=$(mktemp -d) ./install.sh test`。
 
 ---
 
@@ -135,10 +132,7 @@ export VAR
 - **减法与降噪 (Reductionism & Anti-Noise)**：剥离无意义的彩色图标与 Emoji 堆砌，仅保留必要的结构分割与状态语义表达，呈现高质感、纯粹的终端质感。以行间距与层级缩进作为第一视线引导元素，拒绝密密麻麻的文本堆叠。
 - **控制感与无熵 (Silent Execution & Low Entropy)**：过程状态就地收拢或静默，避免无意义的滚屏刷屏破坏终端上下文历史。常规操作轻量流畅，无闪烁重绘；写磁盘/覆盖配置等破坏性操作必须具备清晰的前置变更清单与显式防误触确认；光标恢复由 trap 钩子绝对保障。
 
-
-基于你的 `AGENTS.md` 和你对“秩序感、做减法、零熵增”的极致追求，我为你制定了以下文字规范宪章。这份宪章摒弃了一切冗余的修饰，吸收了苹果文案的“冷静、客观、精准”特质，专注于软件界面与内部文案的规范化。
-
-***
+---
 
 ## 8. Writing / Voice
 

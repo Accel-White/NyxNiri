@@ -59,7 +59,8 @@ run_doctor() {
         "$MAIN_WM/scripts/toggle-eyecare.sh:toggle-eyecare.sh" \
         "$MAIN_WM/scripts/niri-scratch-toggle.sh:niri-scratch-toggle.sh" \
         "$MAIN_WM/scripts/orbit-launcher.py:orbit-launcher.py" \
-        "$MAIN_WM/scripts/niri-scratch-menu.py:niri-scratch-menu.py"; do
+        "$MAIN_WM/scripts/niri-scratch-menu.py:niri-scratch-menu.py" \
+        "$MAIN_WM/scripts/wallpaper-picker.py:wallpaper-picker.py"; do
         local rel_path="${script_info%%:*}"
         local name="${script_info##*:}"
         local full_path="$HOME/.config/$rel_path"

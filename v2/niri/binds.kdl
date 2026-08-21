@@ -48,11 +48,8 @@ binds {
     // 切换 Noctalia 剪贴板历史 / Toggle Noctalia clipboard history panel
     Mod+V { spawn "noctalia" "msg" "panel-toggle" "clipboard"; }
 
-    // 切换 Noctalia 静态壁纸选择器 / Toggle Noctalia wallpaper picker
-    Mod+W { spawn "noctalia" "msg" "panel-toggle" "wallpaper"; }
-
-    // 切换 Noctalia 动态壁纸选择器 (mpvpaper) / Toggle Noctalia live wallpaper picker (mpvpaper)
-    Mod+Shift+W { spawn "noctalia" "msg" "panel-toggle" "noctalia/mpvpaper:picker"; }
+    // 呼出 M3E 原生壁纸选择器 (聚合静态/动态壁纸/搜索/分类) / Open M3E wallpaper picker (Static & Live)
+    Mod+W repeat=false { spawn "~/.config/niri/scripts/wallpaper-picker.py"; }
 
     // 免打扰随机切换下一张壁纸 (主题取色自动跟随更新) / Switch to a random wallpaper immediately
     Mod+Ctrl+W { spawn "noctalia" "msg" "wallpaper-random"; }

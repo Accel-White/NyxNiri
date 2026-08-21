@@ -20,9 +20,9 @@ placeholder = "Search or ask..."
 # 图标说明:
 # - Bing: 󰍉 (Search)
 # - Google: 󰊭 (Google)
-# - DeepSeek: 󰄛 (蓝鲸 · DeepSeek 官方吉祥物)
+# - DeepSeek: 󰈺 (用鱼来伪装的蓝鲸 · DeepSeek 官方吉祥物)
 # - ChatGPT: 󰚩 (OpenAI / AI)
-# - Claude: 󰣆 (星芒 · Anthropic Claude 官方标识)
+# - Claude: 󰣆 (信用卡 · 意思是 Anthropic Claude 很烧钱)
 # -----------------------------------------------------------------------------
 [[search_engines]]
 id = "bing"
@@ -137,10 +137,10 @@ color_key = "secondary"
   color_key = "secondary"
 
 [[items]]
-id = "nautilus"
-name = "Nautilus"
-desc = "File Manager"
-icon = "󰉋"
-cmd = "nautilus"
+id = "wallpaper"
+name = "Wallpapers"
+desc = "Static & Live"
+icon = "󰸉"
+cmd = "~/.config/niri/scripts/wallpaper-picker.py"
 shortcut = "4"
 color_key = "secondary"

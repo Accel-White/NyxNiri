@@ -133,7 +133,7 @@ function nyxhelp --description "NyxNiri Cheatsheet速查手册"
             set_color -o blue; echo -n "    Mod + T / Shift+T        "; set_color green; echo "-> 切换浮动平铺 / 浮动层焦点穿透"; set_color normal
             set_color -o blue; echo -n "    Mod + G                  "; set_color green; echo "-> 切换标签页列模式 (Tabbed Group)"; set_color normal
             set_color -o blue; echo -n "    Mod + F / Shift+F        "; set_color green; echo "-> 最大化列宽 / 全屏窗口"; set_color normal
-            set_color -o blue; echo -n "    Mod + W / Shift+W/Ctrl+W "; set_color green; echo "-> 静态壁纸 / 动态壁纸 / 随机换壁纸"; set_color normal
+            set_color -o blue; echo -n "    Mod + W / Ctrl+W         "; set_color green; echo "-> 壁纸选择器 (静态+动态) / 随机换壁纸"; set_color normal
             set_color -o blue; echo -n "    Mod + N                  "; set_color green; echo "-> 切换护眼暖色温模式"; set_color normal
             set_color -o blue; echo -n "    Mod + ~                  "; set_color green; echo "-> 切换 Kitty Scratchpad 浮动终端"; set_color normal
             set_color -o blue; echo -n "    Mod + A / Mod + 鼠标前侧键 "; set_color green; echo "-> 呼出 Orbit 矢量星环启动器"; set_color normal
