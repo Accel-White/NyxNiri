@@ -33,7 +33,7 @@
 
 - 壁纸选择器（`Super+W`）— 聚合静态与动态壁纸，支持实时搜索与分类。
 - 壁纸色彩联动 — Noctalia V5 直接从壁纸取色；`mpvpaper` 配合 `ffmpeg` 抽取视频帧，动态壁纸亦实时生成调色板。
-- 明暗模式同步 — 全系统级主题总线：GSettings、GTK 3/4、XDG Desktop Portal、Kitty 终端以及浏览器（Brave、Chromium、Firefox）毫秒级实时自适应。
+- 明暗模式同步 — GSettings、GTK 3/4、XDG Desktop Portal、Kitty 终端以及浏览器（Brave、Chromium、Firefox）即时跟随主题变化。
 - 护眼模式（`Super+N`）— 调暖色温、关闭模糊、纯色不透明背景。
 - Scratchpad 终端（`Super+~`）— 随时快捷呼出 Kitty 持久浮动终端。
 - Orbit 启动器（`Super+A` / `Super+鼠标前侧键`）— 矢量星环启动器，聚合应用、工具、网页与 AI/搜索引擎轮盘（全 TOML 自定义）。
@@ -49,10 +49,22 @@
 
 ## 安装
 
+> [!IMPORTANT]
+> **从旧版 Bash 目录（`lib/` + `v2/`）升级：**旧版 `nyxniri update` 无法直接切换到新版 Python 目录。更新前请先运行一次新版引导：
+> ```bash
+> curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+> ```
+> 如果想先检查脚本，可先下载再运行：
+> ```bash
+> curl -fsSL --connect-timeout 10 -o /tmp/nyxniri-install.sh https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh
+> bash /tmp/nyxniri-install.sh
+> ```
+> 迁移不会删除现有配置、`~/.config/NyxNiri/backups/`，也不会删除旧版 `~/.config/dotfiles_backup_*` 快照。
+
 ### 独立在线安装
 
 ```bash
-curl -sL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
 
 ### 从 Git 仓库安装（推荐）
@@ -68,28 +80,27 @@ cd ~/NyxNiri && ./install.sh
 
 ```bash
 # 通过 gh-proxy.org 独立安装
-curl -sL --connect-timeout 10 https://gh-proxy.org/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
+curl -fsSL --connect-timeout 10 https://gh-proxy.org/https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 
 # 通过 gh-proxy.org 克隆仓库
 git clone --depth 1 https://gh-proxy.org/https://github.com/ech678/NyxNiri.git ~/NyxNiri
 cd ~/NyxNiri && ./install.sh
 ```
 
-`install.sh` 会按 官方直连 → jsDelivr CDN → gh-proxy 顺序自动故障回退。
+拉取仓库时，`install.sh` 会先尝试 GitHub，再尝试 gh-proxy。
 </details>
 
 > [!NOTE]
-> 缺少 AUR helper 时 `install full` 会自动补全 `paru`；部署前现有配置备份至 `~/.config/NyxNiri/backups/`。旧版 DMS 保留在 `archive/v1-dms` 分支。
+> 缺少 AUR helper 时，`nyxniri install full` 可以安装 `paru`；交互部署默认先在 `~/.config/NyxNiri/backups/` 创建快照。旧版 DMS 保留在 `archive/v1-dms` 分支。
 
 ## 包含配置
 
 ```text
 NyxNiri
-├── install.sh                  # 安装脚本（含依赖检测与配置备份）
-├── lib/                        # 部署、备份、网络、诊断、国际化等模块
-├── Wallpapers/                 # 壁纸库
-├── fcitx5/                     # NyxMellow fcitx5 皮肤模板
-└── v2/
+├── install.sh                  # 极简引导入口脚本
+├── nyxniri/                    # 纯 Python 核心运维引擎 (零 pip 依赖)
+├── assets/                     # 静态资产 (壁纸库、NyxMellow 输入法皮肤模板)
+└── configs/
     ├── niri/                   # 窗口管理器 (.kdl, .toml)
     │   └── scripts/            # Orbit 启动器、壁纸选择器与 Scratchpad 脚本
     ├── noctalia/               # 桌面 Shell 与主题同步
@@ -105,22 +116,25 @@ NyxNiri
 > 更新时采用原子替换。个人改动通过 Dunder 协议保留：
 > - 含 `*__custom__*` 的文件自动保留（如 `01__custom__.kdl`，数字前缀控制加载顺序）
 > - 含 `*__custom__*` 的目录整体保留（如 `~/.config/niri/__custom__/`）
+> - `~/.config/niri/monitor.kdl` 在部署时保留
 
 ## 工具
 
 `nyxniri` 用于管理安装、快照和系统诊断：
 
+> 旧版 Bash 用户需先运行上面的新版引导，再使用以下命令；旧版 `nyxniri update` 无法完成目录迁移。
+
 | 指令 | 作用 |
 | :--- | :--- |
 | `nyxniri` | 交互式菜单 |
 | `nyxniri install [full\|config]` | 全量部署，或仅同步配置 |
-| `nyxniri update [--force]` | 更新仓库，可选覆盖配置 |
+| `nyxniri update [--force|--no-deploy]` | 更新源码，并强制部署或跳过配置部署 |
 | `nyxniri snapshot [备注]` | 保存当前配置快照 |
-| `nyxniri snapshot delete [序号]` | 删除快照（未指定序号则交互选择） |
+| `nyxniri snapshot delete [序号]` | 删除快照（未指定序号则可批量勾选） |
 | `nyxniri rollback [序号]` | 恢复历史快照 |
 | `nyxniri list` | 查看快照列表 |
-| `nyxniri uninstall` | 卸载并复原配置 |
-| `nyxniri purge` | 清除配置、缓存与壁纸 |
+| `nyxniri uninstall` | 归档当前配置并卸载；交互模式也可选择复原 |
+| `nyxniri purge` | 清除配置、快照、缓存与壁纸 |
 | `nyxniri doctor` | 依赖与系统健康检查 |
 | `nyxniri deps` | 打开依赖检查与安装菜单 |
 | `nyxniri apps` | 常用软件安装菜单（Nautilus、Mission Center、Fcitx5 雾凇拼音） |
@@ -131,7 +145,7 @@ NyxNiri
 | `nyxniri fcitx [install\|status\|uninstall]` | NyxMellow fcitx5 皮肤 |
 | `nyxniri greeter [install\|status\|uninstall]` | Noctalia Greeter（登录界面） |
 
-`nyxhelp` 是基于 `fzf` 的速查手册：
+`nyxhelp` 是基于 `fzf` 的简明速查，覆盖 CLI、Shell 助手和核心快捷键：
 
 | 指令 | 作用 |
 | :--- | :--- |
@@ -189,7 +203,7 @@ NyxNiri
 </details>
 
 > [!TIP]
-> 完整参考：`nyxhelp keys`，或在 Niri 中按 <kbd>Super</kbd> + <kbd>/</kbd>。
+> 快速查看：`nyxhelp keys`。Niri 的完整按键覆盖层请按 <kbd>Super</kbd> + <kbd>/</kbd>。
 
 ## 可选模块
 

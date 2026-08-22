@@ -103,11 +103,15 @@ function nyxhelp --description "NyxNiri Cheatsheet速查手册"
         case cli
             set_color -o magenta; echo "  NyxNiri CLI & 配置快照"; set_color normal
             set_color -o yellow; echo -n "    nyxniri                  "; set_color green; echo "-> 打开控制面板主菜单"; set_color normal
-            set_color -o yellow; echo -n "    nyxniri doctor           "; set_color green; echo "-> 运行系统全要素诊断"; set_color normal
-            set_color -o yellow; echo -n "    nyxniri apps             "; set_color green; echo "-> 常用软件管理 (Nautilus/MissionCenter/Fcitx5)"; set_color normal
-            set_color -o yellow; echo -n "    nyxniri snapshot [备注]  "; set_color green; echo "-> 创建配置安全快照"; set_color normal
+            set_color -o yellow; echo -n "    nyxniri install config   "; set_color green; echo "-> 只部署配置，不安装依赖或壁纸"; set_color normal
+            set_color -o yellow; echo -n "    nyxniri update           "; set_color green; echo "-> 更新源码并选择是否部署配置"; set_color normal
+            set_color -o yellow; echo -n "    nyxniri doctor           "; set_color green; echo "-> 检查依赖、组件和桌面状态"; set_color normal
+            set_color -o yellow; echo -n "    nyxniri apps             "; set_color green; echo "-> 管理 Nautilus、Mission Center、Fcitx5 Rime"; set_color normal
+            set_color -o yellow; echo -n "    nyxniri snapshot [备注]  "; set_color green; echo "-> 创建配置快照"; set_color normal
+            set_color -o yellow; echo -n "    nyxniri snapshot delete  "; set_color green; echo "-> 选择并删除一个或多个快照"; set_color normal
             set_color -o yellow; echo -n "    nyxniri rollback [序号]  "; set_color green; echo "-> 恢复历史配置快照"; set_color normal
             set_color -o yellow; echo -n "    nyxniri list             "; set_color green; echo "-> 查看所有配置快照"; set_color normal
+            set_color -o yellow; echo -n "    nyxniri theme status     "; set_color green; echo "-> 查看当前深浅主题状态"; set_color normal
             return
         case proxy
             set_color -o magenta; echo "  网络代理控制"; set_color normal
@@ -127,7 +131,7 @@ function nyxhelp --description "NyxNiri Cheatsheet速查手册"
             set_color -o magenta; echo "  Niri 桌面核心快捷键"; set_color normal
             set_color -o blue; echo -n "    Mod + Return             "; set_color green; echo "-> 启动 Kitty 终端"; set_color normal
             set_color -o blue; echo -n "    Mod + R / Mod + E        "; set_color green; echo "-> 启动 Noctalia Launcher / Nautilus"; set_color normal
-            set_color -o blue; echo -n "    Mod + Q / Shift+Q        "; set_color green; echo "-> 关闭当前窗口 / 退出桌面会话"; set_color normal
+            set_color -o blue; echo -n "    Mod + Q / Mod+Shift+Q    "; set_color green; echo "-> 关闭当前窗口 / 退出桌面会话"; set_color normal
             set_color -o blue; echo -n "    Mod + Tab                "; set_color green; echo "-> 切换工作区概览 (Overview)"; set_color normal
             set_color -o blue; echo -n "    Mod + Space              "; set_color green; echo "-> 切换预设列宽比例"; set_color normal
             set_color -o blue; echo -n "    Mod + T / Shift+T        "; set_color green; echo "-> 切换浮动平铺 / 浮动层焦点穿透"; set_color normal
@@ -140,7 +144,7 @@ function nyxhelp --description "NyxNiri Cheatsheet速查手册"
             set_color -o blue; echo -n "    Mod + L                  "; set_color green; echo "-> 锁定屏幕 (Noctalia Lock)"; set_color normal
             set_color -o blue; echo -n "    Mod + Shift + S / Print  "; set_color green; echo "-> 交互式区域截图"; set_color normal
             set_color -o blue; echo -n "    Mod + Shift + R          "; set_color green; echo "-> 重载 Niri 桌面配置"; set_color normal
-            set_color -o blue; echo -n "    Mod + Slash (/)         "; set_color green; echo "-> 显示 Niri 原生按键覆盖层"; set_color normal
+            set_color -o blue; echo -n "    Mod + Slash (/)          "; set_color green; echo "-> 显示 Niri 原生按键覆盖层"; set_color normal
             return
         case shell
             set_color -o magenta; echo "  终端补全与 fzf"; set_color normal
@@ -176,6 +180,10 @@ function nyxhelp --description "NyxNiri Cheatsheet速查手册"
             --preview-window="right:65%:wrap" \
             --preview="fish -c 'nyxhelp --section {2}'"
         )
+        if test -n "$selection"
+            set -l fields (string split -n ' ' -- $selection)
+            nyxhelp --section $fields[2]
+        end
     else
         nyxhelp --section all
     end

@@ -1,0 +1,642 @@
+"""CLI entry point, command-line arguments dispatcher, and interactive control panel menus."""
+
+import os
+import subprocess
+import sys
+from typing import List, Optional
+
+from nyxniri.constants import (
+    CLI_CMD,
+    FCITX_THEME,
+    GREETER_PKG,
+    PROJECT_NAME,
+    THEME_ENGINE,
+)
+from nyxniri.core import (
+    acquire_lock,
+    ensure_nyxniri_symlink,
+    get_env,
+    init_logger,
+    log_msg,
+)
+from nyxniri.deploy import (
+    deploy_selected_configs,
+    deploy_wallpapers,
+    discover_config_items,
+    render_completion_screen,
+    test_deploy,
+    wallpapers_pack_present,
+)
+from nyxniri.deps import (
+    get_missing_deps,
+    install_selected_deps,
+    run_dep_menu_loop,
+    run_optional_apps_menu_loop,
+)
+from nyxniri.doctor import generate_bug_report, run_doctor
+from nyxniri.fcitx import (
+    fcitx_enabled,
+    fcitx_install,
+    fcitx_status,
+    fcitx_status_label,
+    fcitx_uninstall,
+    fcitx5_installed,
+)
+from nyxniri.greeter import (
+    greeter_install,
+    greeter_status,
+    greeter_status_label,
+    greeter_uninstall,
+)
+from nyxniri.backup import (
+    backup_configs,
+    delete_backup,
+    list_backups,
+    rollback_configs,
+    uninstall_nyxniri,
+)
+from nyxniri.i18n import msg
+from nyxniri.network import safe_git_pull
+from nyxniri.tui import (
+    CheckboxEntry,
+    CheckboxList,
+    MenuItem,
+    Menu,
+    pad_display,
+    press_any_key,
+    select_language,
+)
+
+# --- Master Component Menu & Preflight ---
+def run_master_component_menu(is_update: bool = False, mode: str = "full") -> Optional[dict]:
+    """Interactive checklist for choosing configs, wallpapers, modules, and backup behavior."""
+    items = discover_config_items()
+    entries: List[CheckboxEntry] = []
+
+    # 1. Configs
+    for item in items:
+        entries.append(CheckboxEntry(key=f"config_{item}", label=msg("master_item_config", item), checked=True))
+
+    if mode == "full":
+        # 2. Heavy assets (wallpapers)
+        wp_checked = not wallpapers_pack_present()
+        wp_status = msg("status_wallpapers_installed") if wallpapers_pack_present() else msg("status_wallpapers_missing")
+        entries.append(CheckboxEntry(
+            key="assets_wallpapers",
+            label=msg("master_item_asset", f"Wallpapers & Videos {wp_status}"),
+            checked=wp_checked,
+        ))
+
+        # 3. Fcitx5
+        if fcitx5_installed():
+            fcitx_check = not (is_update and not fcitx_enabled())
+            entries.append(CheckboxEntry(
+                key="module_fcitx",
+                label=msg("master_item_module", f"NyxMellow fcitx5 {fcitx_status_label()}"),
+                checked=fcitx_check,
+            ))
+
+        # 4. Greeter
+        entries.append(CheckboxEntry(
+            key="module_greeter",
+            label=msg("master_item_module", f"Noctalia Greeter {greeter_status_label()}"),
+            checked=False,
+        ))
+
+    # 5. Behavior: Backup
+    entries.append(CheckboxEntry(key="sep_behavior", label=msg("master_item_behavior"), is_separator=True))
+    entries.append(CheckboxEntry(key="behavior_backup", label=msg("master_item_backup"), checked=True))
+
+    chk = CheckboxList("master_menu_title", entries, hint_key="selective_hint")
+    chosen_keys = chk.run()
+    if chosen_keys is None:
+        return None
+
+    chosen_configs = [k.removeprefix("config_") for k in chosen_keys if k.startswith("config_")]
+    do_wallpapers = "assets_wallpapers" in chosen_keys
+    do_fcitx = "module_fcitx" in chosen_keys
+    do_greeter = "module_greeter" in chosen_keys
+    do_backup = "behavior_backup" in chosen_keys
+
+    return {
+        "configs": chosen_configs,
+        "wallpapers": do_wallpapers,
+        "fcitx": do_fcitx,
+        "greeter": do_greeter,
+        "backup": do_backup,
+    }
+
+def _phase_preflight_check(
+    mode: str,
+    chosen_configs: List[str],
+    do_fcitx: bool,
+    do_greeter: bool,
+    do_wallpapers: bool,
+    do_backup: bool,
+) -> None:
+    """Pre-flight checklist & upfront sudo credentials validation."""
+    needs_sudo = mode == "full" or do_greeter
+
+    print(msg("preflight_express_summary"))
+    print(msg("preflight_comp_config", len(chosen_configs)))
+    if do_wallpapers:
+        print(msg("preflight_comp_assets"))
+    if do_fcitx:
+        print(msg("preflight_comp_module_fcitx", FCITX_THEME))
+    if do_greeter:
+        print(msg("preflight_comp_module_greeter", GREETER_PKG))
+    if mode == "full":
+        print(msg("preflight_comp_deps"))
+    if do_backup:
+        print(msg("preflight_comp_backup"))
+
+    if needs_sudo:
+        sys.stdout.write(msg("preflight_sudo_prompt") + "\n")
+        sys.stdout.flush()
+        sudo_command = ["sudo", "-v"] if sys.stdin.isatty() else ["sudo", "-n", "-v"]
+        try:
+            res = subprocess.run(sudo_command, check=False)
+        except FileNotFoundError:
+            print(msg("err_sudo_missing"), file=sys.stderr)
+            sys.exit(1)
+        if res.returncode != 0:
+            print(msg("err_sudo_aborted"))
+            sys.exit(1)
+        log_msg("INFO", "Sudo credentials cached upfront during pre-flight.")
+
+def install_configs_workflow(mode: str = "full") -> bool:
+    """Full execution pipeline for dotfiles, dependencies, wallpapers, and optional modules."""
+    if sys.stdin.isatty():
+        chosen_dict = run_master_component_menu(is_update=False, mode=mode)
+        if not chosen_dict:
+            print(msg("install_cancelled"))
+            return True
+
+        chosen_configs = chosen_dict["configs"]
+        do_wallpapers = chosen_dict["wallpapers"]
+        do_fcitx = chosen_dict["fcitx"]
+        do_greeter = chosen_dict["greeter"]
+        do_backup = chosen_dict["backup"]
+
+        if not chosen_configs and not do_wallpapers and not do_fcitx and not do_greeter:
+            print(msg("install_cancelled"))
+            return True
+    else:
+        chosen_configs = discover_config_items()
+        do_wallpapers = mode == "full" and not wallpapers_pack_present()
+        do_fcitx = mode == "full" and fcitx_enabled()
+        do_greeter = False
+        do_backup = False
+
+    _phase_preflight_check(mode, chosen_configs, do_fcitx, do_greeter, do_wallpapers, do_backup)
+
+    # Step counting
+    steps = 1
+    if mode == "full":
+        steps += 2
+    if do_fcitx:
+        steps += 1
+    if do_greeter:
+        steps += 1
+    cur_step = 0
+
+    # 1. Deps
+    if mode == "full":
+        cur_step += 1
+        print(msg("install_step_deps", f"{cur_step}/{steps}"))
+        missing = get_missing_deps()
+        if missing:
+            install_selected_deps(missing)
+
+    # 2. Configs
+    cur_step += 1
+    print(msg("install_step_configs", f"{cur_step}/{steps}"))
+    preserved_log: List[str] = []
+    if chosen_configs:
+        failed_items = deploy_selected_configs(do_backup=do_backup, items_to_deploy=chosen_configs, preserved_log=preserved_log)
+        if failed_items:
+            render_completion_screen(
+                mode=mode,
+                chosen_items=chosen_configs,
+                preserved_lines=preserved_log,
+                failed_items=failed_items,
+            )
+            return False
+
+    # 3. Wallpapers
+    wallpaper_result = None
+    if mode == "full":
+        cur_step += 1
+        print(msg("install_step_wallpapers", f"{cur_step}/{steps}"))
+        wallpaper_result = deploy_wallpapers(do_download=do_wallpapers)
+
+    # 4. Fcitx5
+    if do_fcitx:
+        cur_step += 1
+        print(msg("install_step_fcitx", f"{cur_step}/{steps}"))
+        fcitx_install()
+
+    # 5. Greeter
+    if do_greeter:
+        cur_step += 1
+        print(msg("install_step_greeter", f"{cur_step}/{steps}"))
+        greeter_install()
+
+    # Completion
+    render_completion_screen(
+        mode=mode,
+        chosen_items=chosen_configs,
+        preserved_lines=preserved_log,
+        wallpaper_result=wallpaper_result,
+        do_fcitx=do_fcitx,
+        do_greeter=do_greeter,
+    )
+    return True
+
+def offer_overwrite_upgrade(flag: str = "") -> bool:
+    """Handle update flow: ask to deploy changes, view diff, or code update only."""
+    env = get_env()
+    if flag in ("--force", "--deploy"):
+        failed_items = deploy_selected_configs(do_backup=True)
+        if failed_items:
+            render_completion_screen("update", failed_items=failed_items)
+            return False
+        if fcitx_enabled():
+            fcitx_install()
+        render_completion_screen("update")
+        return True
+    elif flag == "--no-deploy":
+        return True
+
+    if not sys.stdin.isatty():
+        failed_items = deploy_selected_configs(do_backup=False)
+        if failed_items:
+            render_completion_screen("update", failed_items=failed_items)
+            return False
+        wallpaper_result = deploy_wallpapers(do_download=False)
+        if fcitx_enabled(): fcitx_install()
+        render_completion_screen("update", wallpaper_result=wallpaper_result)
+        return True
+
+    # Interactive choice menu
+    items = [
+        MenuItem(label=msg("overwrite_opt1")),
+        MenuItem(label=msg("overwrite_opt2")),
+        MenuItem(label=msg("overwrite_opt3"), style="subtle"),
+    ]
+    menu = Menu("overwrite_title", items, hint_key="submenu_hint")
+    choice = menu.run()
+
+    if choice == 0:
+        chosen = run_master_component_menu(is_update=True, mode="full")
+        if chosen:
+            print(msg("upgrading_selected"))
+            preserved: List[str] = []
+            if chosen["configs"]:
+                failed_items = deploy_selected_configs(do_backup=chosen["backup"], items_to_deploy=chosen["configs"], preserved_log=preserved)
+                if failed_items:
+                    render_completion_screen("update", chosen_items=chosen["configs"], preserved_lines=preserved, failed_items=failed_items)
+                    return False
+            wallpaper_result = None
+            if chosen["wallpapers"]:
+                wallpaper_result = deploy_wallpapers(do_download=True)
+            if chosen["fcitx"]:
+                fcitx_install()
+            if chosen["greeter"]:
+                greeter_install()
+            render_completion_screen(
+                "update",
+                chosen_items=chosen["configs"],
+                preserved_lines=preserved,
+                wallpaper_result=wallpaper_result,
+            )
+            return True
+    elif choice == 1:
+        print(msg("diff_viewer_title"))
+        config_items = discover_config_items()
+        diff_cmds = []
+        for it in config_items:
+            src = env.configs_src / it
+            dest = env.config_dir / it
+            if src.exists() and dest.exists():
+                diff_cmds.append(f"diff -urN --color=always '{dest}' '{src}'")
+        if diff_cmds:
+            full_cmd = " ; ".join(diff_cmds) + " | less -R"
+            subprocess.run(full_cmd, shell=True, check=False)
+    else:
+        print(msg("log_config_deploy_skipped"))
+    return True
+
+# --- Submenus ---
+def snapshot_menu_loop() -> None:
+    """Snapshot management interactive submenu."""
+    while True:
+        items = [
+            MenuItem(label=msg("snapshot_sub_create")),
+            MenuItem(label=msg("snapshot_sub_list")),
+            MenuItem(label=msg("snapshot_sub_delete"), style="warn"),
+            MenuItem(label=msg("snapshot_sub_rollback")),
+            MenuItem(label=msg("snapshot_sub_back"), style="subtle"),
+        ]
+        menu = Menu("snapshot_menu_title", items, hint_key="submenu_hint")
+        choice = menu.run()
+        if choice == 0:
+            sys.stdout.write(msg("snapshot_note_prompt"))
+            sys.stdout.flush()
+            note = sys.stdin.readline().strip()
+            backup_configs(note=note, interactive=True)
+            press_any_key()
+        elif choice == 1:
+            list_backups()
+            press_any_key()
+        elif choice == 2:
+            delete_backup("")
+            press_any_key()
+        elif choice == 3:
+            rollback_configs("")
+            press_any_key()
+        elif choice == 4:
+            break
+
+def greeter_menu_loop() -> None:
+    """Noctalia Greeter interactive submenu."""
+    while True:
+        items = [
+            MenuItem(label=msg("greeter_sub_install")),
+            MenuItem(label=msg("greeter_sub_status")),
+            MenuItem(label=msg("greeter_sub_uninstall"), style="warn"),
+            MenuItem(label=msg("greeter_sub_back"), style="subtle"),
+        ]
+        menu = Menu("greeter_menu_title", items, hint_key="submenu_hint")
+        choice = menu.run()
+        if choice == 0: greeter_install(); press_any_key()
+        elif choice == 1: greeter_status(); press_any_key()
+        elif choice == 2: greeter_uninstall(); press_any_key()
+        elif choice == 3: break
+
+def fcitx_menu_loop() -> None:
+    """NyxMellow Fcitx5 skin interactive submenu."""
+    while True:
+        items = [
+            MenuItem(label=msg("fcitx_sub_install")),
+            MenuItem(label=msg("fcitx_sub_status")),
+            MenuItem(label=msg("fcitx_sub_uninstall"), style="warn"),
+            MenuItem(label=msg("fcitx_sub_back"), style="subtle"),
+        ]
+        menu = Menu("fcitx_menu_title", items, hint_key="submenu_hint")
+        choice = menu.run()
+        if choice == 0: fcitx_install(); press_any_key()
+        elif choice == 1: fcitx_status(); press_any_key()
+        elif choice == 2: fcitx_uninstall(); press_any_key()
+        elif choice == 3: break
+
+def deps_menu_loop() -> None:
+    """Dependencies & Recommended apps submenu."""
+    if not sys.stdin.isatty():
+        print(msg("interactive_terminal_required"), file=sys.stderr)
+        return
+
+    while True:
+        items = [
+            MenuItem(label=msg("deps_sub_core")),
+            MenuItem(label=msg("deps_sub_apps")),
+            MenuItem(label=msg("deps_sub_back"), style="subtle"),
+        ]
+        menu = Menu("deps_menu_title", items, hint_key="submenu_hint")
+        choice = menu.run()
+        if choice == 0: run_dep_menu_loop(); press_any_key()
+        elif choice == 1: run_optional_apps_menu_loop(); press_any_key()
+        elif choice == 2: break
+
+def optional_modules_menu_loop() -> None:
+    """Optional modules interactive submenu."""
+    while True:
+        label0 = pad_display(msg("optmod_sub_apps"), 26)
+        label1 = pad_display("Noctalia Greeter", 26) + greeter_status_label()
+        label2 = pad_display(msg("optmod_sub_fcitx"), 26) + fcitx_status_label()
+        label3 = pad_display(msg("optmod_sub_wallpapers"), 26) + (msg("status_wallpapers_installed") if wallpapers_pack_present() else msg("status_wallpapers_missing"))
+
+        items = [
+            MenuItem(label=label0),
+            MenuItem(label=label1),
+            MenuItem(label=label2),
+            MenuItem(label=label3),
+            MenuItem(label=msg("optmod_purge"), style="warn"),
+            MenuItem(label=msg("optmod_back"), style="subtle"),
+        ]
+        menu = Menu("optmod_menu_title", items, hint_key="submenu_hint")
+        choice = menu.run()
+        if choice == 0: run_optional_apps_menu_loop()
+        elif choice == 1: greeter_menu_loop()
+        elif choice == 2: fcitx_menu_loop()
+        elif choice == 3: deploy_wallpapers(do_download=True); press_any_key()
+        elif choice == 4: uninstall_nyxniri("purge"); press_any_key()
+        elif choice == 5: break
+
+def main_menu_loop() -> None:
+    """Main NyxNiri control panel interactive loop."""
+    env = get_env()
+    while True:
+        items = [
+            MenuItem(label=msg("menu_opt1"), group_header=msg("menu_group_deploy")),
+            MenuItem(label=msg("menu_opt2")),
+            MenuItem(label=msg("menu_opt3"), group_header=msg("menu_group_maint")),
+            MenuItem(label=msg("menu_opt4")),
+            MenuItem(label=msg("menu_opt5")),
+            MenuItem(label=msg("menu_opt6")),
+            MenuItem(label=msg("menu_opt7"), group_header=msg("menu_group_system"), style="warn"),
+            MenuItem(label=msg("menu_opt8")),
+            MenuItem(label=msg("menu_opt0"), style="subtle"),
+        ]
+        menu = Menu("menu_title", items, hint_key="menu_hint")
+        choice = menu.run()
+
+        if choice == 0:
+            install_configs_workflow("full")
+        elif choice == 1:
+            deps_menu_loop()
+        elif choice == 2:
+            snapshot_menu_loop()
+        elif choice == 3:
+            update_result = safe_git_pull(env.repo_dir)
+            if update_result is True:
+                offer_overwrite_upgrade()
+            elif update_result is False:
+                print(msg("updating_failed"), file=sys.stderr)
+            press_any_key()
+        elif choice == 4:
+            run_doctor()
+            press_any_key()
+        elif choice == 5:
+            generate_bug_report()
+            press_any_key()
+        elif choice == 6:
+            uninstall_nyxniri("")
+            press_any_key()
+        elif choice == 7:
+            optional_modules_menu_loop()
+        elif choice == 8:
+            sys.exit(0)
+
+# --- CLI Dispatcher ---
+def print_help(file=None) -> None:
+    """Print standard CLI help and commands overview."""
+    if file is None:
+        file = sys.stdout
+    print(msg("cli_help", PROJECT_NAME, CLI_CMD), file=file)
+
+
+def exit_usage(usage: str) -> None:
+    """Report invalid arguments and exit without entering the interactive flow."""
+    print(msg("err_invalid_args", usage), file=sys.stderr)
+    sys.exit(2)
+
+def main() -> None:
+    """Main CLI entrypoint."""
+    if os.getuid() == 0:
+        print(msg("err_root_denied"), file=sys.stderr)
+        sys.exit(1)
+
+    acquire_lock()
+    init_logger()
+    env = get_env()
+    ensure_nyxniri_symlink()
+
+    args = sys.argv[1:]
+    if args:
+        cmd = args[0].lower()
+        sub_args = args[1:]
+
+        if cmd in ("install", "deploy"):
+            mode = sub_args[0] if sub_args else "full"
+            if len(sub_args) > 1 or mode not in ("full", "config"):
+                exit_usage(f"{CLI_CMD} install [full|config]")
+            sys.exit(0 if install_configs_workflow(mode) else 1)
+        elif cmd in ("snapshot", "backup"):
+            if sub_args and sub_args[0] in ("delete", "rm"):
+                if len(sub_args) > 2:
+                    exit_usage(f"{CLI_CMD} snapshot delete [index]")
+                target = sub_args[1] if len(sub_args) > 1 else ""
+                sys.exit(0 if delete_backup(target) else 1)
+            else:
+                note = " ".join(sub_args)
+                sys.exit(0 if backup_configs(note=note, interactive=False) else 1)
+        elif cmd in ("rollback", "restore"):
+            if len(sub_args) > 1:
+                exit_usage(f"{CLI_CMD} rollback [index]")
+            target = sub_args[0] if sub_args else ""
+            sys.exit(0 if rollback_configs(target) else 1)
+        elif cmd == "list":
+            if sub_args:
+                exit_usage(f"{CLI_CMD} list")
+            list_backups()
+            sys.exit(0)
+        elif cmd in ("uninstall", "remove"):
+            target = sub_args[0] if sub_args else ""
+            if len(sub_args) > 1 or target not in ("", "standard", "restore", "purge"):
+                exit_usage(f"{CLI_CMD} uninstall [standard|restore|purge]")
+            sys.exit(0 if uninstall_nyxniri(target) else 1)
+        elif cmd == "purge":
+            if sub_args:
+                exit_usage(f"{CLI_CMD} purge")
+            sys.exit(0 if uninstall_nyxniri("purge") else 1)
+        elif cmd == "doctor":
+            if sub_args:
+                exit_usage(f"{CLI_CMD} doctor")
+            run_doctor()
+            sys.exit(0)
+        elif cmd == "deps":
+            sub = sub_args[0].lower() if sub_args else ""
+            if len(sub_args) > 1 or sub not in ("", "core", "apps", "opt", "optional"):
+                exit_usage(f"{CLI_CMD} deps [core|apps]")
+            if sub == "core":
+                run_dep_menu_loop()
+            elif sub in ("apps", "opt", "optional"):
+                run_optional_apps_menu_loop()
+            else:
+                deps_menu_loop()
+            sys.exit(0)
+        elif cmd in ("apps", "recommended"):
+            if sub_args:
+                exit_usage(f"{CLI_CMD} apps")
+            run_optional_apps_menu_loop()
+            sys.exit(0)
+        elif cmd in ("wallpapers", "wp"):
+            if sub_args:
+                exit_usage(f"{CLI_CMD} wallpapers")
+            wallpaper_result = deploy_wallpapers(do_download=True)
+            sys.exit(0 if wallpaper_result.downloaded else 1)
+        elif cmd in ("bug", "report"):
+            if sub_args:
+                exit_usage(f"{CLI_CMD} {cmd}")
+            generate_bug_report()
+            sys.exit(0)
+        elif cmd == "test":
+            if sub_args:
+                exit_usage(f"{CLI_CMD} test")
+            sys.exit(0 if test_deploy() else 1)
+        elif cmd == "greeter":
+            sub = sub_args[0].lower() if sub_args else ""
+            if len(sub_args) > 1 or sub not in ("", "install", "setup", "status", "uninstall", "remove"):
+                exit_usage(f"{CLI_CMD} greeter [install|status|uninstall]")
+            if sub in ("install", "setup"):
+                greeter_install()
+            elif sub in ("uninstall", "remove"):
+                greeter_uninstall()
+            else:
+                greeter_status()
+            sys.exit(0)
+        elif cmd == "fcitx":
+            sub = sub_args[0].lower() if sub_args else ""
+            if len(sub_args) > 1 or sub not in ("", "install", "setup", "status", "uninstall", "remove"):
+                exit_usage(f"{CLI_CMD} fcitx [install|status|uninstall]")
+            if sub in ("install", "setup"):
+                fcitx_install()
+            elif sub in ("uninstall", "remove"):
+                fcitx_uninstall()
+            else:
+                fcitx_status()
+            sys.exit(0)
+        elif cmd == "theme":
+            sub = sub_args[0] if sub_args else "toggle"
+            if len(sub_args) > 1 or sub not in ("toggle", "dark", "light", "sync", "status"):
+                exit_usage(f"{CLI_CMD} theme [toggle|dark|light|sync|status]")
+            sync_script = env.config_dir / THEME_ENGINE / "theme-sync.sh"
+            if not sync_script.is_file() and (env.configs_src / THEME_ENGINE / "theme-sync.sh").is_file():
+                sync_script = env.configs_src / THEME_ENGINE / "theme-sync.sh"
+            if sync_script.is_file():
+                sync_script.chmod(0o755)
+                res = subprocess.run(["bash", str(sync_script), sub], check=False)
+                sys.exit(res.returncode)
+            else:
+                print(msg("err_theme_sync_missing"), file=sys.stderr)
+                sys.exit(1)
+        elif cmd == "update":
+            flag = sub_args[0] if sub_args else ""
+            if len(sub_args) > 1 or flag not in ("", "--force", "--deploy", "--no-deploy"):
+                exit_usage(f"{CLI_CMD} update [--force|--no-deploy]")
+            update_result = safe_git_pull(env.repo_dir)
+            if update_result is True:
+                sys.exit(0 if offer_overwrite_upgrade(flag) else 1)
+            if update_result is False:
+                print(msg("updating_failed"), file=sys.stderr)
+                sys.exit(1)
+            sys.exit(0)
+        elif cmd in ("help", "-h", "--help"):
+            if sub_args:
+                exit_usage(f"{CLI_CMD} help")
+            print_help()
+            sys.exit(0)
+
+        print(msg("err_unknown_command", args[0]), file=sys.stderr)
+        print_help(file=sys.stderr)
+        sys.exit(2)
+
+    # Interactive flow
+    if not sys.stdin.isatty():
+        sys.exit(0 if install_configs_workflow("full") else 1)
+    select_language()
+    main_menu_loop()
+
+if __name__ == "__main__":
+    main()

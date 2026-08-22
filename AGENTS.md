@@ -21,13 +21,13 @@
 ## 1. 【最高优先级】存疑必全仓库排查
 
 对代码、路径、变量、配置项有任何疑问，下结论、判定 Bug 或修改前，**必
-须全仓库检索相关文件**（至少含 `install.sh`、`lib/*.sh`、`v2/**/*.sh`
+须全仓库检索相关文件**（至少含 `install.sh`、`nyxniri/*.py`、`configs/**/*.sh`
 及其引用文件）。
 
 - 禁止仅凭单文件或"看起来像"的假设下结论。
 - 禁止在未完成全局排查前判定某处为硬编码/缺陷并擅自修复。
 - 排查方式：全库 `grep` 检索对象的所有引用点，确认是否已有对应处理逻
-  辑（如 `sed` 替换、条件判断、环境检测等）。
+  辑（如字符串替换、条件判断、环境检测等）。
 - 排查后仍无法确定，必须列出已排查文件清单并说明理由。
 - 不因改动小或时间紧而跳过。
 
@@ -37,13 +37,12 @@
 
 | 目录 | 职责 |
 |---|---|
-| `v2/` | Dotfiles 配置源码（niri、noctalia 等的 `.kdl` / 配置模板） |
-| `lib/` | Shell 部署 / 诊断 / 备份引擎（`deploy.sh`、`main.sh` 等） |
-| `install.sh` | 统一入口点，仅负责环境预检并 `exec` 转入 `lib/main.sh` |
-| `fcitx5/` | Fcitx5 动态皮肤（NyxMellow）模板源码 |
-| `Wallpapers/` | 本地内置默认壁纸（离线 fallback） |
+| `configs/` | Dotfiles 配置源码（niri、noctalia 等的 `.kdl` / 配置模板） |
+| `assets/` | 静态资产（`assets/wallpapers/` 离线壁纸、`assets/fcitx5/` 输入法皮肤） |
+| `nyxniri/` | Python 部署 / 诊断 / 备份核心引擎（零 pip 依赖，纯标准库） |
+| `install.sh` | 统一引导入口点，负责环境预检并 `exec python3 -m nyxniri` |
 
-**物理隔离**：仓库源码与 `~/.config/` 隔离，仅允许通过 `lib/deploy.sh`
+**物理隔离**：仓库源码与 `~/.config/` 隔离，仅允许通过 `nyxniri.deploy`
 的 `atomic_replace_item` 机制复制/替换，禁止 `ln -s` 软链接进 `~/.config/`
 （`~/.config/` 内部文件之间的软链接，如运行时主题切换，不受此限）。
 
@@ -56,8 +55,9 @@
 
 ```bash
 # 语法与静态检查（改动后必跑，零网络秒级）
-for f in install.sh lib/*.sh v2/niri/scripts/*.sh v2/noctalia/*.sh; do bash -n "$f"; done
-shellcheck install.sh lib/*.sh
+python3 -m compileall nyxniri
+bash -n install.sh configs/noctalia/*.sh configs/niri/scripts/*.sh
+shellcheck install.sh
 
 # 沙箱隔离部署测试（极速、不污染实机、不下载外部大包）
 HOME=$(mktemp -d) ./install.sh test
@@ -68,7 +68,7 @@ HOME=$(mktemp -d) ./install.sh test
 
 **提交前验证**：
 
-1. **代码修改**：跑语法检查 `bash -n`（或 Python `py_compile`）+ `shellcheck`（成本极低，无例外）。
+1. **代码修改**：跑语法检查 `python3 -m compileall nyxniri` + `shellcheck`（成本极低，无例外）。
 2. **逻辑/流程改动**：追加沙箱部署测试 `HOME=$(mktemp -d) ./install.sh test`。
 
 ---
@@ -81,13 +81,10 @@ HOME=$(mktemp -d) ./install.sh test
 | 部署仓库文件到 `~/.config/` | 只能走 `atomic_replace_item`，禁止软链接 |
 | 文件/目录名含 `__custom__` | 更新时自动保留，不需手动处理 |
 | 脚本以 `id -u == 0` 运行 | `install.sh`/`nyxniri` 直接拒绝；系统级维护脚本（如 `clean-cache`）例外，允许要求 root |
-| `v2/` 模板里的 `/home/user` | 占位符，由 `lib/deploy.sh` 部署时 `sed` 替换为目标 `$HOME`，勿改为硬编码 |
-| sed 动态替换路径 | 转义 `\|` 和 `&`（见下方代码块） |
-| NVIDIA env 变量 | 默认注释，仅 `lspci` 检测后由 `lib/deploy.sh` 自动解注释，绝不能默认开启 |
-| `export VAR=$(mktemp)` | 禁止（见下方代码块） |
-| 网络命令（curl 等） | 必须带 `--connect-timeout`，非关键调用加 `\|\| true` 容错 |
-| 依赖非 0 退出码做流程控制的脚本 | 用 `set -uo pipefail`，不用 `set -e` |
-| 引擎代码（`lib/*.sh`） | 避免硬编码特定项目名，用 `$PROJECT_NAME`/`$CLI_CMD`/`$MAIN_WM`/`$THEME_ENGINE` 等全局变量；TUI 文案可适当灵活 |
+| `configs/` 模板里的 `/home/user` | 占位符，由部署引擎替换为目标 `$HOME`，勿改为硬编码 |
+| NVIDIA env 变量 | 默认注释，仅 `lspci` 检测后由部署引擎自动解注释，绝不能默认开启 |
+| 网络命令（curl 等） | 必须带 `--connect-timeout`，非关键调用加容错 |
+| 引擎代码（`nyxniri/`） | 避免硬编码特定项目名，用 `constants.py` 常量；TUI 文案可适当灵活 |
 
 **sed 转义**：
 ```bash

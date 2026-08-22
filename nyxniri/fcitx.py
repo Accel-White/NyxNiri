@@ -1,0 +1,268 @@
+"""Optional NyxMellow dynamic Fcitx5 skin (Noctalia user template integration)."""
+
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Optional
+
+from nyxniri.constants import Colors, FCITX_THEME, PROJECT_NAME, THEME_ENGINE
+from nyxniri.core import get_env, log_msg
+from nyxniri.i18n import get_lang, msg
+
+
+def _text(zh: str, en: str) -> str:
+    return zh if get_lang() == "zh" else en
+
+def _fcitx_paths():
+    env = get_env()
+    themes_dir = env.home / ".local/share/fcitx5/themes"
+    theme_dir = themes_dir / FCITX_THEME
+    template_dir = theme_dir / "templates"
+    classicui = env.config_dir / "fcitx5" / "conf" / "classicui.conf"
+    noctalia_conf = env.config_dir / THEME_ENGINE / f"{THEME_ENGINE}-config.toml"
+    state_file = env.state_dir / f"fcitx-{FCITX_THEME}-theme.prev"
+    enabled_marker = env.state_dir / f"fcitx-{FCITX_THEME}.enabled"
+    source_dir = env.assets_src / "fcitx5" / FCITX_THEME / "templates"
+    return themes_dir, theme_dir, template_dir, classicui, noctalia_conf, state_file, enabled_marker, source_dir
+
+def fcitx5_installed() -> bool:
+    """Check if fcitx5 binary is in PATH."""
+    return shutil.which("fcitx5") is not None
+
+def noctalia_available() -> bool:
+    """Check if noctalia CLI is in PATH."""
+    return shutil.which(THEME_ENGINE) is not None
+
+def fcitx_enabled() -> bool:
+    """Check if user consent marker exists."""
+    _, _, _, _, _, _, enabled_marker, _ = _fcitx_paths()
+    return enabled_marker.is_file()
+
+def fcitx_status_label() -> str:
+    """Return compact status label for menus."""
+    if not fcitx5_installed():
+        return msg("status_fcitx5_missing")
+    if fcitx_enabled():
+        return msg("status_enabled")
+    return msg("status_disabled")
+
+def fcitx_templates_registered() -> bool:
+    """Check if noctalia-config.toml registers nyxmellow templates."""
+    _, _, _, _, noctalia_conf, _, _, _ = _fcitx_paths()
+    if noctalia_conf.is_file():
+        try:
+            content = noctalia_conf.read_text(encoding="utf-8", errors="ignore")
+            return f"theme.templates.user.{FCITX_THEME}_" in content
+        except Exception:
+            pass
+    return False
+
+def fcitx_backup_theme_settings() -> None:
+    """Save existing Theme and DarkTheme settings before applying NyxMellow."""
+    _, _, _, classicui, _, state_file, _, _ = _fcitx_paths()
+    state_file.parent.mkdir(parents=True, exist_ok=True)
+    if state_file.is_file():
+        return
+
+    existed = 0
+    t, dt = "", ""
+    if classicui.is_file():
+        existed = 1
+        try:
+            content = classicui.read_text(encoding="utf-8", errors="ignore")
+            m_t = re.search(r"^Theme=(.*)", content, re.MULTILINE)
+            if m_t: t = m_t.group(1).strip()
+            m_dt = re.search(r"^DarkTheme=(.*)", content, re.MULTILINE)
+            if m_dt: dt = m_dt.group(1).strip()
+        except Exception:
+            pass
+
+    state_file.write_text(f"Existed={existed}\nTheme={t}\nDarkTheme={dt}\n", encoding="utf-8")
+
+def fcitx_deploy_templates() -> bool:
+    """Deploy theme template SVGs and theme.conf into ~/.local/share/fcitx5/themes/nyxmellow/templates/."""
+    _, _, template_dir, _, _, _, _, source_dir = _fcitx_paths()
+    if not source_dir.is_dir():
+        print(msg("log_fcitx_template_missing", str(source_dir)))
+        return False
+
+    template_dir.mkdir(parents=True, exist_ok=True)
+    for item in source_dir.iterdir():
+        shutil.copy2(item, template_dir / item.name)
+    print(msg("fcitx_templates_deployed"))
+    return True
+
+def _update_ini_file(file_path: Path, section: str, key: str, val: str) -> None:
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    if not file_path.is_file():
+        file_path.write_text(f"[{section}]\n{key}={val}\n", encoding="utf-8")
+        return
+
+    content = file_path.read_text(encoding="utf-8", errors="replace")
+    if re.search(rf"^{re.escape(key)}=", content, re.MULTILINE):
+        content = re.sub(rf"^{re.escape(key)}=.*", f"{key}={val}", content, flags=re.MULTILINE)
+    else:
+        if re.search(rf"^\[{re.escape(section)}\]", content, re.MULTILINE):
+            content = re.sub(rf"(^\[{re.escape(section)}\].*)", rf"\1\n{key}={val}", content, flags=re.MULTILINE)
+        else:
+            content += f"\n[{section}]\n{key}={val}\n"
+    file_path.write_text(content, encoding="utf-8")
+
+def fcitx_set_theme_conf() -> None:
+    """Update Theme & DarkTheme in classicui.conf."""
+    _, _, _, classicui, _, _, _, _ = _fcitx_paths()
+    fcitx_backup_theme_settings()
+    _update_ini_file(classicui, "ClassicUI", "Theme", FCITX_THEME)
+    _update_ini_file(classicui, "ClassicUI", "DarkTheme", FCITX_THEME)
+    print(msg("fcitx_theme_set", str(classicui)))
+
+def fcitx_configure_quickphrase() -> None:
+    """Configure QuickPhrase hotkey in quickphrase.conf."""
+    env = get_env()
+    qp_conf = env.config_dir / "fcitx5" / "conf" / "quickphrase.conf"
+    _update_ini_file(qp_conf, "Hotkey", "TriggerKey", "Super+semicolon")
+    _update_ini_file(qp_conf, "Hotkey", "AlternativeTriggerKey", "")
+
+def fcitx_restart() -> None:
+    """Restart running fcitx5 daemon to load updated skin."""
+    if fcitx5_installed():
+        res = subprocess.run(["pgrep", "-x", "fcitx5"], capture_output=True, check=False)
+        if res.returncode == 0:
+            subprocess.run(["pkill", "-x", "fcitx5"], check=False)
+            time.sleep(1)
+            subprocess.Popen(["fcitx5", "-d"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(msg("fcitx_restarted"))
+
+def fcitx_trigger_render() -> None:
+    """Ask Noctalia daemon to render templates for current palette."""
+    if noctalia_available():
+        subprocess.run([THEME_ENGINE, "msg", "config-reload"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        res = subprocess.run([THEME_ENGINE, "msg", "templates-apply"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        if res.returncode == 0:
+            print(msg("fcitx_render_ok"))
+        else:
+            print(msg("fcitx_render_pending"))
+    else:
+        print(msg("fcitx_render_pending"))
+
+def fcitx_install() -> bool:
+    """Deploy templates, apply configuration, and activate NyxMellow skin."""
+    print(msg("fcitx_install_title"))
+    if not fcitx_deploy_templates():
+        return False
+
+    _, _, _, _, _, _, enabled_marker, _ = _fcitx_paths()
+    if fcitx5_installed():
+        fcitx_set_theme_conf()
+        fcitx_configure_quickphrase()
+        fcitx_trigger_render()
+        fcitx_restart()
+        enabled_marker.parent.mkdir(parents=True, exist_ok=True)
+        enabled_marker.touch()
+        log_msg("INFO", "Deployed and activated NyxMellow fcitx5 skin")
+        return True
+    else:
+        print(msg("fcitx_skip_no_fcitx5"))
+        return False
+
+def fcitx_status() -> None:
+    """Check and display status of fcitx5 and NyxMellow theme."""
+    _, theme_dir, _, classicui, noctalia_conf, _, _, _ = _fcitx_paths()
+    print(msg("fcitx_status_title"))
+
+    if fcitx5_installed():
+        print(msg("doctor_ok", _text("fcitx5: 已安装", "fcitx5: installed")))
+    else:
+        print(msg("doctor_warn", _text("fcitx5: 未安装", "fcitx5: not installed")))
+
+    if fcitx_templates_registered():
+        print(msg("fcitx_registered", str(noctalia_conf)))
+    else:
+        print(msg("fcitx_not_registered", str(noctalia_conf)))
+
+    if theme_dir.is_dir():
+        print(msg("doctor_ok", _text(f"主题目录: {theme_dir}", f"Theme directory: {theme_dir}")))
+        if (theme_dir / "theme.conf").is_file() and (theme_dir / "panel.svg").is_file() and (theme_dir / "highlight.svg").is_file():
+            print(msg("doctor_ok", _text("渲染文件: 已生成并跟随 Noctalia 配色", "Rendered files: present and following Noctalia colors")))
+        else:
+            print(msg("doctor_warn", _text(
+                f"渲染文件缺失；请运行 {THEME_ENGINE} msg config-reload 或 nyxniri fcitx install",
+                f"Rendered files are missing; run {THEME_ENGINE} msg config-reload or nyxniri fcitx install",
+            )))
+    else:
+        print(msg("doctor_warn", _text(f"主题目录缺失: {theme_dir}", f"Theme directory is missing: {theme_dir}")))
+
+    if classicui.is_file():
+        try:
+            content = classicui.read_text(encoding="utf-8", errors="ignore")
+            t = re.search(r"^Theme=(.*)", content, re.MULTILINE)
+            dt = re.search(r"^DarkTheme=(.*)", content, re.MULTILINE)
+            t_str = t.group(1).strip() if t else ""
+            dt_str = dt.group(1).strip() if dt else ""
+            print(msg("doctor_ok", f"classicui.conf: Theme={t_str} DarkTheme={dt_str}"))
+        except Exception:
+            pass
+    else:
+        print(msg("doctor_warn", _text("classicui.conf: 缺失", "classicui.conf: missing")))
+
+def fcitx_uninstall() -> bool:
+    """Uninstall NyxMellow skin, unregister templates, and revert classicui settings."""
+    _, theme_dir, _, classicui, noctalia_conf, state_file, enabled_marker, _ = _fcitx_paths()
+    print(msg("fcitx_uninstall_title"))
+
+    # Unregister from noctalia-config.toml
+    if noctalia_conf.is_file() and fcitx_templates_registered():
+        lines = noctalia_conf.read_text(encoding="utf-8").splitlines()
+        new_lines = []
+        skip = False
+        prefix = f"[theme.templates.user.{FCITX_THEME}_"
+        for line in lines:
+            if line.startswith(prefix):
+                skip = True
+                continue
+            if skip and line.startswith("["):
+                skip = False
+            if not skip:
+                new_lines.append(line)
+        noctalia_conf.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+        print(msg("log_fcitx_template_unregistered", THEME_ENGINE))
+
+    # Remove theme directory
+    if theme_dir.is_dir():
+        shutil.rmtree(theme_dir, ignore_errors=True)
+        print(msg("log_fcitx_theme_dir_removed", str(theme_dir)))
+
+    # Revert classicui.conf
+    if state_file.is_file():
+        try:
+            state_txt = state_file.read_text(encoding="utf-8")
+            m_ex = re.search(r"^Existed=(.*)", state_txt, re.MULTILINE)
+            m_t = re.search(r"^Theme=(.*)", state_txt, re.MULTILINE)
+            m_dt = re.search(r"^DarkTheme=(.*)", state_txt, re.MULTILINE)
+            existed = m_ex.group(1).strip() if m_ex else "0"
+            t = m_t.group(1).strip() if m_t else ""
+            dt = m_dt.group(1).strip() if m_dt else ""
+
+            if existed != "1":
+                classicui.unlink(missing_ok=True)
+            else:
+                if classicui.is_file():
+                    content = classicui.read_text(encoding="utf-8")
+                    if t: content = re.sub(r"^Theme=.*", f"Theme={t}", content, flags=re.MULTILINE)
+                    else: content = re.sub(r"^Theme=.*\n?", "", content, flags=re.MULTILINE)
+                    if dt: content = re.sub(r"^DarkTheme=.*", f"DarkTheme={dt}", content, flags=re.MULTILINE)
+                    else: content = re.sub(r"^DarkTheme=.*\n?", "", content, flags=re.MULTILINE)
+                    classicui.write_text(content, encoding="utf-8")
+        except Exception:
+            pass
+        state_file.unlink(missing_ok=True)
+
+    enabled_marker.unlink(missing_ok=True)
+    fcitx_restart()
+    print(msg("fcitx_uninstall_done"))
+    log_msg("INFO", "Uninstalled NyxMellow fcitx5 skin")
+    return True

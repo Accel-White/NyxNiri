@@ -3,11 +3,11 @@
 
 # 子命令
 complete -c nyxniri -f -n "__fish_use_subcommand" -a install   -d "Deploy dotfiles & deps (full|config)"
-complete -c nyxniri -f -n "__fish_use_subcommand" -a snapshot  -d "Create config snapshot (delete [idx] removes one)"
+complete -c nyxniri -f -n "__fish_use_subcommand" -a snapshot  -d "Create or delete config snapshots"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a rollback  -d "Restore config from a snapshot"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a list      -d "List all snapshots"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a uninstall -d "Safely uninstall NyxNiri"
-complete -c nyxniri -f -n "__fish_use_subcommand" -a purge     -d "Deep purge configs, cache & wallpapers"
+complete -c nyxniri -f -n "__fish_use_subcommand" -a purge     -d "Deep purge configs, snapshots, cache & wallpapers"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a doctor    -d "Run System Doctor diagnostics"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a deps      -d "Open dependency check & install menu"
 complete -c nyxniri -f -n "__fish_use_subcommand" -a apps      -d "Recommended apps installer (Nautilus/Fcitx5)"
@@ -44,14 +44,18 @@ complete -c nyxniri -f -n "__fish_seen_subcommand_from fcitx" -a status    -d "S
 complete -c nyxniri -f -n "__fish_seen_subcommand_from fcitx" -a uninstall -d "Uninstall skin"
 
 # update 参数
-complete -c nyxniri -f -n "__fish_seen_subcommand_from update" -l force -d "Overwrite-deploy latest configs"
+complete -c nyxniri -f -n "__fish_seen_subcommand_from update" -l force -d "Update and redeploy configs with a snapshot"
+complete -c nyxniri -f -n "__fish_seen_subcommand_from update" -l no-deploy -d "Update source only"
 
 # 快照序号动态补全 (rollback / snapshot delete)
 function __nyxniri_snapshot_indices
     set -l dirs
     if test -d "$HOME/.config/NyxNiri/backups"
         for d in "$HOME/.config/NyxNiri/backups"/*
-            test -d "$d"; and set -a dirs "$d"
+            switch (basename "$d")
+                case 'snapshot_*' 'pre_rollback_*'
+                    test -d "$d"; and set -a dirs "$d"
+            end
         end
     end
     for d in "$HOME/.config"/dotfiles_backup_*

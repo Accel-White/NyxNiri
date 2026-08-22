@@ -4,6 +4,8 @@
 noctalia-docs
 example-widgets
 notes/
+/.codex/
+/.agents/
 
 # Python cache & bytecode
 __pycache__/

@@ -200,7 +200,7 @@ builtin_ids = ["kitty", "qt", "starship"]
 community_ids = []
 
 # NyxMellow 动态 fcitx5 皮肤（mellow 形状 + Material You 自动取色）
-# 路径中的 /home/user 为占位符，由 lib/deploy.sh 在部署时替换为实际 $HOME
+# 路径中的 /home/user 为占位符，由 nyxniri.deploy 在部署时替换为实际 $HOME
 [theme.templates.user.nyxmellow_theme]
 index = 0
 input_path = "/home/user/.local/share/fcitx5/themes/nyxmellow/templates/theme.conf"
