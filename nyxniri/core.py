@@ -99,8 +99,17 @@ def get_pics_dir() -> Path:
 
 # --- Dynamic Version Extractor ---
 def get_version(target_dir: Path) -> str:
-    """Extract release version from Git tag, CHANGELOG.md, or fallback to v2.x."""
-    version = ""
+    """Extract release version from CHANGELOG.md, Git tag, or fallback to v3.0.0."""
+    changelog = target_dir / "CHANGELOG.md"
+    if changelog.is_file():
+        try:
+            content = changelog.read_text(encoding="utf-8")
+            for candidate in re.findall(r"^##\s+\[([^\]]+)\]", content, re.MULTILINE):
+                if candidate.lower() != "unreleased":
+                    return candidate
+        except Exception:
+            pass
+
     if (target_dir / ".git").is_dir():
         try:
             res = subprocess.run(
@@ -117,17 +126,7 @@ def get_version(target_dir: Path) -> str:
         except Exception:
             pass
 
-    changelog = target_dir / "CHANGELOG.md"
-    if changelog.is_file():
-        try:
-            content = changelog.read_text(encoding="utf-8")
-            for candidate in re.findall(r"^##\s+\[([^\]]+)\]", content, re.MULTILINE):
-                if candidate.lower() != "unreleased":
-                    return candidate
-        except Exception:
-            pass
-
-    return "v2.x"
+    return "v3.0.0"
 
 # --- PID Single-Instance Lock ---
 _LOCK_FILE: Optional[Path] = None

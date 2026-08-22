@@ -288,13 +288,14 @@ def prompt_confirm(prompt_key: str, default: str = "y") -> bool:
     """Bilingual prompt confirmation (returns True for Yes, False for No)."""
     if os.environ.get("NYXNIRI_AUTO_YES", "0") == "1":
         return True
-    if not sys.stdin.isatty():
-        return default.lower().startswith("y")
 
     sys.stdout.write(msg(prompt_key))
     sys.stdout.flush()
     try:
-        line = sys.stdin.readline().strip()
+        line = sys.stdin.readline()
+        if not line:
+            return default.lower().startswith("y")
+        line = line.strip()
         if not line:
             return default.lower().startswith("y")
         return line.lower().startswith("y")

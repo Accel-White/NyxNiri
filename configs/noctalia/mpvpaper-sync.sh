@@ -1,4 +1,5 @@
 #!/bin/bash
+set -uo pipefail
 # Hook to synchronize mpvpaper's video wallpaper with Noctalia's native wallpaper and theme.
 
 # Check dependencies
@@ -12,7 +13,7 @@ done
 ASSIGNMENTS_FILE="$HOME/.local/state/noctalia/mpvpaper/assignments.json"
 
 # Signal trap for clean termination
-trap 'exit 0' INT TERM EXIT
+trap 'exit 0' INT TERM
 
 process_assignments() {
     local VIDEO_PATH THUMB_NAME THUMB_PATH CURRENT_WP
@@ -27,7 +28,7 @@ process_assignments() {
         # Check if it's a video
         if [[ "$VIDEO_PATH" =~ \.(mp4|webm|mkv|mov|gif)$ ]]; then
             # Generate a hash-based filename for the thumbnail to avoid re-generating for the same video
-            THUMB_NAME=$(echo -n "$VIDEO_PATH" | md5sum | awk '{print $1}')
+            THUMB_NAME=$(printf '%s' "$VIDEO_PATH" | md5sum | awk '{print $1}')
             THUMB_PATH="$HOME/.cache/noctalia/mpvpaper/${THUMB_NAME}.jpg"
             
             mkdir -p "$(dirname "$THUMB_PATH")"

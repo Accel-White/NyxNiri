@@ -37,7 +37,7 @@ clone_repo_bootstrap() {
 
         echo -e "  [$idx/${#GIT_MIRROR_REGISTRY[@]}] Fetching from [$tag] node…" >&2
         
-        if [ "$target_dir" = "$CACHE_DIR" ]; then
+        if [ "$target_dir" = "$CACHE_DIR" ] && [[ "$target_dir" == "$HOME/"* ]]; then
             rm -rf "$target_dir" 2>/dev/null || true
         fi
 

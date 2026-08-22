@@ -139,15 +139,18 @@ def check_mpvpaper_leak() -> None:
     try:
         res = subprocess.run(["mpvpaper", "--version"], capture_output=True, text=True, check=False)
         out = res.stdout or res.stderr
-        m = re.search(r"mpvpaper\s+v?([0-9]+\.[0-9]+)", out)
+        m = re.search(r"mpvpaper\s+v?([0-9]+(?:\.[0-9]+)+)", out)
         if m:
             ver_str = m.group(1)
-            ver = float(ver_str)
-            if ver < 1.9:
-                print(msg("mpvpaper_leak_warn", ver_str))
-                print(msg("mpvpaper_upgrade_skip"))
-            else:
-                print(msg("mpvpaper_version_ok", ver_str))
+            try:
+                parts = tuple(int(p) for p in ver_str.split("."))
+                if parts < (1, 9):
+                    print(msg("mpvpaper_leak_warn", ver_str))
+                    print(msg("mpvpaper_upgrade_skip"))
+                else:
+                    print(msg("mpvpaper_version_ok", ver_str))
+            except ValueError:
+                pass
     except Exception:
         pass
 

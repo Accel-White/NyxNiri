@@ -242,6 +242,6 @@ capsule = false
 type = "noctalia/mpvpaper:mpvpaper"
 
 [plugin_settings."noctalia/mpvpaper"]
-mpv_options = "--script=~/.config/noctalia/mpv-hook.lua"
+mpv_options = "--config=no --load-scripts=no --script=~/.config/noctalia/mpv-hook.lua"
 picker_placement = "floating"
 video_directory = "/home/user/图片/Wallpapers/video"

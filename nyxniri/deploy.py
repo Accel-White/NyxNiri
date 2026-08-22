@@ -47,7 +47,7 @@ def discover_config_items() -> List[str]:
         items = [p.name for p in env.configs_src.iterdir() if p.name != "__pycache__"]
         if items:
             return sorted(items)
-    return ["fish", "noctalia", "niri", "kitty", "fastfetch", "starship.toml", "zed"]
+    return ["fastfetch", "fish", "kitty", "niri", "noctalia", "starship.toml", "xdg-desktop-portal", "zed"]
 
 def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]] = None, test_mode: bool = False) -> bool:
     """Atomic swap deployment via sibling temp directories with Dunder Protocol preservation."""
@@ -233,18 +233,18 @@ def _phase_render_templates() -> None:
     config_dir = env.config_dir
     wp_dest = get_pics_dir() / "Wallpapers"
 
-    noctalia_conf = config_dir / THEME_ENGINE / "noctalia-config.toml"
+    noctalia_conf = config_dir / THEME_ENGINE / f"{THEME_ENGINE}-config.toml"
     if noctalia_conf.is_file():
         content = noctalia_conf.read_text(encoding="utf-8", errors="replace")
         content = re.sub(r'^directory = ".*"', f'directory = "{wp_dest}"', content, flags=re.MULTILINE)
         content = re.sub(r'^video_directory = ".*"', f'video_directory = "{wp_dest / "video"}"', content, flags=re.MULTILINE)
-        content = re.sub(r'/home/[^/]+', str(home), content)
+        content = content.replace("/home/user", str(home))
         noctalia_conf.write_text(content, encoding="utf-8")
 
     niri_conf = config_dir / MAIN_WM / "config.kdl"
     if niri_conf.is_file():
         content = niri_conf.read_text(encoding="utf-8", errors="replace")
-        content = re.sub(r'/home/[^/]+', str(home), content)
+        content = content.replace("/home/user", str(home))
         pics_dir = get_pics_dir()
         if str(pics_dir).startswith(str(home)):
             rel_pics = "~" + str(pics_dir)[len(str(home)):]
@@ -257,7 +257,7 @@ def _phase_render_templates() -> None:
     fish_vars = config_dir / "fish" / "fish_variables"
     if fish_vars.is_file():
         content = fish_vars.read_text(encoding="utf-8", errors="replace")
-        content = re.sub(r'/home/[^/]+', str(home), content)
+        content = content.replace("/home/user", str(home))
         fish_vars.write_text(content, encoding="utf-8")
 
 def _phase_hardware_patches() -> None:
@@ -279,9 +279,9 @@ def _phase_hardware_patches() -> None:
         print(msg("log_nvidia_gpu_detected"))
         log_msg("INFO", "NVIDIA GPU detected. Enabling NVIDIA envs in config.kdl")
         content = niri_conf.read_text(encoding="utf-8")
-        content = re.sub(r'^\s*//\s*(GBM_BACKEND\s+"nvidia-drm")', r'\1', content, flags=re.MULTILINE)
-        content = re.sub(r'^\s*//\s*(__GLX_VENDOR_LIBRARY_NAME\s+"nvidia")', r'\1', content, flags=re.MULTILINE)
-        content = re.sub(r'^\s*//\s*(LIBVA_DRIVER_NAME\s+"nvidia")', r'\1', content, flags=re.MULTILINE)
+        content = re.sub(r'^(\s*)//\s*(GBM_BACKEND\s+"nvidia-drm")', r'\1\2', content, flags=re.MULTILINE)
+        content = re.sub(r'^(\s*)//\s*(__GLX_VENDOR_LIBRARY_NAME\s+"nvidia")', r'\1\2', content, flags=re.MULTILINE)
+        content = re.sub(r'^(\s*)//\s*(LIBVA_DRIVER_NAME\s+"nvidia")', r'\1\2', content, flags=re.MULTILINE)
         niri_conf.write_text(content, encoding="utf-8")
     else:
         print(msg("log_nvidia_gpu_not_detected"))
@@ -305,8 +305,9 @@ def _phase_post_install_services() -> None:
     if shutil.which("fish"):
         print(msg("log_check_fisher"))
         log_msg("INFO", "Checking Fisher plugin manager installation")
-        fisher_tmp = tempfile.mktemp()
-        fisher_path = Path(fisher_tmp)
+        tfd, tname = tempfile.mkstemp(suffix=".fish")
+        os.close(tfd)
+        fisher_path = Path(tname)
         register_temp_path(fisher_path)
 
         msg_install = msg("log_install_fish_plugins")

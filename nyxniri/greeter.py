@@ -127,11 +127,9 @@ def greeter_install() -> bool:
     else:
         print(msg("greeter_config_failed", str(GREETER_ETC_CFG)))
 
-    # Create /var/lib/noctalia-greeter state directory
     state_cmd = (
         f"mkdir -p /var/lib/{GREETER_PKG} && "
-        f"chown -R greeter:greeter /var/lib/{GREETER_PKG} 2>/dev/null || "
-        f"chown -R root:root /var/lib/{GREETER_PKG} 2>/dev/null || true && "
+        f"(chown -R greeter:greeter /var/lib/{GREETER_PKG} 2>/dev/null || true) && "
         f"chmod 755 /var/lib/{GREETER_PKG}"
     )
     res_s = subprocess.run(["sudo", "sh", "-c", state_cmd], check=False)

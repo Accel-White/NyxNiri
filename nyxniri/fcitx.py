@@ -51,12 +51,16 @@ def fcitx_status_label() -> str:
     return msg("status_disabled")
 
 def fcitx_templates_registered() -> bool:
-    """Check if noctalia-config.toml registers nyxmellow templates."""
+    """Check if noctalia-config.toml registers all 3 nyxmellow templates."""
     _, _, _, _, noctalia_conf, _, _, _ = _fcitx_paths()
     if noctalia_conf.is_file():
         try:
             content = noctalia_conf.read_text(encoding="utf-8", errors="ignore")
-            return f"theme.templates.user.{FCITX_THEME}_" in content
+            return (
+                f"theme.templates.user.{FCITX_THEME}_theme" in content
+                and f"theme.templates.user.{FCITX_THEME}_panel" in content
+                and f"theme.templates.user.{FCITX_THEME}_highlight" in content
+            )
         except Exception:
             pass
     return False
@@ -149,6 +153,57 @@ def fcitx_trigger_render() -> None:
     else:
         print(msg("fcitx_render_pending"))
 
+def fcitx_register_templates() -> bool:
+    """Ensure nyxmellow templates are fully registered in noctalia-config.toml."""
+    _, _, _, _, noctalia_conf, _, _, _ = _fcitx_paths()
+    if not noctalia_conf.is_file():
+        return False
+
+    content = noctalia_conf.read_text(encoding="utf-8", errors="replace")
+    env = get_env()
+    home = str(env.home)
+    expected_theme = f"[theme.templates.user.{FCITX_THEME}_theme]"
+    expected_panel = f"[theme.templates.user.{FCITX_THEME}_panel]"
+    expected_highlight = f"[theme.templates.user.{FCITX_THEME}_highlight]"
+
+    if expected_theme not in content or expected_panel not in content or expected_highlight not in content:
+        lines = content.splitlines()
+        clean_lines = []
+        skip = False
+        prefix = f"[theme.templates.user.{FCITX_THEME}_"
+        for line in lines:
+            if line.startswith(prefix):
+                skip = True
+                continue
+            if skip and line.startswith("["):
+                skip = False
+            if not skip:
+                clean_lines.append(line)
+
+        template_block = f"""
+# NyxMellow 动态 fcitx5 皮肤（mellow 形状 + Material You 自动取色）
+# 路径中的 /home/user 为占位符，由 nyxniri.deploy 在部署时替换为实际 $HOME
+[theme.templates.user.{FCITX_THEME}_theme]
+index = 0
+input_path = "{home}/.local/share/fcitx5/themes/{FCITX_THEME}/templates/theme.conf"
+output_path = "{home}/.local/share/fcitx5/themes/{FCITX_THEME}/theme.conf"
+
+[theme.templates.user.{FCITX_THEME}_panel]
+index = 1
+input_path = "{home}/.local/share/fcitx5/themes/{FCITX_THEME}/templates/panel.svg"
+output_path = "{home}/.local/share/fcitx5/themes/{FCITX_THEME}/panel.svg"
+
+[theme.templates.user.{FCITX_THEME}_highlight]
+index = 2
+input_path = "{home}/.local/share/fcitx5/themes/{FCITX_THEME}/templates/highlight.svg"
+output_path = "{home}/.local/share/fcitx5/themes/{FCITX_THEME}/highlight.svg"
+post_hook = "if pgrep -x fcitx5 >/dev/null 2>&1; then pkill -x fcitx5; sleep 1; fcitx5 -d >/dev/null 2>&1 & fi"
+"""
+        new_content = "\n".join(clean_lines).rstrip() + "\n" + template_block
+        noctalia_conf.write_text(new_content, encoding="utf-8")
+        log_msg("INFO", "Registered NyxMellow templates in noctalia-config.toml")
+    return True
+
 def fcitx_install() -> bool:
     """Deploy templates, apply configuration, and activate NyxMellow skin."""
     print(msg("fcitx_install_title"))
@@ -157,6 +212,7 @@ def fcitx_install() -> bool:
 
     _, _, _, _, _, _, enabled_marker, _ = _fcitx_paths()
     if fcitx5_installed():
+        fcitx_register_templates()
         fcitx_set_theme_conf()
         fcitx_configure_quickphrase()
         fcitx_trigger_render()
