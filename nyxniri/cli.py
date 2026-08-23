@@ -266,8 +266,8 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
             fcitx_install()
         try:
             greeter_install()
-        except Exception:
-            pass
+        except Exception as e:
+            log_msg("WARN", f"Greeter install skipped during --force update: {e}")
         render_completion_screen("update", wallpaper_result=wallpaper_result)
         return True
     elif flag == "--no-deploy":
@@ -343,6 +343,7 @@ def check_new_deps_post_update() -> None:
         return
     print(msg("new_deps_detected", " ".join(missing)))
     if not sys.stdin.isatty():
+        log_msg("INFO", f"Auto-installing new deps non-interactively: {' '.join(missing)}")
         install_selected_deps(missing)
         return
     if prompt_confirm("prompt_install_missing_deps", "y"):
