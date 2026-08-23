@@ -23,7 +23,7 @@ class TestGreeterExitCode(unittest.TestCase):
         from nyxniri.cli import main
 
         with patch("sys.argv", ["nyxniri", "greeter", "install"]):
-            with patch("nyxniri.cli.greeter_install", return_value=False):
+            with patch("nyxniri.greeter.greeter_install", return_value=False):
                 with self.assertRaises(SystemExit) as ctx:
                     main()
                 self.assertEqual(ctx.exception.code, 1)
@@ -33,7 +33,7 @@ class TestGreeterExitCode(unittest.TestCase):
         from nyxniri.cli import main
 
         with patch("sys.argv", ["nyxniri", "greeter", "install"]):
-            with patch("nyxniri.cli.greeter_install", return_value=True):
+            with patch("nyxniri.greeter.greeter_install", return_value=True):
                 with self.assertRaises(SystemExit) as ctx:
                     main()
                 self.assertEqual(ctx.exception.code, 0)
@@ -55,7 +55,7 @@ class TestFcitxExitCode(unittest.TestCase):
         from nyxniri.cli import main
 
         with patch("sys.argv", ["nyxniri", "fcitx", "uninstall"]):
-            with patch("nyxniri.cli.fcitx_uninstall", return_value=False):
+            with patch("nyxniri.fcitx.fcitx_uninstall", return_value=False):
                 with self.assertRaises(SystemExit) as ctx:
                     main()
                 self.assertEqual(ctx.exception.code, 1)

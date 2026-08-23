@@ -59,6 +59,9 @@ python3 -m compileall nyxniri
 bash -n install.sh configs/noctalia/*.sh configs/niri/scripts/*.sh
 shellcheck install.sh
 
+# 行为契约测试（改动后必跑，零依赖秒级）
+python3 -m unittest discover -s tests -q
+
 # 沙箱隔离部署测试（极速、不污染实机、不下载外部大包）
 HOME=$(mktemp -d) ./install.sh test
 
@@ -69,7 +72,8 @@ HOME=$(mktemp -d) ./install.sh test
 **提交前验证**：
 
 1. **代码修改**：跑语法检查 `python3 -m compileall nyxniri` + `shellcheck`（成本极低，无例外）。
-2. **逻辑/流程改动**：追加沙箱部署测试 `HOME=$(mktemp -d) ./install.sh test`。
+2. **行为/逻辑改动**：跑 `python3 -m unittest discover -s tests -q`（契约测试，捕获回归）。
+3. **部署流程改动**：追加沙箱部署测试 `HOME=$(mktemp -d) ./install.sh test`。
 
 ---
 
@@ -85,6 +89,13 @@ HOME=$(mktemp -d) ./install.sh test
 | NVIDIA env 变量 | 默认注释，仅 `lspci` 检测后由部署引擎自动解注释，绝不能默认开启 |
 | 网络命令（curl 等） | 必须带 `--connect-timeout`，非关键调用加容错 |
 | 引擎代码（`nyxniri/`） | 避免硬编码特定项目名，用 `constants.py` 常量；TUI 文案可适当灵活 |
+
+**扩展指南（加法不是重构）**：
+
+- **加 CLI 命令**：写 `_cmd_xxx(sub_args) -> int` handler，加一行到 `COMMANDS` 字典。退出码自动传播。
+- **加可选模块**（greeter/fcitx 同款 install|status|uninstall 三件套）：用 `_module_handler()` 工厂，一行注册。
+- **加 doctor 检查项**：写 `_check_xxx(env) -> None` 函数，append 到 `DOCTOR_CHECKS` 列表。不碰 `run_doctor()`。
+- **加 i18n 键**：在 `TRANSLATIONS` 字典加 `zh` + `en` 条目。`test_i18n.py` 自动校验无孤儿/无缺失。
 
 **sed 转义**：
 ```bash

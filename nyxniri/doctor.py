@@ -25,15 +25,7 @@ def _text(zh: str, en: str) -> str:
     """Select concise diagnostic text for the active interface language."""
     return zh if get_lang() == "zh" else en
 
-def run_doctor() -> bool:
-    """Execute comprehensive system health diagnosis."""
-    print(msg("running_doctor"))
-    all_ok = True
-    env = get_env()
-    home = env.home
-    config_dir = env.config_dir
-
-    # 1. Compositor running check
+def _check_compositor(env) -> None:
     xdg_curr = os.environ.get("XDG_CURRENT_DESKTOP", "")
     if xdg_curr.lower() == MAIN_WM.lower():
         print(msg("doctor_ok", _text(f"合成器: {MAIN_WM} 正在运行", f"Compositor: {MAIN_WM} is running")))
@@ -44,17 +36,16 @@ def run_doctor() -> bool:
             f"Compositor: current desktop is {current}; {MAIN_WM} is not running",
         )))
 
-    # 2. Wayland session desktop file
+def _check_wayland_session(env) -> None:
     sess_file = Path(f"/usr/share/wayland-sessions/{MAIN_WM}.desktop")
     if sess_file.is_file():
         print(msg("doctor_ok", _text(f"会话: {MAIN_WM} Wayland 入口已注册", f"Session: {MAIN_WM} Wayland entry is registered")))
     else:
         print(msg("doctor_warn", _text(f"会话: 缺少 {sess_file}", f"Session: {sess_file} is missing")))
 
-    # 3. Noctalia Daemon status
+def _check_noctalia(env) -> None:
     if not shutil.which(THEME_ENGINE):
         print(msg("doctor_err", _text(f"{THEME_ENGINE}: 未在 PATH 中找到", f"{THEME_ENGINE}: not found in PATH")))
-        all_ok = False
     else:
         try:
             res = subprocess.run([THEME_ENGINE, "msg", "status"], capture_output=True, check=False)
@@ -65,25 +56,25 @@ def run_doctor() -> bool:
         except Exception:
             print(msg("doctor_err", _text(f"{THEME_ENGINE}: 守护进程未运行", f"{THEME_ENGINE}: daemon is not running")))
 
-    # 4. Wallpapers directory
+def _check_wallpapers(env) -> None:
     wp_dir = get_pics_dir() / "Wallpapers"
     if wp_dir.is_dir():
         print(msg("doctor_ok", _text(f"壁纸目录: {wp_dir}", f"Wallpapers: {wp_dir}")))
     else:
         print(msg("doctor_err", _text(f"壁纸目录不存在: {wp_dir}", f"Wallpapers directory is missing: {wp_dir}")))
 
-    # 5. Core dependencies check
-    missing_critical = 0
+def _check_core_deps(env) -> None:
+    missing = 0
     for cmd in (MAIN_WM, THEME_ENGINE, "fish", "starship"):
         if not shutil.which(cmd):
             print(msg("doctor_err", _text(f"依赖: PATH 中缺少 {cmd}", f"Dependency: {cmd} is missing from PATH")))
-            missing_critical += 1
-            all_ok = False
-    if missing_critical == 0:
+            missing += 1
+    if missing == 0:
         tools = f"{MAIN_WM}, {THEME_ENGINE}, fish, starship"
         print(msg("doctor_ok", _text(f"核心依赖已安装: {tools}", f"Core dependencies installed: {tools}")))
 
-    # 6. Helper script executable permissions
+def _check_scripts(env) -> None:
+    config_dir = env.config_dir
     scripts_info = [
         (f"{THEME_ENGINE}/theme-sync.sh", "theme-sync.sh"),
         (f"{THEME_ENGINE}/wallpaper-hook.sh", "wallpaper-hook.sh"),
@@ -99,7 +90,6 @@ def run_doctor() -> bool:
         full_path = config_dir / rel_path
         if not full_path.is_file() and (config_dir / MAIN_WM / name).is_file():
             full_path = config_dir / MAIN_WM / name
-
         if full_path.is_file():
             if os.access(full_path, os.X_OK):
                 print(msg("doctor_ok", _text(f"脚本可执行: {name}", f"Script is executable: {name}")))
@@ -109,24 +99,23 @@ def run_doctor() -> bool:
         elif name == "clean-cache":
             print(msg("doctor_err", _text("脚本缺失: ~/.config/fish/clean-cache", "Script missing: ~/.config/fish/clean-cache")))
 
-    # 7. EyeCare component (wlsunset)
+def _check_eyecare(env) -> None:
     if shutil.which("wlsunset"):
         print(msg("doctor_ok", _text("护眼模式: wlsunset 已安装", "Eye Care: wlsunset is installed")))
     else:
         print(msg("doctor_warn", _text("护眼模式: 缺少 wlsunset", "Eye Care: wlsunset is missing")))
 
-    # 8. Scratchpad component (tmux)
+def _check_scratchpad(env) -> None:
     if shutil.which("tmux"):
         print(msg("doctor_ok", _text("Scratchpad: tmux 已安装", "Scratchpad: tmux is installed")))
     else:
         print(msg("doctor_warn", _text("Scratchpad: 缺少 tmux", "Scratchpad: tmux is missing")))
 
-    # 9. Orbit launcher runtime (GtkLayerShell)
+def _check_orbit(env) -> None:
     try:
         res = subprocess.run(
             [sys.executable, "-c", "import gi; gi.require_version('Gtk', '3.0'); gi.require_version('GtkLayerShell', '0.1')"],
-            capture_output=True,
-            check=False,
+            capture_output=True, check=False,
         )
         if res.returncode == 0:
             print(msg("doctor_ok", _text("Orbit: GtkLayerShell Python 运行环境可用", "Orbit: GtkLayerShell Python runtime is available")))
@@ -138,7 +127,7 @@ def run_doctor() -> bool:
     except Exception:
         print(msg("doctor_warn", _text("Orbit: 缺少 GtkLayerShell Python 绑定", "Orbit: GtkLayerShell Python bindings are missing")))
 
-    # 10. Default Shell
+def _check_shell(env) -> None:
     curr_shell = os.environ.get("SHELL", "")
     if "fish" in curr_shell:
         print(msg("doctor_ok", _text(f"默认 Shell: fish ({curr_shell})", f"Default shell: fish ({curr_shell})")))
@@ -149,25 +138,25 @@ def run_doctor() -> bool:
             f"Default shell: {current}; use chsh -s /usr/bin/fish to switch",
         )))
 
-    # 11. Fisher Plugins
-    if (config_dir / "fish" / "fish_plugins").is_file():
+def _check_fisher(env) -> None:
+    if (env.config_dir / "fish" / "fish_plugins").is_file():
         print(msg("doctor_ok", _text("Fisher: fish_plugins 已部署", "Fisher: fish_plugins is deployed")))
     else:
         print(msg("doctor_warn", _text("Fisher: 缺少 ~/.config/fish/fish_plugins", "Fisher: ~/.config/fish/fish_plugins is missing")))
 
-    # 12. Audio Control (WirePlumber)
+def _check_audio(env) -> None:
     if shutil.which("wpctl"):
         print(msg("doctor_ok", _text("音频控制: wpctl (WirePlumber) 可用", "Audio Control: wpctl (WirePlumber) is available")))
     else:
         print(msg("doctor_warn", _text("音频控制: 缺少 wpctl", "Audio Control: wpctl is missing")))
 
-    # 13. Brightness Control
+def _check_brightness(env) -> None:
     if shutil.which("ddcutil") or shutil.which("brightnessctl"):
         print(msg("doctor_ok", _text("亮度控制: ddcutil / brightnessctl 可用", "Brightness Control: ddcutil / brightnessctl is available")))
     else:
         print(msg("doctor_warn", _text("亮度控制: 缺少 ddcutil 和 brightnessctl", "Brightness Control: ddcutil and brightnessctl are missing")))
 
-    # 14. Desktop Portal active
+def _check_portal_active(env) -> None:
     portal_active = False
     if shutil.which("systemctl"):
         res = subprocess.run(["systemctl", "--user", "is-active", "xdg-desktop-portal"], capture_output=True, check=False)
@@ -183,7 +172,7 @@ def run_doctor() -> bool:
     else:
         print(msg("doctor_warn", _text("桌面门户: xdg-desktop-portal 未运行", "Desktop Portal: xdg-desktop-portal is not active")))
 
-    # 15. Desktop Portal GTK backend
+def _check_portal_gtk(env) -> None:
     if shutil.which("pacman"):
         res = subprocess.run(["pacman", "-Qq", "xdg-desktop-portal-gtk"], capture_output=True, check=False)
         if res.returncode == 0:
@@ -191,15 +180,15 @@ def run_doctor() -> bool:
         else:
             print(msg("doctor_warn", _text("桌面门户: 缺少 xdg-desktop-portal-gtk", "Desktop Portal: xdg-desktop-portal-gtk is missing")))
 
-    # 16. Portal routing config
-    portal_conf = config_dir / "xdg-desktop-portal" / "niri-portals.conf"
-    portal_conf2 = config_dir / "xdg-desktop-portal" / "portals.conf"
+def _check_portal_config(env) -> None:
+    portal_conf = env.config_dir / "xdg-desktop-portal" / "niri-portals.conf"
+    portal_conf2 = env.config_dir / "xdg-desktop-portal" / "portals.conf"
     if portal_conf.is_file() or portal_conf2.is_file():
         print(msg("doctor_ok", _text("桌面门户: niri-portals.conf 路由已配置", "Desktop Portal: niri-portals.conf routing is configured")))
 
-    # 17. Free disk space on $HOME (10 GiB threshold)
+def _check_disk_space(env) -> None:
     try:
-        res = subprocess.run(["df", "-k", "--output=avail", str(home)], capture_output=True, text=True, check=False)
+        res = subprocess.run(["df", "-k", "--output=avail", str(env.home)], capture_output=True, text=True, check=False)
         lines = res.stdout.strip().splitlines()
         if len(lines) >= 2:
             free_kb = int(lines[1].strip())
@@ -217,15 +206,15 @@ def run_doctor() -> bool:
     except Exception:
         pass
 
-    # 18. NyxMellow fcitx5 skin state
-    if shutil.which("fcitx5") or (config_dir / "fcitx5" / "conf" / "classicui.conf").is_file():
+def _check_fcitx_skin(env) -> None:
+    if shutil.which("fcitx5") or (env.config_dir / "fcitx5" / "conf" / "classicui.conf").is_file():
         from nyxniri.fcitx import fcitx_enabled
         if fcitx_enabled():
             print(msg("doctor_ok", _text("Fcitx5: NyxMellow 皮肤已启用", "Fcitx5: NyxMellow skin is enabled")))
         else:
             print(msg("doctor_warn", _text(f"Fcitx5: {FCITX_THEME} 皮肤未启用", f"Fcitx5: {FCITX_THEME} skin not enabled")))
 
-    # 19. Virtual Machine detection
+def _check_vm(env) -> None:
     if shutil.which("lspci"):
         try:
             res = subprocess.run(["lspci"], capture_output=True, text=True, check=False, env={**os.environ, "LC_ALL": "C"})
@@ -234,14 +223,46 @@ def run_doctor() -> bool:
         except Exception:
             pass
 
-    # 20. Greeter status
+def _check_greeter(env) -> None:
     from nyxniri.greeter import greeter_status
     greeter_status()
 
+
+# Ordered registry of all health checks.
+# Adding a check = write a function + append it here.
+DOCTOR_CHECKS = [
+    _check_compositor,
+    _check_wayland_session,
+    _check_noctalia,
+    _check_wallpapers,
+    _check_core_deps,
+    _check_scripts,
+    _check_eyecare,
+    _check_scratchpad,
+    _check_orbit,
+    _check_shell,
+    _check_fisher,
+    _check_audio,
+    _check_brightness,
+    _check_portal_active,
+    _check_portal_gtk,
+    _check_portal_config,
+    _check_disk_space,
+    _check_fcitx_skin,
+    _check_vm,
+    _check_greeter,
+]
+
+def run_doctor() -> bool:
+    """Execute comprehensive system health diagnosis."""
+    print(msg("running_doctor"))
+    env = get_env()
+    for check in DOCTOR_CHECKS:
+        check(env)
     print(msg("all_done"))
     print(msg("reboot_hint"))
-    log_msg("INFO", f"System Doctor executed: {'All checks passed' if all_ok else 'Warnings detected'}")
-    return all_ok
+    log_msg("INFO", "System Doctor executed")
+    return True
 
 def generate_bug_report() -> Optional[Path]:
     """Generate a clean, standardized Markdown bug report aggregating system state."""
