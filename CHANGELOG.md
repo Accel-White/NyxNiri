@@ -8,7 +8,6 @@
 ## [v3.0.1] - Unreleased
 
 ### Fixed
-- 修复从 v2 Bash 版迁移到 v3 时丢失的多项行为，恢复与旧版一致的体验。
 - 非交互式环境下运行 `nyxniri uninstall` 不再意外执行卸载。
 - 配置原子替换在极少数失败情况下不再让配置"消失"。
 - 推荐应用菜单中 Mission Center 和 Fcitx5 现在能正确安装。
@@ -353,7 +352,8 @@
 ### Added
 - 首次发布基于 Niri 与 Noctalia V5 的 NyxNiri 桌面配置。
 
-[Unreleased]: https://github.com/ech678/NyxNiri/compare/v2.3.4...HEAD
+[Unreleased]: https://github.com/ech678/NyxNiri/compare/v3.0.0...HEAD
+[v3.0.0]: https://github.com/ech678/NyxNiri/compare/v2.3.4...v3.0.0
 [v2.3.4]: https://github.com/ech678/NyxNiri/compare/v2.3.3...v2.3.4
 [v2.3.3]: https://github.com/ech678/NyxNiri/compare/v2.3.2...v2.3.3
 [v2.3.2]: https://github.com/ech678/NyxNiri/compare/v2.3.1...v2.3.2

@@ -9,7 +9,7 @@
 <h1>NyxNiri</h1>
 
 <p><strong>A Material You desktop experience for Arch / CachyOS</strong><br />
-<sub>Built on Niri and Noctalia V5</sub></p>
+<sub>Built on Niri and Noctalia V5 — and stays out of your way.</sub></p>
 
 <p>
   <a href="https://github.com/ech678/NyxNiri/stargazers"><img height="22" src="https://m3-markdown-badges.vercel.app/stars/3/3/ech678/NyxNiri" alt="Stars" /></a>
@@ -31,21 +31,14 @@
 
 ## Features
 
-- Wallpaper Picker (`Super+W`) — Unified static and live wallpaper picker with search and category filters.
-- Wallpaper Color Sync — Noctalia V5 extracts palettes directly from wallpaper; an `mpvpaper` hook extracts video frames via `ffmpeg` for live wallpapers.
-- Light/dark sync — GSettings, GTK 3/4, XDG Desktop Portal, Kitty, and browsers (Brave, Chromium, Firefox) update together when the theme changes.
-- Eye Care Mode (`Super+N`) — warmer color temperature, zero blur, solid opaque windows for reading sessions.
-- Scratchpad Terminal (`Super+~`) — quick-toggle persistent Kitty floating terminal anytime.
-- Orbit Launcher (`Super+A` / `Super+MouseForward`) — vector radial launcher for apps, tools, web links, and AI/search dial (fully configurable via TOML).
-- Shell & Terminal — Fish aliases for proxy/cache management, Kitty cursor trails, Windows-style shortcuts.
-- NyxMellow — a dynamic fcitx5 skin: mellow rounded geometry with Noctalia Material You color palette.
-
-## Requirements
-
-- Arch Linux / CachyOS
-- [Niri](https://github.com/YaLTeR/niri) (Wayland compositor)
-- [Noctalia V5](https://github.com/noctalia-dev/noctalia) (desktop shell, official repo)
-- `mpvpaper` (AUR), `kitty`, `fish`, `starship`, `tmux`
+- **Wallpaper Picker** (`Super+W`) — static + live, search and categories.
+- **Color Sync** — Noctalia V5 extracts palettes from wallpaper; `mpvpaper` + `ffmpeg` for video frames.
+- **Light/Dark Sync** — GTK 3/4, XDG portal, Kitty, and browsers switch together.
+- **Eye Care** (`Super+N`) — warmer color temperature, no blur, opaque windows.
+- **Scratchpad** (`Super+~`) — persistent Kitty floating terminal.
+- **Orbit Launcher** (`Super+A` / `Super+MouseForward`) — vector radial; apps, tools, links, AI/search dial (TOML-configurable).
+- **Shell & Terminal** — Fish aliases for proxy/cache, Kitty cursor trails, Windows-style shortcuts.
+- **NyxMellow** — dynamic fcitx5 skin: mellow geometry + Noctalia Material You palette.
 
 ## Install
 
@@ -62,6 +55,9 @@
 ```bash
 curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
 ```
+
+> [!TIP]
+> Without an AUR helper, `nyxniri install full` can bootstrap `paru` for you.
 
 ### From a git checkout (recommended)
 
@@ -86,9 +82,6 @@ cd ~/NyxNiri && ./install.sh
 For repository downloads, `install.sh` tries GitHub first, then gh-proxy.
 </details>
 
-> [!NOTE]
-> `nyxniri install full` can install `paru` when no AUR helper is available. Interactive deployment creates a snapshot in `~/.config/NyxNiri/backups/` by default. Legacy DMS lives on `archive/v1-dms`.
-
 ## Included Configs
 
 ```text
@@ -109,47 +102,9 @@ NyxNiri
 ```
 
 > [!NOTE]
-> Configs update atomically. Personal tweaks are preserved via Dunder protocol:
-> - files matching `*__custom__*` (e.g. `01__custom__.kdl`) are preserved (number prefixes control load order)
-> - folders matching `*__custom__*` (e.g. `~/.config/niri/__custom__/`) are kept intact
-> - `~/.config/niri/monitor.kdl` is kept across deployments
-
-## Tooling
-
-`nyxniri` manages install, snapshots and diagnostics:
-
-> Legacy Bash users must run the current bootstrap shown above before using these commands. The old `nyxniri update` cannot perform the directory migration.
-
-| Command | Description |
-| :--- | :--- |
-| `nyxniri` | Interactive menu |
-| `nyxniri install [full\|config]` | Deploy everything, or sync configs only |
-| `nyxniri update [--force|--no-deploy]` | Update source; force config deployment or skip it |
-| `nyxniri snapshot [note]` | Save current config state |
-| `nyxniri snapshot delete [idx]` | Delete snapshots (multi-select if no index) |
-| `nyxniri rollback [index]` | Restore a snapshot |
-| `nyxniri list` | List snapshots |
-| `nyxniri uninstall` | Archive current configs and remove NyxNiri; interactive mode also offers restore |
-| `nyxniri purge` | Remove configs, snapshots, cache and wallpapers |
-| `nyxniri doctor` | Dependency + system health check |
-| `nyxniri deps` | Open dependency check & install menu |
-| `nyxniri apps` | Open recommended apps installer (Nautilus, Mission Center, Fcitx5 Rime) |
-| `nyxniri wallpapers` | Download the full wallpaper & video pack from the external repo |
-| `nyxniri theme [toggle\|dark\|light\|sync\|status]` | Switch or sync system dark/light theme |
-| `nyxniri bug` / `nyxniri report` | Generate diagnostic bug report |
-| `nyxniri test` | Developer test deploy (no backup, keep monitor.kdl) |
-| `nyxniri fcitx [install\|status\|uninstall]` | NyxMellow fcitx5 skin |
-| `nyxniri greeter [install\|status\|uninstall]` | Noctalia Greeter (login screen) |
-
-`nyxhelp` is a compact fzf-based reference for the CLI, shell helpers, and core keybindings:
-
-| Command | Description |
-| :--- | :--- |
-| `nyxhelp` | Interactive dual-panel cheatsheet |
-| `nyxhelp keys` | Niri keybindings |
-| `nyxhelp proxy` | Proxy controls (`proxy_on [port]`, `proxy_off`, `proxy_status`) |
-| `nyxhelp pkg` | Package shortcuts (`up`, `in`, `se`, `un`, `clean`) |
-| `nyxhelp all` | Full cheatsheet |
+> Configs deploy atomically. Personal tweaks survive updates via the Dunder protocol:
+> - `*__custom__*` files (e.g. `01__custom__.kdl`) and folders are preserved — number prefixes control load order.
+> - `~/.config/niri/monitor.kdl` is kept across deployments.
 
 ## Keybindings
 
@@ -216,6 +171,70 @@ NyxNiri
 
 **Noctalia Greeter:** greetd login screen matching Noctalia style. `nyxniri greeter install` installs `greetd` + `noctalia-greeter` (AUR), backs up `/etc/greetd/config.toml`, and configures Polkit rules. Does not disable existing display managers.
 
+## Tooling
+
+`nyxniri` manages install, snapshots and diagnostics. Interactive deployments create a snapshot in `~/.config/NyxNiri/backups/` by default.
+
+> Legacy Bash users must run the current bootstrap shown above before using these commands. The old `nyxniri update` cannot perform the directory migration.
+
+**Top-level**
+
+| Command | Description |
+| :--- | :--- |
+| `nyxniri` | Interactive menu |
+| `nyxniri test` | Developer test deploy (no backup, keep monitor.kdl) |
+
+**Deploy**
+
+| Command | Description |
+| :--- | :--- |
+| `nyxniri install [full\|config]` | Deploy everything, or sync configs only |
+| `nyxniri update [--force\|--no-deploy]` | Update source; force config deployment or skip it |
+
+**Snapshots**
+
+| Command | Description |
+| :--- | :--- |
+| `nyxniri snapshot [note]` | Save current config state |
+| `nyxniri snapshot delete [idx]` | Delete snapshots (multi-select if no index) |
+| `nyxniri rollback [index]` | Restore a snapshot |
+| `nyxniri list` | List snapshots |
+
+**System**
+
+| Command | Description |
+| :--- | :--- |
+| `nyxniri doctor` | Dependency + system health check |
+| `nyxniri deps` | Open dependency check & install menu |
+| `nyxniri apps` | Open recommended apps installer (Nautilus, Mission Center, Fcitx5 Rime) |
+| `nyxniri wallpapers` | Download the full wallpaper & video pack from the external repo |
+| `nyxniri theme [toggle\|dark\|light\|sync\|status]` | Switch or sync system dark/light theme |
+| `nyxniri bug` / `nyxniri report` | Generate diagnostic bug report |
+
+**Uninstall**
+
+| Command | Description |
+| :--- | :--- |
+| `nyxniri uninstall` | Archive current configs and remove NyxNiri; interactive mode also offers restore |
+| `nyxniri purge` | Remove configs, snapshots, cache and wallpapers |
+
+**Optional modules**
+
+| Command | Description |
+| :--- | :--- |
+| `nyxniri fcitx [install\|status\|uninstall]` | NyxMellow fcitx5 skin |
+| `nyxniri greeter [install\|status\|uninstall]` | Noctalia Greeter (login screen) |
+
+`nyxhelp` is a compact fzf-based reference for the CLI, shell helpers, and core keybindings:
+
+| Command | Description |
+| :--- | :--- |
+| `nyxhelp` | Interactive dual-panel cheatsheet |
+| `nyxhelp keys` | Niri keybindings |
+| `nyxhelp proxy` | Proxy controls (`proxy_on [port]`, `proxy_off`, `proxy_status`) |
+| `nyxhelp pkg` | Package shortcuts (`up`, `in`, `se`, `un`, `clean`) |
+| `nyxhelp all` | Full cheatsheet |
+
 ## Troubleshooting
 
 <details>
@@ -280,10 +299,8 @@ rm -f ~/.config/gtk-4.0/gtk.css ~/.config/gtk-4.0/noctalia.css ~/.config/gtk-3.0
 **Contact & Community:**
 
 - Telegram Channel: [@linux_ricing](https://t.me/linux_ricing)
-- QQ: `2040244628`
-- Linux Ricing Group: `631425889`
-- Sponsor: [Afdian](https://afdian.com/a/Echoes678)
-- Bug reports: [GitHub Issues](https://github.com/ech678/NyxNiri/issues)
+- QQ: `2040244628` · Linux Ricing Group: `631425889`
+- Sponsor: [Afdian](https://afdian.com/a/Echoes678) · Bug reports: [GitHub Issues](https://github.com/ech678/NyxNiri/issues)
 
 **Special Thanks & Contributors:**
 
@@ -292,7 +309,7 @@ rm -f ~/.config/gtk-4.0/gtk.css ~/.config/gtk-4.0/noctalia.css ~/.config/gtk-3.0
 
 **Thanks to:**
 
-- [RanXom/glassy-niri](https://github.com/RanXom/glassy-niri) — blur effects reference
+- [RanXOM/glassy-niri](https://github.com/RanXom/glassy-niri) — blur effects reference
 - [SHORiN-KiWATA/shorin-niri](https://github.com/SHORiN-KiWATA/shorin-niri) — heavily referenced
 - [sanweiya/fcitx5-mellow-themes](https://github.com/sanweiya/fcitx5-mellow-themes) — mellow shape source for NyxMellow skin
 - [StarWhiteIsBusy/Round-Simple-Fcitx5-Skin](https://github.com/StarWhiteIsBusy/Round-Simple-Fcitx5-Skin) — Noctalia color-sync pattern reference
