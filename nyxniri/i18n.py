@@ -1253,6 +1253,10 @@ Commands:
         "zh": "手动升级命令: paru -S mpvpaper-git 或 yay -S mpvpaper-git",
         "en": "Manual upgrade: paru -S mpvpaper-git or yay -S mpvpaper-git",
     },
+    "mpvpaper_upgrade_prompt": {
+        "zh": "是否立即安装 mpvpaper-git 修复版？ [y/N] ",
+        "en": "Install mpvpaper-git fix now? [y/N] ",
+    },
     "err_mpvpaper_git_failed": {
         "zh": f"{Colors.BOLD_RED}[✗] mpvpaper-git 安装失败{Colors.RESET}",
         "en": f"{Colors.BOLD_RED}[✗] Failed to install mpvpaper-git{Colors.RESET}",

@@ -51,15 +51,15 @@ def fcitx_status_label() -> str:
     return msg("status_disabled")
 
 def fcitx_templates_registered() -> bool:
-    """Check if noctalia-config.toml registers all 3 nyxmellow templates."""
+    """Check if noctalia-config.toml registers any nyxmellow template."""
     _, _, _, _, noctalia_conf, _, _, _ = _fcitx_paths()
     if noctalia_conf.is_file():
         try:
             content = noctalia_conf.read_text(encoding="utf-8", errors="ignore")
             return (
                 f"theme.templates.user.{FCITX_THEME}_theme" in content
-                and f"theme.templates.user.{FCITX_THEME}_panel" in content
-                and f"theme.templates.user.{FCITX_THEME}_highlight" in content
+                or f"theme.templates.user.{FCITX_THEME}_panel" in content
+                or f"theme.templates.user.{FCITX_THEME}_highlight" in content
             )
         except Exception:
             pass

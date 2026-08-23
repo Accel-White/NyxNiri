@@ -44,17 +44,13 @@
 
 - Arch Linux / CachyOS
 - [Niri](https://github.com/YaLTeR/niri) (Wayland compositor)
-- [Noctalia V5](https://github.com/noctalia-dev/noctalia) (desktop shell, Official Repo)
+- [Noctalia V5](https://github.com/noctalia-dev/noctalia) (desktop shell, official repo)
 - `mpvpaper` (AUR), `kitty`, `fish`, `starship`, `tmux`
 
 ## Install
 
 > [!IMPORTANT]
-> **Upgrading from the legacy Bash release (`lib/` + `v2/`):** its `nyxniri update` command cannot switch to the current Python layout. Run the current bootstrap once before updating:
-> ```bash
-> curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
-> ```
-> To inspect the bootstrap first, download it and run it locally:
+> **Upgrading from the legacy Bash release (`lib/` + `v2/`):** its `nyxniri update` command cannot switch to the current Python layout. Run the current bootstrap once before updating. To inspect it first, download and run locally:
 > ```bash
 > curl -fsSL --connect-timeout 10 -o /tmp/nyxniri-install.sh https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh
 > bash /tmp/nyxniri-install.sh
@@ -70,7 +66,7 @@ curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri
 ### From a git checkout (recommended)
 
 ```bash
-# shallow clone: latest snapshot only (~9MB); drop --depth 1 for full history
+# shallow clone: latest snapshot only; drop --depth 1 for full history
 git clone --depth 1 https://github.com/ech678/NyxNiri.git ~/NyxNiri
 cd ~/NyxNiri && ./install.sh
 ```

@@ -50,11 +50,7 @@
 ## 安装
 
 > [!IMPORTANT]
-> **从旧版 Bash 目录（`lib/` + `v2/`）升级：**旧版 `nyxniri update` 无法直接切换到新版 Python 目录。更新前请先运行一次新版引导：
-> ```bash
-> curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh | bash
-> ```
-> 如果想先检查脚本，可先下载再运行：
+> **从旧版 Bash 目录（`lib/` + `v2/`）升级：**旧版 `nyxniri update` 无法直接切换到新版 Python 目录。更新前请先运行一次新版引导，可先下载检查再运行：
 > ```bash
 > curl -fsSL --connect-timeout 10 -o /tmp/nyxniri-install.sh https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh
 > bash /tmp/nyxniri-install.sh
@@ -70,7 +66,7 @@ curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri
 ### 从 Git 仓库安装（推荐）
 
 ```bash
-# 浅克隆：仅拉取最新快照（约 9MB）；如需完整历史去掉 --depth 1
+# 浅克隆：仅拉取最新快照；如需完整历史去掉 --depth 1
 git clone --depth 1 https://github.com/ech678/NyxNiri.git ~/NyxNiri
 cd ~/NyxNiri && ./install.sh
 ```
@@ -137,7 +133,7 @@ NyxNiri
 | `nyxniri purge` | 清除配置、快照、缓存与壁纸 |
 | `nyxniri doctor` | 依赖与系统健康检查 |
 | `nyxniri deps` | 打开依赖检查与安装菜单 |
-| `nyxniri apps` | 常用软件安装菜单（Nautilus、Mission Center、Fcitx5 雾凇拼音） |
+| `nyxniri apps` | 常用软件安装菜单（Nautilus、Mission Center、Fcitx5 Rime） |
 | `nyxniri wallpapers` | 从外部仓库下载全套壁纸与动态视频包 |
 | `nyxniri theme [toggle\|dark\|light\|sync\|status]` | 切换或同步系统深浅主题 |
 | `nyxniri bug` / `nyxniri report` | 生成诊断报告 |
@@ -191,7 +187,7 @@ NyxNiri
 | <kbd>Super</kbd> + <kbd>I</kbd> | 控制中心 |
 | <kbd>Super</kbd> + <kbd>V</kbd> | 剪贴板 |
 | <kbd>Super</kbd> + <kbd>W</kbd> | 壁纸选择器（静态与动态） |
-| <kbd>Super</kbd> + <kbd>Ctrl</kbd> + <kbd>W</kbd> | 免打扰随机切换壁纸 |
+| <kbd>Super</kbd> + <kbd>Ctrl</kbd> + <kbd>W</kbd> | 随机切换壁纸 |
 | <kbd>Super</kbd> + <kbd>N</kbd> | 护眼模式 |
 | <kbd>Super</kbd> + <kbd>~</kbd> | 切换 Kitty Scratchpad 浮动终端 |
 | <kbd>Super</kbd> + <kbd>A</kbd> / <kbd>Super</kbd> + <kbd>鼠标前侧键</kbd> | Orbit 矢量星环启动器 |

@@ -64,6 +64,7 @@ from nyxniri.tui import (
     Menu,
     pad_display,
     press_any_key,
+    prompt_confirm,
     select_language,
 )
 
@@ -77,7 +78,7 @@ def run_master_component_menu(is_update: bool = False, mode: str = "full") -> Op
     for item in items:
         entries.append(CheckboxEntry(key=f"config_{item}", label=msg("master_item_config", item), checked=True))
 
-    if mode == "full":
+    if mode == "full" or is_update:
         # 2. Heavy assets (wallpapers)
         wp_checked = not wallpapers_pack_present()
         wp_status = msg("status_wallpapers_installed") if wallpapers_pack_present() else msg("status_wallpapers_missing")
@@ -183,17 +184,17 @@ def install_configs_workflow(mode: str = "full") -> bool:
             return True
     else:
         chosen_configs = discover_config_items()
-        do_wallpapers = mode == "full" and not wallpapers_pack_present()
-        do_fcitx = mode == "full" and fcitx_enabled()
+        do_wallpapers = not wallpapers_pack_present()
+        do_fcitx = fcitx_enabled()
         do_greeter = False
         do_backup = False
 
     _phase_preflight_check(mode, chosen_configs, do_fcitx, do_greeter, do_wallpapers, do_backup)
 
     # Step counting
-    steps = 1
+    steps = 2  # configs + wallpapers
     if mode == "full":
-        steps += 2
+        steps += 1  # deps
     if do_fcitx:
         steps += 1
     if do_greeter:
@@ -223,12 +224,11 @@ def install_configs_workflow(mode: str = "full") -> bool:
             )
             return False
 
-    # 3. Wallpapers
+    # 3. Wallpapers (always run — at least syncs offline fallback wallpapers)
     wallpaper_result = None
-    if mode == "full":
-        cur_step += 1
-        print(msg("install_step_wallpapers", f"{cur_step}/{steps}"))
-        wallpaper_result = deploy_wallpapers(do_download=do_wallpapers)
+    cur_step += 1
+    print(msg("install_step_wallpapers", f"{cur_step}/{steps}"))
+    wallpaper_result = deploy_wallpapers(do_download=do_wallpapers)
 
     # 4. Fcitx5
     if do_fcitx:
@@ -261,9 +261,14 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
         if failed_items:
             render_completion_screen("update", failed_items=failed_items)
             return False
+        wallpaper_result = deploy_wallpapers(do_download=True)
         if fcitx_enabled():
             fcitx_install()
-        render_completion_screen("update")
+        try:
+            greeter_install()
+        except Exception:
+            pass
+        render_completion_screen("update", wallpaper_result=wallpaper_result)
         return True
     elif flag == "--no-deploy":
         return True
@@ -290,6 +295,9 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
     if choice == 0:
         chosen = run_master_component_menu(is_update=True, mode="full")
         if chosen:
+            if not chosen["configs"] and not chosen["wallpapers"] and not chosen["fcitx"] and not chosen["greeter"]:
+                print(msg("log_no_components_selected"))
+                return True
             print(msg("upgrading_selected"))
             preserved: List[str] = []
             if chosen["configs"]:
@@ -328,6 +336,21 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
     return True
 
 # --- Submenus ---
+def check_new_deps_post_update() -> None:
+    """Check for newly introduced core dependencies after a repository update."""
+    missing = get_missing_deps()
+    if not missing:
+        return
+    print(msg("new_deps_detected", " ".join(missing)))
+    if not sys.stdin.isatty():
+        install_selected_deps(missing)
+        return
+    if prompt_confirm("prompt_install_missing_deps", "y"):
+        install_selected_deps(missing)
+    else:
+        print(msg("deps_install_skipped"))
+
+
 def snapshot_menu_loop() -> None:
     """Snapshot management interactive submenu."""
     while True:
@@ -461,6 +484,11 @@ def main_menu_loop() -> None:
             update_result = safe_git_pull(env.repo_dir)
             if update_result is True:
                 offer_overwrite_upgrade()
+                check_new_deps_post_update()
+                print(msg("updating_done"))
+                press_any_key()
+                # Re-exec to load new code
+                os.execv(sys.executable, [sys.executable, "-m", "nyxniri"])
             elif update_result is False:
                 print(msg("updating_failed"), file=sys.stderr)
             press_any_key()
@@ -580,23 +608,23 @@ def main() -> None:
             if len(sub_args) > 1 or sub not in ("", "install", "setup", "status", "uninstall", "remove"):
                 exit_usage(f"{CLI_CMD} greeter [install|status|uninstall]")
             if sub in ("install", "setup"):
-                greeter_install()
+                sys.exit(0 if greeter_install() else 1)
             elif sub in ("uninstall", "remove"):
-                greeter_uninstall()
+                sys.exit(0 if greeter_uninstall() else 1)
             else:
                 greeter_status()
-            sys.exit(0)
+                sys.exit(0)
         elif cmd == "fcitx":
             sub = sub_args[0].lower() if sub_args else ""
             if len(sub_args) > 1 or sub not in ("", "install", "setup", "status", "uninstall", "remove"):
                 exit_usage(f"{CLI_CMD} fcitx [install|status|uninstall]")
             if sub in ("install", "setup"):
-                fcitx_install()
+                sys.exit(0 if fcitx_install() else 1)
             elif sub in ("uninstall", "remove"):
-                fcitx_uninstall()
+                sys.exit(0 if fcitx_uninstall() else 1)
             else:
                 fcitx_status()
-            sys.exit(0)
+                sys.exit(0)
         elif cmd == "theme":
             sub = sub_args[0] if sub_args else "toggle"
             if len(sub_args) > 1 or sub not in ("toggle", "dark", "light", "sync", "status"):
@@ -605,7 +633,10 @@ def main() -> None:
             if not sync_script.is_file() and (env.configs_src / THEME_ENGINE / "theme-sync.sh").is_file():
                 sync_script = env.configs_src / THEME_ENGINE / "theme-sync.sh"
             if sync_script.is_file():
-                sync_script.chmod(0o755)
+                try:
+                    sync_script.chmod(0o755)
+                except Exception:
+                    pass
                 res = subprocess.run(["bash", str(sync_script), sub], check=False)
                 sys.exit(res.returncode)
             else:
@@ -617,7 +648,10 @@ def main() -> None:
                 exit_usage(f"{CLI_CMD} update [--force|--no-deploy]")
             update_result = safe_git_pull(env.repo_dir)
             if update_result is True:
-                sys.exit(0 if offer_overwrite_upgrade(flag) else 1)
+                deploy_ok = offer_overwrite_upgrade(flag)
+                check_new_deps_post_update()
+                print(msg("updating_done"))
+                sys.exit(0 if deploy_ok else 1)
             if update_result is False:
                 print(msg("updating_failed"), file=sys.stderr)
                 sys.exit(1)
