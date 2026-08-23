@@ -4,19 +4,18 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from tests.utils import make_temp_home, force_repo_mode, reset_env
+from tests.utils import TempEnv
 
 
 class TestOptionalAppPackageMapping(unittest.TestCase):
     """Optional apps must map to correct package names before installation."""
 
     def setUp(self):
-        self._tmp = make_temp_home()
-        reset_env(Path(self._tmp.name))
-        force_repo_mode()
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
 
     def tearDown(self):
-        self._tmp.cleanup()
+        self._ctx.__exit__()
 
     def test_missioncenter_maps_to_mission_center(self):
         """missioncenter key must install 'mission-center' package (hyphen difference)."""
@@ -89,12 +88,11 @@ class TestMpvpaperDetection(unittest.TestCase):
     """mpvpaper version must be checked via pacman -Qi, not binary --version."""
 
     def setUp(self):
-        self._tmp = make_temp_home()
-        reset_env(Path(self._tmp.name))
-        force_repo_mode()
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
 
     def tearDown(self):
-        self._tmp.cleanup()
+        self._ctx.__exit__()
 
     def test_uses_pacman_qi_not_binary_version(self):
         """check_mpvpaper_leak should use pacman -Qi, not mpvpaper --version."""

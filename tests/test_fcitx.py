@@ -4,19 +4,18 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch, mock_open
 
-from tests.utils import make_temp_home, force_repo_mode, reset_env
+from tests.utils import TempEnv
 
 
 class TestFcitxTemplateDetection(unittest.TestCase):
     """fcitx_templates_registered must use OR logic (any one template = registered)."""
 
     def setUp(self):
-        self._tmp = make_temp_home()
-        reset_env(Path(self._tmp.name))
-        force_repo_mode()
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
 
     def tearDown(self):
-        self._tmp.cleanup()
+        self._ctx.__exit__()
 
     def test_all_three_registered_returns_true(self):
         """All 3 templates present → True."""

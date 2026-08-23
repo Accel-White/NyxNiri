@@ -1,26 +1,27 @@
-"""Behavior contracts for deploy: atomic replace rollback, broken symlink, no-clobber."""
+"""Behavior contracts for deploy: atomic replace rollback, broken symlink, no-clobber.
 
-import os
+Safety: all tests use tempfile.TemporaryDirectory for filesystem operations.
+No test touches the real ~/.config or the real repo configs/ directory.
+"""
+
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from tests.utils import make_temp_home, force_repo_mode, reset_env
+from tests.utils import TempEnv
 
 
 class TestAtomicReplaceFileRollback(unittest.TestCase):
     """If the 2nd rename fails, dest must be restored from old_dest."""
 
     def setUp(self):
-        self._tmp = make_temp_home()
-        self.home = Path(self._tmp.name)
-        reset_env(self.home)
-        force_repo_mode()
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
 
     def tearDown(self):
-        self._tmp.cleanup()
+        self._ctx.__exit__()
 
     def test_file_replace_rollback_on_second_rename_failure(self):
         """If tmp_file.rename(dest) fails, dest must be restored from old_dest."""
@@ -33,14 +34,10 @@ class TestAtomicReplaceFileRollback(unittest.TestCase):
             dest = workdir / "dest.txt"
             dest.write_text("original")
 
-            # Make the second rename (tmp_file → dest) fail by intercepting
-            # the specific pattern: a file named *.new.* being renamed to dest
             original_rename = Path.rename
-            call_count = [0]
 
             def fail_second_rename(self_path, target):
                 if ".new." in self_path.name and target == dest:
-                    call_count[0] += 1
                     raise OSError("simulated rename failure")
                 return original_rename(self_path, target)
 
@@ -72,13 +69,11 @@ class TestAtomicReplaceDirRollback(unittest.TestCase):
     """Directory atomic replace must also rollback on failure."""
 
     def setUp(self):
-        self._tmp = make_temp_home()
-        self.home = Path(self._tmp.name)
-        reset_env(self.home)
-        force_repo_mode()
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
 
     def tearDown(self):
-        self._tmp.cleanup()
+        self._ctx.__exit__()
 
     def test_dir_replace_rollback_on_rename_failure(self):
         """If tmp_new.rename(dest) fails, dest must be restored from old_dest."""
@@ -96,7 +91,6 @@ class TestAtomicReplaceDirRollback(unittest.TestCase):
             original_rename = Path.rename
 
             def fail_final_rename(self_path, target):
-                # Fail when tmp_new (named dest_dir.new.*) is renamed to dest
                 if ".new." in self_path.name and target == dest:
                     raise OSError("simulated dir rename failure")
                 return original_rename(self_path, target)
@@ -114,47 +108,35 @@ class TestEffectsSymlinkBroken(unittest.TestCase):
     """A broken effects.kdl symlink should be detected and recreated."""
 
     def setUp(self):
-        self._tmp = make_temp_home()
-        self.home = Path(self._tmp.name)
-        reset_env(self.home)
-        self.env = force_repo_mode()
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
 
     def tearDown(self):
-        self._tmp.cleanup()
+        self._ctx.__exit__()
 
     def test_broken_symlink_condition(self):
-        """The condition for recreating effects.kdl must fire on broken symlinks.
+        """The deploy condition for broken symlinks must fire correctly.
 
-        Tests the actual conditional logic: a broken symlink (exists() == False,
-        is_symlink() == True) must NOT be skipped.
+        Tests in a temp directory — never touches the real repo.
         """
-        import tempfile
-        from pathlib import Path
-
         with tempfile.TemporaryDirectory() as workdir:
             workdir = Path(workdir)
             effects_normal = workdir / "effects_normal.kdl"
             effects_normal.write_text("// normal")
             effects_sym = workdir / "effects.kdl"
 
-            # Create a broken symlink pointing to a non-existent file
             effects_sym.symlink_to(workdir / "effects_eyecare.kdl")
 
-            # The deploy condition is: effects_normal.is_file() and not effects_sym.exists()
-            # A broken symlink: exists() == False → condition is True → should be recreated
-            self.assertTrue(effects_normal.is_file(), "effects_normal.kdl should exist")
+            self.assertTrue(effects_normal.is_file())
             self.assertFalse(effects_sym.exists(),
-                             "Broken symlink should not exist() — this is what triggers recreation")
-            self.assertTrue(effects_sym.is_symlink(),
-                            "Broken symlink should still be a symlink")
+                             "Broken symlink should not exist() — triggers recreation")
+            self.assertTrue(effects_sym.is_symlink())
 
-            # Simulate the recreation logic from _phase_atomic_deployment
             if effects_normal.is_file() and not effects_sym.exists():
                 effects_sym.unlink(missing_ok=True)
                 effects_sym.symlink_to(effects_normal)
 
-            self.assertTrue(effects_sym.exists(),
-                            "After recreation, effects.kdl should exist and point to effects_normal.kdl")
+            self.assertTrue(effects_sym.exists())
             self.assertEqual(effects_sym.resolve(), effects_normal.resolve())
 
 
@@ -162,25 +144,22 @@ class TestWallpaperNoClobber(unittest.TestCase):
     """Wallpaper pack download should not overwrite existing user files."""
 
     def setUp(self):
-        self._tmp = make_temp_home()
-        self.home = Path(self._tmp.name)
-        reset_env(self.home)
-        self.env = force_repo_mode()
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+        self.env = self._ctx.env
 
     def tearDown(self):
-        self._tmp.cleanup()
+        self._ctx.__exit__()
 
     def test_existing_wallpaper_not_overwritten(self):
         """When downloading wallpaper pack, existing files must be preserved."""
         from nyxniri.deploy import deploy_wallpapers
 
-        wp_dest = self.home / "Pictures" / "Wallpapers"
+        wp_dest = self.env.home / "Pictures" / "Wallpapers"
         wp_dest.mkdir(parents=True, exist_ok=True)
-        # User has a custom wallpaper
         user_wp = wp_dest / "my_custom.webp"
         user_wp.write_text("user custom content")
 
-        # Create a fake tmp clone that the download would create
         fake_clone = Path(tempfile.mkdtemp())
         (fake_clone / "my_custom.webp").write_text("repo version")
         (fake_clone / "new_wallpaper.webp").write_text("new from repo")
@@ -193,12 +172,10 @@ class TestWallpaperNoClobber(unittest.TestCase):
                     with patch("nyxniri.deploy._wallpaper_pack_present_at", return_value=True):
                         with patch("nyxniri.deploy.wallpapers_pack_present", return_value=False):
                             with patch("builtins.print"):
-                                result = deploy_wallpapers(do_download=True)
+                                deploy_wallpapers(do_download=True)
 
-            # User's custom file must be preserved
             self.assertEqual(user_wp.read_text(), "user custom content",
                              "Existing user wallpaper must not be overwritten")
-            # New file from repo should be added
             self.assertTrue((wp_dest / "new_wallpaper.webp").exists(),
                             "New wallpaper from repo should be added")
         finally:
