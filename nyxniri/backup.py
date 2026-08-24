@@ -336,16 +336,16 @@ def uninstall_nyxniri(mode: str = "") -> bool:
         print(msg("purge_start"))
         try:
             fcitx_uninstall()
-        except Exception:
-            pass
+        except Exception as e:
+            log_msg("WARN", f"fcitx uninstall failed during purge: {e}")
         try:
             gtktheme_uninstall()
-        except Exception:
-            pass
+        except Exception as e:
+            log_msg("WARN", f"gtk theme uninstall failed during purge: {e}")
         try:
             greeter_uninstall()
-        except Exception:
-            pass
+        except Exception as e:
+            log_msg("WARN", f"greeter uninstall failed during purge: {e}")
 
         for item in items:
             p = env.config_dir / item
@@ -397,13 +397,13 @@ def uninstall_nyxniri(mode: str = "") -> bool:
 
     try:
         fcitx_uninstall()
-    except Exception:
-        pass
+    except Exception as e:
+        log_msg("WARN", f"fcitx uninstall failed: {e}")
 
     try:
         gtktheme_uninstall()
-    except Exception:
-        pass
+    except Exception as e:
+        log_msg("WARN", f"gtk theme uninstall failed: {e}")
 
     print(msg("uninstall_archived", str(archive_dir)))
     print(msg("uninstall_done"))

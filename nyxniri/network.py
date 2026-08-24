@@ -248,7 +248,7 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
 
     run_mode = get_env().run_mode
     env = {**os.environ, "LC_ALL": "C"}
-    git_net = ["-c", "http.lowSpeedLimit=0", "-c", "http.lowSpeedTime=15"]
+    git_net = ["-c", "http.lowSpeedLimit=1000", "-c", "http.lowSpeedTime=15"]
     # Check for uncommitted changes
     res_status = subprocess.run(
         ["git", "status", "--porcelain"],

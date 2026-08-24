@@ -4,10 +4,8 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 import time
 from pathlib import Path
-from typing import Optional
 
 from nyxniri.constants import Colors, FCITX_THEME, PROJECT_NAME, THEME_ENGINE
 from nyxniri.core import get_env, log_msg

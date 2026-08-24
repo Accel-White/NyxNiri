@@ -183,7 +183,6 @@ def _phase_atomic_deployment(
             temp_monitor: Optional[Path] = None
             if item == MAIN_WM and (dest / MAIN_WM_HARDWARE_CONFIG).is_file():
                 if keep_monitor or os.environ.get("NYXNIRI_KEEP_MONITOR", "0") == "1":
-                    import tempfile
                     tfd, tname = tempfile.mkstemp()
                     os.close(tfd)
                     temp_monitor = Path(tname)
@@ -313,7 +312,7 @@ def _phase_post_install_services() -> None:
         from nyxniri.gtktheme import gtktheme_trigger_render
         gtktheme_trigger_render()
         print(msg("log_enable_mpvpaper"))
-        subprocess.run([THEME_ENGINE, "msg", "plugins", "enable", "noctalia/mpvpaper"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        subprocess.run([THEME_ENGINE, "msg", "plugins", "enable", f"{THEME_ENGINE}/mpvpaper"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
 
     if shutil.which("fish"):
         print(msg("log_check_fisher"))
@@ -556,12 +555,12 @@ def render_completion_screen(
                 elif focus == 1:
                     star_url = REPO_URL.removesuffix(".git")
                     if shutil.which("xdg-open"):
-                        subprocess.run(["xdg-open", star_url], check=False)
+                        subprocess.run(["xdg-open", star_url], check=False, timeout=5)
                     print(msg("msg_star_opened", star_url))
                     time.sleep(1.2)
                 elif focus == 2:
                     break
-            elif key in ("0", "q", "Q", "ESC", "CTRL_C"):
+            elif key in ("0", "q", "Q", "ESC", "EXIT"):
                 break
     finally:
         sys.stdout.write(Colors.CURSOR_SHOW)
@@ -597,7 +596,6 @@ def test_deploy() -> bool:
     """Developer test command: fast idempotent re-deploy in current environment."""
     print(msg("test_start"))
     os.environ["NYXNIRI_KEEP_MONITOR"] = "1"
-    os.environ["NYXNIRI_TEST_MODE"] = "1"
 
     preserved_log: List[str] = []
     items = discover_config_items()

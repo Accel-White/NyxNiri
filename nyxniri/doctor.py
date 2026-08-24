@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 from nyxniri.constants import (
     Colors,
@@ -186,18 +186,21 @@ def _check_portal_config(env) -> None:
     if portal_conf.is_file() or portal_conf2.is_file():
         print(msg("doctor_ok", _text("桌面门户: niri-portals.conf 路由已配置", "Desktop Portal: niri-portals.conf routing is configured")))
 
+_MIN_HOME_FREE_KIB = 10 * 1024 * 1024  # 10 GiB expressed in KiB
+_GIB_KIB = 1024 * 1024
+_MIB_KIB = 1024
+
 def _check_disk_space(env) -> None:
     try:
         res = subprocess.run(["df", "-k", "--output=avail", str(env.home)], capture_output=True, text=True, check=False)
         lines = res.stdout.strip().splitlines()
         if len(lines) >= 2:
             free_kb = int(lines[1].strip())
-            threshold = 10 * 1024 * 1024
-            if free_kb < threshold:
-                if free_kb >= 1048576:
-                    free_human = f"{free_kb / 1048576:.1f} GiB"
-                elif free_kb >= 1024:
-                    free_human = f"{free_kb / 1024:.1f} MiB"
+            if free_kb < _MIN_HOME_FREE_KIB:
+                if free_kb >= _GIB_KIB:
+                    free_human = f"{free_kb / _GIB_KIB:.1f} GiB"
+                elif free_kb >= _MIB_KIB:
+                    free_human = f"{free_kb / _MIB_KIB:.1f} MiB"
                 else:
                     free_human = f"{free_kb} KiB"
                 print(msg("doctor_warn", _text(f"磁盘空间: $HOME 仅剩 {free_human}", f"Disk Space: only {free_human} free on $HOME")))

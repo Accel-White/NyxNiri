@@ -5,10 +5,15 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)。
 
-## [v3.0.1] - Unreleased
+## [Unreleased]
+
+## [v3.0.1] - 2026-08-24
 
 ### Added
 - GTK3 和 GTK4 应用现在跟随壁纸自动切换 Material You 配色。
+
+### Changed
+- 壁纸选择器重写，缩略图改为按需加载。
 
 ### Fixed
 - 切换深浅色模式后 Kitty、Nautilus 等应用跟随延迟数秒甚至不跟随的问题。
@@ -28,6 +33,7 @@
 - 非交互模式下仓库有本地改动时不再误报更新成功。
 - 壁纸包下载不再覆盖用户已自定义的同名壁纸。
 - 护眼模式快捷切换留下的失效链接现在能自动修复。
+- Fish 的 Tab 补全恢复，不再只采纳历史建议而无法补全文件路径。
 
 ## [v3.0.0] - 2026-08-22
 
@@ -355,7 +361,8 @@
 ### Added
 - 首次发布基于 Niri 与 Noctalia V5 的 NyxNiri 桌面配置。
 
-[Unreleased]: https://github.com/ech678/NyxNiri/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/ech678/NyxNiri/compare/v3.0.1...HEAD
+[v3.0.1]: https://github.com/ech678/NyxNiri/compare/v3.0.0...v3.0.1
 [v3.0.0]: https://github.com/ech678/NyxNiri/compare/v2.3.4...v3.0.0
 [v2.3.4]: https://github.com/ech678/NyxNiri/compare/v2.3.3...v2.3.4
 [v2.3.3]: https://github.com/ech678/NyxNiri/compare/v2.3.2...v2.3.3
