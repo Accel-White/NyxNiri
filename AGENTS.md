@@ -217,6 +217,10 @@ export VAR
 - 所有新测试必须用 `tests/utils.py:TempEnv`，禁止碰真实 `~/.config`。
 - 反例：9cb1e0a 之前的测试把实仓库 `configs/niri/config.kdl` 写成桩文件。
 
+### 测试深度
+- 构造外部命令（git/curl/systemd 等）的函数，必须有"参数列表形状"契约测试，不能只断言返回值。
+- mock 层级要紧贴被测代码；mock 打得太高会绕过命令构造逻辑（反例：测 `safe_git_pull` 时 mock `_run_git_transfer`，就跳过了 `_with_git_progress` 的参数变形）。
+
 ### Commit
 - Conventional Commits：`feat|fix|refactor|test|docs|chore: 简述`。
 - body 说"为什么"，不说"做了什么"（diff 已经说明做什么）。
