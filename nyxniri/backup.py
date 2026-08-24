@@ -293,6 +293,7 @@ def uninstall_nyxniri(mode: str = "") -> bool:
     from nyxniri.deploy import discover_config_items
     from nyxniri.fcitx import fcitx_uninstall
     from nyxniri.greeter import greeter_uninstall
+    from nyxniri.gtktheme import gtktheme_uninstall
 
     env = get_env()
     items = discover_config_items()
@@ -335,6 +336,10 @@ def uninstall_nyxniri(mode: str = "") -> bool:
         print(msg("purge_start"))
         try:
             fcitx_uninstall()
+        except Exception:
+            pass
+        try:
+            gtktheme_uninstall()
         except Exception:
             pass
         try:
@@ -392,6 +397,11 @@ def uninstall_nyxniri(mode: str = "") -> bool:
 
     try:
         fcitx_uninstall()
+    except Exception:
+        pass
+
+    try:
+        gtktheme_uninstall()
     except Exception:
         pass
 

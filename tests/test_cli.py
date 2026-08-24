@@ -69,6 +69,41 @@ class TestFcitxExitCode(unittest.TestCase):
                             self.assertEqual(ctx.exception.code, 1)
 
 
+class TestGtkExitCode(unittest.TestCase):
+    """gtk install/uninstall exit code must propagate."""
+
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+
+    def tearDown(self):
+        self._ctx.__exit__()
+
+    def test_gtk_install_failure_propagates_exit_1(self):
+        from nyxniri.cli import main
+
+        with patch("sys.argv", ["nyxniri", "gtk", "install"]):
+            with patch("nyxniri.cli.acquire_lock"):
+                with patch("nyxniri.cli.init_logger"):
+                    with patch("nyxniri.cli.ensure_nyxniri_symlink"):
+                        with patch("nyxniri.gtktheme.gtktheme_install", return_value=False):
+                            with self.assertRaises(SystemExit) as ctx:
+                                main()
+                            self.assertEqual(ctx.exception.code, 1)
+
+    def test_gtk_install_success_propagates_exit_0(self):
+        from nyxniri.cli import main
+
+        with patch("sys.argv", ["nyxniri", "gtk", "install"]):
+            with patch("nyxniri.cli.acquire_lock"):
+                with patch("nyxniri.cli.init_logger"):
+                    with patch("nyxniri.cli.ensure_nyxniri_symlink"):
+                        with patch("nyxniri.gtktheme.gtktheme_install", return_value=True):
+                            with self.assertRaises(SystemExit) as ctx:
+                                main()
+                            self.assertEqual(ctx.exception.code, 0)
+
+
 class TestUpdateForcePath(unittest.TestCase):
     """update --force must deploy wallpapers + greeter, not just configs + fcitx."""
 

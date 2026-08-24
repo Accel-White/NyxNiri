@@ -214,6 +214,18 @@ def _check_fcitx_skin(env) -> None:
         else:
             print(msg("doctor_warn", _text(f"Fcitx5: {FCITX_THEME} 皮肤未启用", f"Fcitx5: {FCITX_THEME} skin not enabled")))
 
+def _check_gtk_theme(env) -> None:
+    from nyxniri.gtktheme import gtktheme_registered, gtktheme_rendered
+    if gtktheme_rendered():
+        print(msg("doctor_ok", _text("GTK 主题: 已渲染并跟随壁纸", "GTK theme: rendered, following wallpaper")))
+    elif gtktheme_registered():
+        print(msg("doctor_warn", _text(
+            "GTK 主题: 模板已注册但未渲染，运行 nyxniri gtk install",
+            "GTK theme: registered but not rendered, run nyxniri gtk install",
+        )))
+    else:
+        print(msg("doctor_warn", _text("GTK 主题: 未注册", "GTK theme: not registered")))
+
 def _check_vm(env) -> None:
     if shutil.which("lspci"):
         try:
@@ -249,6 +261,7 @@ DOCTOR_CHECKS = [
     _check_portal_config,
     _check_disk_space,
     _check_fcitx_skin,
+    _check_gtk_theme,
     _check_vm,
     _check_greeter,
 ]

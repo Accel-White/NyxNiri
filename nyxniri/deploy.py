@@ -310,6 +310,8 @@ def _phase_post_install_services() -> None:
         print(msg("log_gtk_theme_init"))
 
     if shutil.which(THEME_ENGINE):
+        from nyxniri.gtktheme import gtktheme_trigger_render
+        gtktheme_trigger_render()
         print(msg("log_enable_mpvpaper"))
         subprocess.run([THEME_ENGINE, "msg", "plugins", "enable", "noctalia/mpvpaper"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
 

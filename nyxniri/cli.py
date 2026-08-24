@@ -693,6 +693,8 @@ COMMANDS = {
                   f"{CLI_CMD} greeter [install|status|uninstall]"),
     "fcitx":     (_module_handler("fcitx", "fcitx"),
                   f"{CLI_CMD} fcitx [install|status|uninstall]"),
+    "gtk":       (_module_handler("gtktheme", "gtk"),
+                  f"{CLI_CMD} gtk [install|status|uninstall]"),
     "theme":     (_cmd_theme,     f"{CLI_CMD} theme [toggle|dark|light|sync|status]"),
     "update":    (_cmd_update,    f"{CLI_CMD} update [--force|--no-deploy]"),
     "help":      (_cmd_help,      f"{CLI_CMD} help"),
