@@ -85,9 +85,27 @@ def _run_cancellable_process(
 def _with_git_progress(command: List[str]) -> Tuple[List[str], bool]:
     """Force native Git progress only when stderr is attached to a terminal."""
     show_progress = sys.stderr.isatty()
-    if show_progress:
-        return [*command[:2], "--progress", *command[2:]], True
-    return command, False
+    if not show_progress:
+        return command, False
+    # Locate the git subcommand (first positional token after git and its
+    # value-taking top-level options like -c / -C / --git-dir / --work-tree / --namespace).
+    # Inserting --progress before the subcommand would feed it to the preceding
+    # value-taking option (e.g. as the -c key), which git rejects.
+    value_opts = {"-c", "-C", "--git-dir", "--work-tree", "--namespace"}
+    i = 1  # skip "git"
+    while i < len(command):
+        tok = command[i]
+        if tok == "--":
+            i += 1
+            break
+        if tok.startswith("-"):
+            i += 2 if tok in value_opts else 1
+            continue
+        break
+    sub_idx = i
+    if sub_idx >= len(command):
+        return [*command, "--progress"], True
+    return [*command[:sub_idx + 1], "--progress", *command[sub_idx + 1:]], True
 
 
 def _run_git_transfer(command: List[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:

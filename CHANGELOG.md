@@ -7,6 +7,11 @@
 
 ## [Unreleased]
 
+## [v3.0.2] - 2026-08-24
+
+### Fixed
+- 检查更新时报 `key does not contain a section: --progress` 错误的问题。
+
 ## [v3.0.1] - 2026-08-24
 
 ### Added
@@ -361,7 +366,8 @@
 ### Added
 - 首次发布基于 Niri 与 Noctalia V5 的 NyxNiri 桌面配置。
 
-[Unreleased]: https://github.com/ech678/NyxNiri/compare/v3.0.1...HEAD
+[Unreleased]: https://github.com/ech678/NyxNiri/compare/v3.0.2...HEAD
+[v3.0.2]: https://github.com/ech678/NyxNiri/compare/v3.0.1...v3.0.2
 [v3.0.1]: https://github.com/ech678/NyxNiri/compare/v3.0.0...v3.0.1
 [v3.0.0]: https://github.com/ech678/NyxNiri/compare/v2.3.4...v3.0.0
 [v2.3.4]: https://github.com/ech678/NyxNiri/compare/v2.3.3...v2.3.4

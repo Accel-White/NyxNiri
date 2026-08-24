@@ -140,5 +140,62 @@ class TestDirtyTreeReturnValue(unittest.TestCase):
         self.assertTrue(result, "Clean tree with successful pull should return True")
 
 
+class TestGitProgressInsertion(unittest.TestCase):
+    """--progress 必须插在 git 子命令之后，绝不能成为 -c 的 value。"""
+
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+
+    def tearDown(self):
+        self._ctx.__exit__()
+
+    def test_progress_after_subcommand_for_c_prefixed_pull(self):
+        """对 `git -c K=V -c K=V pull --ff-only`，--progress 必须在 pull 之后。"""
+        from nyxniri.network import _with_git_progress
+
+        with patch("sys.stderr.isatty", return_value=True):
+            cmd, show = _with_git_progress(
+                ["git", "-c", "http.lowSpeedLimit=1000",
+                 "-c", "http.lowSpeedTime=15", "pull", "--ff-only"]
+            )
+        self.assertTrue(show)
+        # --progress 绝不能紧跟在 -c 后面（否则会被当成 -c 的 key）
+        for i, tok in enumerate(cmd):
+            if tok == "-c":
+                self.assertNotEqual(cmd[i + 1], "--progress",
+                                    "--progress must not become the -c value")
+        # 子命令 pull 必须在 --progress 之前
+        self.assertLess(cmd.index("pull"), cmd.index("--progress"))
+        self.assertEqual(cmd, ["git", "-c", "http.lowSpeedLimit=1000",
+                               "-c", "http.lowSpeedTime=15",
+                               "pull", "--progress", "--ff-only"])
+
+    def test_progress_after_clone_subcommand(self):
+        """对 `git clone -c ...`，--progress 必须紧跟 clone 之后。"""
+        from nyxniri.network import _with_git_progress
+
+        with patch("sys.stderr.isatty", return_value=True):
+            cmd, show = _with_git_progress(
+                ["git", "clone", "-c", "http.lowSpeedTime=15",
+                 "-c", "http.lowSpeedLimit=1000",
+                 "--depth", "1", "url", "dir"]
+            )
+        self.assertTrue(show)
+        self.assertEqual(cmd[1], "clone")
+        self.assertEqual(cmd[2], "--progress")
+
+    def test_no_progress_when_not_tty(self):
+        """非 tty 环境不应注入 --progress。"""
+        from nyxniri.network import _with_git_progress
+
+        with patch("sys.stderr.isatty", return_value=False):
+            cmd, show = _with_git_progress(
+                ["git", "-c", "K=V", "pull", "--ff-only"]
+            )
+        self.assertFalse(show)
+        self.assertNotIn("--progress", cmd)
+
+
 if __name__ == "__main__":
     unittest.main()
