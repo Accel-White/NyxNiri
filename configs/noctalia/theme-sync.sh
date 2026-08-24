@@ -172,6 +172,10 @@ fi
 set_system_theme "$SCHEME_VAL" "$GTK_THEME"
 
 # 7. Atomic Sync to GTK 3.0 & GTK 4.0 INI Files
+# gtk-application-prefer-dark-theme is deprecated in GTK4 (libadwaita prints a
+# warning), but Brave/Chromium reads it at startup to detect dark mode. We keep
+# writing it for both GTK3 and GTK4 — the warning is cosmetic and does not
+# affect libadwaita, which relies on portal color-scheme + @media CSS instead.
 atomic_update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-application-prefer-dark-theme" "$DARK_PREF"
 atomic_update_ini "$HOME/.config/gtk-3.0/settings.ini" "gtk-theme-name" "$GTK_THEME"
 atomic_update_ini "$HOME/.config/gtk-4.0/settings.ini" "gtk-application-prefer-dark-theme" "$DARK_PREF"

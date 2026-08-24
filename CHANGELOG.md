@@ -12,6 +12,7 @@
 
 ### Fixed
 - 切换深浅色模式后 Kitty、Nautilus、Brave 等应用跟随延迟数秒甚至不跟随的问题。
+- 切换深浅色模式后 Nautilus 等 GTK4 应用不跟随系统主题的问题。
 - 非交互式环境下运行 `nyxniri uninstall` 不再意外执行卸载。
 - 配置原子替换在极少数失败情况下不再让配置"消失"。
 - 推荐应用菜单中 Mission Center 和 Fcitx5 现在能正确安装。
