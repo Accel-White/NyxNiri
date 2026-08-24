@@ -1125,10 +1125,6 @@ Commands:
         "zh": f"{Colors.BOLD_RED}[✗] 所有镜像节点均拉取失败{Colors.RESET}\n",
         "en": f"{Colors.BOLD_RED}[✗] All mirror nodes failed{Colors.RESET}\n",
     },
-    "net_changelog_title": {
-        "zh": "最新更新日志",
-        "en": "Latest Changelog",
-    },
 
     # Logging & Atomic Deployment
     "log_keep_custom_file": {
