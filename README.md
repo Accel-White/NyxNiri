@@ -294,6 +294,13 @@ rm -f ~/.config/gtk-4.0/gtk.css ~/.config/gtk-4.0/noctalia.css ~/.config/gtk-3.0
 
 </details>
 
+<details>
+<summary><b>Brave doesn't follow theme toggle</b> — Brave cold-start bug (not a NyxNiri issue).</summary>
+
+On non-GNOME Wayland compositors, Brave's portal theme-signal subscription fails to initialize on cold start, so `nyxniri theme toggle` doesn't recolor it. Open `brave://settings/appearance` and switch theme mode once (e.g. Classic → GTK → Classic) to wake it up; it follows live afterwards without restarting Brave. Needs re-waking after each Brave restart.
+
+</details>
+
 ## Credits
 
 **Contact & Community:**

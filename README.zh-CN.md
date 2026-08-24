@@ -294,6 +294,13 @@ rm -f ~/.config/gtk-4.0/gtk.css ~/.config/gtk-4.0/noctalia.css ~/.config/gtk-3.0
 
 </details>
 
+<details>
+<summary><b>Brave 切换主题后不变色</b> — Brave 冷启动 bug（非 NyxNiri 问题）。</summary>
+
+Brave 在非 GNOME Wayland 上冷启动时，portal 主题信号订阅未正确初始化，`nyxniri theme toggle` 后不变色。去 `brave://settings/appearance` 手动切一次主题模式（如"经典"→"GTK"→"经典"）即可唤醒，此后实时跟随，无需重启 Brave；重启 Brave 后需再次唤醒。
+
+</details>
+
 ## 致谢与社区
 
 **联系与社区：**

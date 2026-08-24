@@ -266,9 +266,12 @@ Noctalia 模板引擎支持 `.dark.` / `.light.` 两种模式取色
   （GTK3 不会自动读该 key 加载模块）
 - **修复**：
   1. 恢复向 `gtk-4.0/settings.ini` 写入 `prefer-dark-theme`（启动时跟随）
-  2. niri config `environment` 加 `GTK_MODULES "colorreload-gtk-module"`
-     （强制加载模块 → toggle 时重载 settings.ini → 实时跟随）
-- **状态**：已解决（依赖 `kde-gtk-config` 包的 `colorreload-gtk-module`）
+  2. （未采用）曾考虑在 niri config `environment` 加
+     `GTK_MODULES "colorreload-gtk-module"`，但反编译验证该模块只监视
+     `~/.config/gtk-3.0/colors.css`，不读 `settings.ini`，对 Brave 无用，
+     从未加入 config.kdl
+- **状态**：部分解决。`prefer-dark-theme` 解决冷启动跟随（启动读对深浅）；
+  toggle 实时跟随未解决，见 Problem 11
 
 ### Problem 7: Noctalia 调色板更新延迟 ~6 秒
 
@@ -318,16 +321,24 @@ Noctalia 模板引擎支持 `.dark.` / `.light.` 两种模式取色
   - NyxNiri 侧信号链路正确，问题在 Brave 自身
   - `colorreload-gtk-module`（`kde-gtk-config` 包）经反编译验证只监视
     `~/.config/gtk-3.0/colors.css`，不读 `settings.ini`，对 Brave 无用，
-    已从 config.kdl 移除 `GTK_MODULES`
+    从未加入 config.kdl
 - **根因**：Brave 在非 GNOME 的 Wayland 复合器（如 Niri）上冷启动时，
-  portal `SettingChanged` 信号订阅可能未正确初始化。这是 Brave/Chromium
-  自身的冷启动 bug，不是 NyxNiri 的信号链路问题
+  portal `SettingChanged` 信号订阅未正确初始化。这是 Brave/Chromium
+  自身的冷启动 bug，不是 NyxNiri 的信号链路问题。
+  实测直接 `gsettings set org.gnome.desktop.interface color-scheme`（绕开
+  theme-sync.sh）Brave 亦不变色——gsettings 值正确变化、portal 信号确实
+  发出，但 Brave 不处理；偶尔跟一次是 portal 订阅 race 命中，不可靠。
+  v2.3.3 时代 Brave 版本能稳定处理 gsettings 信号（CHANGELOG 声称"实时
+  跟随"属实），后续 Brave 更新引入 portal 订阅 race
 - **按钮唤醒现象**：在 `brave://settings/appearance` 手动切换一次主题模式
   （如"经典"→"GTK"→"经典"），Brave 内部重新初始化 `NativeTheme` 观察者，
   portal 订阅被激活，此后 toggle 即可实时跟随
 - **排障指引**：如果 Brave 不跟随 toggle，去 `brave://settings/appearance`
   切一次模式即可唤醒，无需重启 Brave
-- **状态**：非 NyxNiri 侧 bug。待后续尝试延迟广播或 CDP 自动唤醒方案
+- **状态**：已确认 Brave upstream bug，NyxNiri 侧无法修复。方案 A
+  （延迟广播）实机证伪；方案 B（CDP）因 `brave://` 禁 CDP 导航不可行；
+  两全方案（toggle 跳过 gsettings 广播让 Noctalia hook 异步独占）实测
+  gsettings 值正确变化但 Brave 仍不响应
 
 ---
 
@@ -343,7 +354,7 @@ Noctalia 模板引擎支持 `.dark.` / `.light.` 两种模式取色
 | `config-reload` 卡 30s 网络超时 | 实测 0.045s，无超时 |
 | `gtk-dark.css` 软链接是根因 | 无关（GTK4 下 gtk-theme-name 无效）|
 | `.rgb_csv` 渲染风险 | 实机验证成功，0 个占位符残留 |
-| `palette-export --format gtk-css` 子命令 | **不存在**（`unknown command`），PR #20 的方案不可行 |
+| `palette-export --format gtk-css` 子命令 | **不存在**（`unknown command`）。PR #20 的 GTK 方案依赖此子命令，不可行；其 GTK Material You 目标已被当前用户模板架构（nyxniri_gtk3/gtk4）取代，PR #20 已关闭 |
 | `prefer-dark-theme` 是 Nautilus 不跟的根因 | 真根因是 `gtk-4.0.css` 无条件 `@define-color` 覆盖 libadwaita `@media` |
 
 ---
