@@ -497,6 +497,43 @@ M3 配色后，Qt 应用自动跟随，不需要 Kvantum（Kvantum 仅给走 Kva
   后 2 次是 spurious 回退，Nautilus 闪烁、Brave 被多余信号干扰。
   PR #26 的延迟重广播 hunk 经此实测证伪，未合并。
 
+### Problem 12: GTK4 标题栏最小化/最大化/关闭按钮显示成同心圆
+
+- **症状**：Nautilus、GTK Demo 等 GTK4 应用标题栏右侧三个按钮显示成
+  同心圆（一个外圆套一个内圆）
+- **误判**：最初以为 `GtkWindowControls` 的按钮只带 `.minimize/.maximize/.close`、
+  没有 `.image-button`，根因是 libadwaita 通用 `button` 规则上底色 +
+  `button:not(.combo)` 掰成圆。按此修了 `windowcontrols button:not(.combo)`
+  重置（特异性 `(0,1,2)`），实机**无变化**。
+- **真根因**：`GtkButton` 在子部件是图标时**自动加 `.image-button`**
+  （`gtkbutton.c: update_style_classes_from_child_type`，文档明说"the node
+  will get .image-button if the content is just an image"）。`GtkWindowControls`
+  的 minimize/maximize/close 按钮塞了一个 `GtkImage`、不带 `.flat` →
+  自动获得 `.image-button`。GTK4 user CSS（`~/.config/gtk-4.0/gtk.css`，
+  provider 优先级 `USER=800`）压过 libadwaita（`THEME`）—— 这点"同心圆
+  能出现"本身就是证据：若 libadwaita 的
+  `windowcontrols > button:...image-button { background: none }` 生效，
+  按钮就透明、没外圆了。于是我们的 `.image-button` 规则给按钮
+  `secondary_container` 底色 + `100%` 圆角 = **外圆**；libadwaita 给
+  `windowcontrols > button > image` 加 `border-radius:100%` + 底色 = **内圆** →
+  同心圆。
+- **修复**：`gtk-4.0.css` 在 `@media` 块外加 `windowcontrols > button > image
+  { background: none; border-radius: 0 }`，只清掉 libadwaita 给图标加的**内圆**
+  （底色 + `border-radius:100%`），**保留**按钮本体的 `.image-button` 规则
+  （`secondary_container` 底色 + `100%` 圆角 = 大圆 + `:hover`/`:active` 混色）。
+  结果：窗口按钮变成标准的 M3 image-button（大圆 + 图标），与其它 image-button
+  一致；图标颜色由已有的 `.image-button image { color: on_secondary_container }`
+  给。user CSS（`USER=800`）压过 libadwaita（`THEME`），一条 base 规则即覆盖
+  libadwaita 的 `:hover`/`:active` 内圆（provider 优先级先于特异性）。
+- **代价**：失去 libadwaita 原生"图标内圈 hover/active 变深"反馈，改为大圆
+  整体变色（与其它 image-button 一致）；窗口按钮从低调变显眼（实色大圆）；
+  外观与 `.image-button` 规则耦合，将来改那条规则窗口按钮会跟着变。
+- **只改 GTK4**：GTK3/adw-gtk3 的 titlebutton 没有 libadwaita"图标圆"设计，
+  无此问题，`gtk-3.0.css` 不动
+- **坑**：GTK4 不热重载 CSS 文件（见 Problem 10），改完 gtk.css 必须重启
+  GTK4 应用才会生效
+- **状态**：已解决
+
 ---
 
 ## 8. 旧文档的错误假设纠正
@@ -529,6 +566,7 @@ M3 配色后，Qt 应用自动跟随，不需要 Kvantum（Kvantum 仅给走 Kva
 | gtk.css 渲染错色 | Noctalia 调色板是否已更新？（等 ~6s）`noctalia msg config-reload && noctalia msg templates-apply` |
 | Brave 报 Theme parsing error | `gtk-3.0.css` 是否含 GTK4 专有属性？ |
 | M3 颜色覆盖不了 | `gtk-dark.css` 软链接是否已删？`ls -la ~/.config/gtk-4.0/gtk-dark.css` |
+| GTK4 标题栏按钮显示成同心圆 | `gtk-4.0/gtk.css` 是否含 `windowcontrols button` 重置？`grep windowcontrols ~/.config/gtk-4.0/gtk.css` |
 
 ---
 
