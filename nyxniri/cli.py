@@ -70,7 +70,7 @@ from nyxniri.state import (
     uninstall_nyxniri,
 )
 from nyxniri.i18n import msg
-from nyxniri.network import safe_git_pull
+from nyxniri.network import safe_git_checkout_ref, safe_git_pull
 from nyxniri.deploy import apply_preset, collect_presets, delete_preset, edit_preset, list_presets, save_preset
 from nyxniri.tui import (
     CheckboxEntry,
@@ -755,12 +755,27 @@ def _cmd_theme(sub_args: List[str]) -> int:
         return 1
 
 def _cmd_update(sub_args: List[str]) -> int:
-    flag = sub_args[0] if sub_args else ""
-    if len(sub_args) > 1 or flag not in ("", "--force", "--deploy", "--no-deploy"):
-        exit_usage(f"{CLI_CMD} update [--force|--no-deploy]")
+    usage = f"{CLI_CMD} update [--force|--no-deploy] [--to <tag|commit>]"
+    flag = ""
+    to_ref = ""
+    it = iter(sub_args)
+    for cur in it:
+        if cur == "--to":
+            to_ref = next(it, "")
+            if not to_ref:
+                exit_usage(usage)
+        elif cur in ("--force", "--deploy", "--no-deploy"):
+            if flag:
+                exit_usage(usage)
+            flag = cur
+        else:
+            exit_usage(usage)
     env = get_env()
     check_path_occlusion()
-    update_result = safe_git_pull(env.repo_dir)
+    if to_ref:
+        update_result = safe_git_checkout_ref(env.repo_dir, to_ref)
+    else:
+        update_result = safe_git_pull(env.repo_dir)
     if update_result is True:
         deploy_ok = offer_overwrite_upgrade(flag)
         check_new_deps_post_update()
@@ -808,7 +823,7 @@ COMMANDS = {
     "fisher":    (_module_handler("fisher", "fisher"),
                   f"{CLI_CMD} fisher [install|status|uninstall]"),
     "theme":     (_cmd_theme,     f"{CLI_CMD} theme [toggle|dark|light|sync|status]"),
-    "update":    (_cmd_update,    f"{CLI_CMD} update [--force|--no-deploy]"),
+    "update":    (_cmd_update,    f"{CLI_CMD} update [--force|--no-deploy] [--to <tag|commit>]"),
     "help":      (_cmd_help,      f"{CLI_CMD} help"),
     "-h":        (_cmd_help,      f"{CLI_CMD} help"),
     "--help":    (_cmd_help,      f"{CLI_CMD} help"),
