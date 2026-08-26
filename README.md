@@ -39,16 +39,12 @@
 - **Orbit Launcher** (`Super+A` / `Super+MouseForward`) — vector radial; apps, tools, links, AI/search dial (TOML-configurable).
 - **Shell & Terminal** — Fish aliases for proxy/cache, Kitty cursor trails, Windows-style shortcuts.
 - **NyxMellow** — dynamic fcitx5 skin: mellow geometry + Noctalia Material You palette.
+- **Presets** — per-app flavor variants (e.g. kitty transparent); switch with one command, save your setup as a private preset, or edit it in `$EDITOR`.
 
 ## Install
 
 > [!IMPORTANT]
-> **Upgrading from the legacy Bash release (`lib/` + `v2/`):** its `nyxniri update` command cannot switch to the current Python layout. Run the current bootstrap once before updating. To inspect it first, download and run locally:
-> ```bash
-> curl -fsSL --connect-timeout 10 -o /tmp/nyxniri-install.sh https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh
-> bash /tmp/nyxniri-install.sh
-> ```
-> This migration does not remove active configs, `~/.config/NyxNiri/backups/`, or legacy `~/.config/dotfiles_backup_*` snapshots.
+> **Upgrading from the legacy Bash release (`lib/` + `v2/`):** its `nyxniri update` cannot switch to the current Python layout. Run the current bootstrap once before updating. Configs, `~/.config/NyxNiri/backups/`, and legacy `~/.config/dotfiles_backup_*` snapshots are preserved.
 
 ### Standalone (online)
 
@@ -66,6 +62,10 @@ curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri
 git clone --depth 1 https://github.com/ech678/NyxNiri.git ~/NyxNiri
 cd ~/NyxNiri && ./install.sh
 ```
+
+### System package (AUR)
+
+> Coming soon — `paru -S nyxniri-git`, with updates handled by pacman.
 
 <details>
 <summary>Mirrors for China (gh-proxy / CDN)</summary>
@@ -105,6 +105,20 @@ NyxNiri
 > Configs deploy atomically. Personal tweaks survive updates via the Dunder protocol:
 > - `*__custom__*` files (e.g. `01__custom__.kdl`) and folders are preserved — number prefixes control load order.
 > - `~/.config/niri/monitor.kdl` is kept across deployments.
+
+## Presets
+
+Some apps ship flavor variants — `kitty` comes with a `transparent` preset out of the box. Presets layer between defaults and your `__custom__` files, so switching never touches your own tweaks.
+
+| Command | Description |
+| :--- | :--- |
+| `nyxniri preset <app> list` | List presets (`*` marks the active one) |
+| `nyxniri preset <app> apply <name>` | Switch preset (`apply default` resets) |
+| `nyxniri preset <app> save <name>` | Save the current config as a private preset |
+| `nyxniri preset <app> edit <name>` | Edit a private preset in `$EDITOR` |
+| `nyxniri preset <app> delete <name>` | Delete a private preset (official ones are read-only) |
+
+Official presets update with `nyxniri update`; private ones live in `~/.config/NyxNiri/presets/`.
 
 ## Keybindings
 
@@ -156,7 +170,9 @@ NyxNiri
 > [!TIP]
 > Quick reference: `nyxhelp keys`. For Niri's full overlay, press <kbd>Super</kbd> + <kbd>/</kbd>.
 
-## Optional Modules
+## Extensions
+
+> The GTK theme and fisher plugin manager deploy automatically with a full install; the items below are opt-in.
 
 **NyxMellow fcitx5 skin:** mellow rounded shape matching Noctalia color palette (auto light/dark switch). `nyxniri fcitx install` registers it as a template and re-renders on wallpaper/theme changes. Opt-in only.
 
@@ -215,15 +231,17 @@ NyxNiri
 
 | Command | Description |
 | :--- | :--- |
-| `nyxniri uninstall` | Archive current configs and remove NyxNiri; interactive mode also offers restore |
-| `nyxniri purge` | Remove configs, snapshots, cache and wallpapers |
+| `nyxniri uninstall [--all\|standard\|restore\|purge]` | Checkbox uninstall — pick what to remove (configs, CLI, modules, snapshots, wallpapers); defaults to the standard range |
+| `nyxniri purge` | Shorthand for `uninstall --all` |
 
-**Optional modules**
+**Extensions**
 
 | Command | Description |
 | :--- | :--- |
 | `nyxniri fcitx [install\|status\|uninstall]` | NyxMellow fcitx5 skin |
 | `nyxniri greeter [install\|status\|uninstall]` | Noctalia Greeter (login screen) |
+| `nyxniri gtk [install\|status\|uninstall]` | Material You GTK3/4 theme |
+| `nyxniri fisher [install\|status\|uninstall]` | fisher plugin manager for Fish |
 
 `nyxhelp` is a compact fzf-based reference for the CLI, shell helpers, and core keybindings:
 

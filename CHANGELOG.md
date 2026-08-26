@@ -7,10 +7,11 @@
 
 ## [Unreleased]
 
+## [v3.0.3] - 2026-08-26
+
 ### Added
 - 配置预设：支持多套风味变体的应用（如 kitty 透明）可一键切换，切换不影响你的自定义修改；也能把当前配置存成私有预设，或直接在编辑器里改。
 - 卸载改为勾选清单：可逐项选择清理哪些，默认勾选等同原标准卸载范围；管道模式下默认全选并归档配置。
-- 新增系统包安装方式（AUR 的 nyxniri-git），用 pacman 管理更新；切换安装方式不影响已部署的配置。
 - fisher 现可作为模块单独查询状态或卸载（nyxniri fisher ...），归类与 fcitx/greeter/gtk 一致。
 
 ### Changed
@@ -384,7 +385,8 @@
 ### Added
 - 首次发布基于 Niri 与 Noctalia V5 的 NyxNiri 桌面配置。
 
-[Unreleased]: https://github.com/ech678/NyxNiri/compare/v3.0.2...HEAD
+[Unreleased]: https://github.com/ech678/NyxNiri/compare/v3.0.3...HEAD
+[v3.0.3]: https://github.com/ech678/NyxNiri/compare/v3.0.2...v3.0.3
 [v3.0.2]: https://github.com/ech678/NyxNiri/compare/v3.0.1...v3.0.2
 [v3.0.1]: https://github.com/ech678/NyxNiri/compare/v3.0.0...v3.0.1
 [v3.0.0]: https://github.com/ech678/NyxNiri/compare/v2.3.4...v3.0.0

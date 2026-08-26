@@ -39,16 +39,12 @@
 - **Orbit 启动器**（`Super+A` / `Super+鼠标前侧键`）— 矢量星环；应用、工具、网页、AI/搜索轮盘，全 TOML 自定义。
 - **Shell 和终端** — Fish 代理/缓存别名，Kitty 光标轨迹，Windows 风格快捷键。
 - **NyxMellow** — 动态 fcitx5 皮肤：mellow 圆角 + Noctalia Material You 配色。
+- **配置预设** — 每个应用多套风味变体（如 kitty 透明）；一条命令切换，把当前配置存为私有预设，或直接在 `$EDITOR` 里改。
 
 ## 安装
 
 > [!IMPORTANT]
-> **从旧版 Bash 目录（`lib/` + `v2/`）升级：**旧版 `nyxniri update` 无法直接切换到新版 Python 目录。更新前请先运行一次新版引导，可先下载检查再运行：
-> ```bash
-> curl -fsSL --connect-timeout 10 -o /tmp/nyxniri-install.sh https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh
-> bash /tmp/nyxniri-install.sh
-> ```
-> 迁移不会删除现有配置、`~/.config/NyxNiri/backups/`，也不会删除旧版 `~/.config/dotfiles_backup_*` 快照。
+> **从旧版 Bash 目录（`lib/` + `v2/`）升级：**旧版 `nyxniri update` 无法直接切换到新版 Python 目录。更新前请先运行一次新版引导。现有配置、`~/.config/NyxNiri/backups/` 和旧版 `~/.config/dotfiles_backup_*` 快照都会保留。
 
 ### 独立在线安装
 
@@ -66,6 +62,10 @@ curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ech678/NyxNiri
 git clone --depth 1 https://github.com/ech678/NyxNiri.git ~/NyxNiri
 cd ~/NyxNiri && ./install.sh
 ```
+
+### 系统包安装（AUR）
+
+> 即将支持——`paru -S nyxniri-git`，更新由 pacman 管理。
 
 <details>
 <summary>国内镜像加速（gh-proxy / CDN）</summary>
@@ -105,6 +105,20 @@ NyxNiri
 > 配置采用原子部署。个人改动通过 Dunder 协议保留：
 > - `*__custom__*` 文件（如 `01__custom__.kdl`）和目录自动保留——数字前缀控制加载顺序。
 > - `~/.config/niri/monitor.kdl` 在部署时保留。
+
+## 预设
+
+有些应用自带多套风味——`kitty` 默认就带一个 `transparent` 透明预设。预设叠在默认配置和你的 `__custom__` 之间，切换不会碰你的自定义改动。
+
+| 指令 | 作用 |
+| :--- | :--- |
+| `nyxniri preset <app> list` | 列出预设（`*` 标当前活动） |
+| `nyxniri preset <app> apply <name>` | 切换预设（`apply default` 回默认） |
+| `nyxniri preset <app> save <name>` | 把当前配置存为私有预设 |
+| `nyxniri preset <app> edit <name>` | 在 `$EDITOR` 里改私有预设 |
+| `nyxniri preset <app> delete <name>` | 删除私有预设（官方预设只读） |
+
+官方预设随 `nyxniri update` 更新；私有预设存在 `~/.config/NyxNiri/presets/`。
 
 ## 快捷键
 
@@ -156,7 +170,9 @@ NyxNiri
 > [!TIP]
 > 快速查看：`nyxhelp keys`。Niri 完整按键覆盖层按 <kbd>Super</kbd> + <kbd>/</kbd>。
 
-## 可选模块
+## 扩展
+
+> GTK 主题和 fisher 插件管理器随全量安装自动部署；下面的条目按需启用。
 
 **NyxMellow fcitx5 皮肤：** 圆角 mellow 风格，跟随 Noctalia 配色和明暗。`nyxniri fcitx install` 注册为模板，随主题自动重绘；按需启用，不覆盖现有配置。
 
@@ -215,15 +231,17 @@ NyxNiri
 
 | 指令 | 作用 |
 | :--- | :--- |
-| `nyxniri uninstall` | 归档当前配置并卸载；交互模式也可选择复原 |
-| `nyxniri purge` | 清除配置、快照、缓存与壁纸 |
+| `nyxniri uninstall [--all\|standard\|restore\|purge]` | 勾选式卸载——逐项选择清理内容（配置、CLI、模块、快照、壁纸），默认勾选等同标准范围 |
+| `nyxniri purge` | `uninstall --all` 的简写 |
 
-**可选模块**
+**扩展**
 
 | 指令 | 作用 |
 | :--- | :--- |
 | `nyxniri fcitx [install\|status\|uninstall]` | NyxMellow fcitx5 皮肤 |
 | `nyxniri greeter [install\|status\|uninstall]` | Noctalia Greeter（登录界面） |
+| `nyxniri gtk [install\|status\|uninstall]` | Material You GTK3/4 主题 |
+| `nyxniri fisher [install\|status\|uninstall]` | Fish 的 fisher 插件管理器 |
 
 `nyxhelp` 是基于 `fzf` 的简明速查，覆盖 CLI、Shell 助手和核心快捷键：
 
