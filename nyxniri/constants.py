@@ -21,11 +21,15 @@ ASSETS_DIR_NAME = "assets"
 
 # --- Repository & Network Mirrors ---
 REPO_URL = "https://github.com/ech678/NyxNiri.git"
+CLONE_URL = os.environ.get("NYXNIRI_REPO") or REPO_URL
 
-GIT_MIRROR_REGISTRY = [
-    ("Official", "https://github.com/ech678/NyxNiri.git"),
-    ("gh-proxy.org", "https://gh-proxy.org/https://github.com/ech678/NyxNiri.git"),
-]
+if os.environ.get("NYXNIRI_REPO"):
+    GIT_MIRROR_REGISTRY = [("Custom", os.environ["NYXNIRI_REPO"])]
+else:
+    GIT_MIRROR_REGISTRY = [
+        ("Official", "https://github.com/ech678/NyxNiri.git"),
+        ("gh-proxy.org", "https://gh-proxy.org/https://github.com/ech678/NyxNiri.git"),
+    ]
 
 RAW_MIRROR_TEMPLATES = [
     ("Official", "https://raw.githubusercontent.com/{USER_REPO}/{BRANCH}/{FILE_PATH}"),
