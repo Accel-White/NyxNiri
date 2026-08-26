@@ -27,16 +27,39 @@ def register_temp_path(path: Path | str) -> None:
     if path:
         _CLEANUP_TEMP_PATHS.add(Path(path))
 
+def remove_path(path: Path) -> None:
+    """Remove a path without following a top-level symlink.
+
+    Shared by deploy.atomic (swap cleanup) and state.backup/uninstall (archive
+    + delete). The symlink check precedes is_dir() so a symlink to a directory
+    is unlinked, not rmtree'd through the link.
+    """
+    try:
+        if path.is_symlink():
+            path.unlink(missing_ok=True)
+        elif path.is_dir():
+            shutil.rmtree(path, ignore_errors=True)
+        else:
+            path.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+def copy_path(src: Path, dest: Path) -> None:
+    """Copy one path while preserving a top-level symlink as a symlink."""
+    if src.is_symlink():
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.unlink(missing_ok=True)
+        dest.symlink_to(os.readlink(src))
+    elif src.is_dir():
+        shutil.copytree(src, dest, symlinks=True)
+    else:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+
 def cleanup_temp_paths() -> None:
     """Remove all registered temporary files and directories."""
     for p in list(_CLEANUP_TEMP_PATHS):
-        try:
-            if p.is_dir():
-                shutil.rmtree(p, ignore_errors=True)
-            elif p.exists() or p.is_symlink():
-                p.unlink(missing_ok=True)
-        except Exception:
-            pass
+        remove_path(p)
     _CLEANUP_TEMP_PATHS.clear()
 
 atexit.register(cleanup_temp_paths)

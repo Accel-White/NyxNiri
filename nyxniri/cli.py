@@ -61,13 +61,14 @@ from nyxniri.state import (
 )
 from nyxniri.i18n import msg
 from nyxniri.network import safe_git_pull
-from nyxniri.deploy import apply_preset, collect_presets, delete_preset, list_presets, save_preset
+from nyxniri.deploy import apply_preset, collect_presets, delete_preset, edit_preset, list_presets, save_preset
 from nyxniri.tui import (
     CheckboxEntry,
     CheckboxList,
     MenuItem,
     Menu,
     PresetSwitcher,
+    drain_stdin,
     pad_display,
     press_any_key,
     prompt_confirm,
@@ -387,6 +388,7 @@ def snapshot_menu_loop() -> None:
         if choice == 0:
             sys.stdout.write(msg("snapshot_note_prompt"))
             sys.stdout.flush()
+            drain_stdin()
             note = sys.stdin.readline().strip()
             backup_configs(note=note, interactive=True)
             press_any_key()
@@ -647,9 +649,9 @@ def _cmd_test(sub_args: List[str]) -> int:
     return 0 if test_deploy() else 1
 
 def _cmd_preset(sub_args: List[str]) -> int:
-    """nyxniri preset <app> [list|apply <name>|save <name>|delete <name>]"""
+    """nyxniri preset <app> [list|apply <name>|save <name>|edit <name>|delete <name>]"""
     if len(sub_args) < 2:
-        exit_usage(f"{CLI_CMD} preset <app> [list|apply <name>|save <name>|delete <name>]")
+        exit_usage(f"{CLI_CMD} preset <app> [list|apply <name>|save <name>|edit <name>|delete <name>]")
     app = sub_args[0]
     action = sub_args[1]
     name = sub_args[2] if len(sub_args) > 2 else ""
@@ -658,12 +660,12 @@ def _cmd_preset(sub_args: List[str]) -> int:
             exit_usage(f"{CLI_CMD} preset {app} list")
         list_presets(app)
         return 0
-    if action in ("apply", "save", "delete"):
+    if action in ("apply", "save", "edit", "delete"):
         if not name or len(sub_args) > 3:
             exit_usage(f"{CLI_CMD} preset {app} {action} <name>")
-        fn = {"apply": apply_preset, "save": save_preset, "delete": delete_preset}[action]
+        fn = {"apply": apply_preset, "save": save_preset, "edit": edit_preset, "delete": delete_preset}[action]
         return 0 if fn(app, name) else 1
-    exit_usage(f"{CLI_CMD} preset {app} [list|apply <name>|save <name>|delete <name>]")
+    exit_usage(f"{CLI_CMD} preset {app} [list|apply <name>|save <name>|edit <name>|delete <name>]")
 
 def _module_handler(module_name: str, triad_name: str):
     """Factory: build a handler for install|status|uninstall triad (greeter/fcitx).
@@ -751,13 +753,15 @@ COMMANDS = {
     "bug":       (_cmd_bug,       f"{CLI_CMD} bug"),
     "report":    (_cmd_bug,       f"{CLI_CMD} bug"),
     "test":      (_cmd_test,      f"{CLI_CMD} test"),
-    "preset":    (_cmd_preset,    f"{CLI_CMD} preset <app> [list|apply <name>|save <name>|delete <name>]"),
+    "preset":    (_cmd_preset,    f"{CLI_CMD} preset <app> [list|apply <name>|save <name>|edit <name>|delete <name>]"),
     "greeter":   (_module_handler("greeter", "greeter"),
                   f"{CLI_CMD} greeter [install|status|uninstall]"),
     "fcitx":     (_module_handler("fcitx", "fcitx"),
                   f"{CLI_CMD} fcitx [install|status|uninstall]"),
     "gtk":       (_module_handler("gtktheme", "gtk"),
                   f"{CLI_CMD} gtk [install|status|uninstall]"),
+    "fisher":    (_module_handler("fisher", "fisher"),
+                  f"{CLI_CMD} fisher [install|status|uninstall]"),
     "theme":     (_cmd_theme,     f"{CLI_CMD} theme [toggle|dark|light|sync|status]"),
     "update":    (_cmd_update,    f"{CLI_CMD} update [--force|--no-deploy]"),
     "help":      (_cmd_help,      f"{CLI_CMD} help"),

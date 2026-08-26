@@ -31,7 +31,7 @@ class TestUninstallModuleVisibility(unittest.TestCase):
         greeter_u = MagicMock()
         fisher_u = MagicMock()
         with patch("sys.stdin.isatty", return_value=False), patch("builtins.print"), \
-             patch("nyxniri.state.uninstall._copy_path"), patch("nyxniri.state.uninstall._remove_path"), \
+             patch("nyxniri.state.uninstall.copy_path"), patch("nyxniri.state.uninstall.remove_path"), \
              patch("nyxniri.state.uninstall.get_pics_dir", return_value=self._ctx.env.home / "Pictures"), \
              patch("nyxniri.modules.fcitx.fcitx5_installed", return_value=True), \
              patch("nyxniri.modules.gtktheme.gtktheme_registered", return_value=False), \
@@ -39,7 +39,7 @@ class TestUninstallModuleVisibility(unittest.TestCase):
              patch("nyxniri.modules.fcitx.fcitx_uninstall", side_effect=fcitx_u), \
              patch("nyxniri.modules.gtktheme.gtktheme_uninstall", side_effect=gtk_u), \
              patch("nyxniri.modules.greeter.greeter_uninstall", side_effect=greeter_u), \
-             patch("nyxniri.deploy.deploy.fisher_uninstall", side_effect=fisher_u):
+             patch("nyxniri.modules.fisher.fisher_uninstall", side_effect=fisher_u):
             result = uninstall_nyxniri("")
 
         self.assertTrue(result)
@@ -72,7 +72,7 @@ class TestUninstallExecutionOrder(unittest.TestCase):
             state_at_fcitx["exists"] = self.env.state_dir.exists()
 
         with patch("sys.stdin.isatty", return_value=False), patch("builtins.print"), \
-             patch("nyxniri.state.uninstall._copy_path"), \
+             patch("nyxniri.state.uninstall.copy_path"), \
              patch("nyxniri.state.uninstall.get_pics_dir", return_value=self.env.home / "Pictures"), \
              patch("nyxniri.modules.fcitx.fcitx5_installed", return_value=True), \
              patch("nyxniri.modules.gtktheme.gtktheme_registered", return_value=False), \
@@ -135,9 +135,9 @@ class TestFisherUninstall(unittest.TestCase):
         self._ctx.__exit__()
 
     def test_fish_absent_degrades_to_direct_rm(self):
-        from nyxniri.deploy.deploy import fisher_uninstall
+        from nyxniri.modules.fisher import fisher_uninstall
 
-        with patch("nyxniri.deploy.deploy.shutil.which", return_value=None):
+        with patch("nyxniri.modules.fisher.shutil.which", return_value=None):
             fisher_uninstall()
 
         # fish absent → conf.d/ nuked, fisher.fish removed.
@@ -145,7 +145,7 @@ class TestFisherUninstall(unittest.TestCase):
         self.assertFalse((self.fish_dir / "conf.d").exists())
 
     def test_fish_present_fisher_installed_calls_remove_all(self):
-        from nyxniri.deploy.deploy import fisher_uninstall
+        from nyxniri.modules.fisher import fisher_uninstall
 
         calls = []
 
@@ -159,8 +159,8 @@ class TestFisherUninstall(unittest.TestCase):
                 r.returncode = 0
             return r
 
-        with patch("nyxniri.deploy.deploy.shutil.which", return_value="/usr/bin/fish"), \
-             patch("nyxniri.deploy.deploy.subprocess.run", side_effect=fake_run):
+        with patch("nyxniri.modules.fisher.shutil.which", return_value="/usr/bin/fish"), \
+             patch("nyxniri.modules.fisher.subprocess.run", side_effect=fake_run):
             fisher_uninstall()
 
         # `fisher remove --all` was invoked, and the loader file removed.
@@ -227,6 +227,30 @@ class TestGreeterStateDirRemoval(unittest.TestCase):
             any("rm" in c and "-rf" in c and str(GREETER_STATE_DIR) in " ".join(c) for c in calls),
             f"Expected sudo rm -rf {GREETER_STATE_DIR}, got: {calls}",
         )
+
+
+class TestFisherInstallDetect(unittest.TestCase):
+    """fisher module: install early-returns when fish absent; detection by loader file."""
+
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+        self.env = self._ctx.env
+
+    def tearDown(self):
+        self._ctx.__exit__()
+
+    def test_installed_detects_loader_file(self):
+        from nyxniri.modules.fisher import fisher_installed
+        fish_dir = self.env.config_dir / "fish" / "functions"
+        fish_dir.mkdir(parents=True)
+        (fish_dir / "fisher.fish").write_text("# fisher")
+        self.assertTrue(fisher_installed())
+
+    def test_install_noop_when_fish_absent(self):
+        from nyxniri.modules.fisher import fisher_install
+        with patch("nyxniri.modules.fisher.shutil.which", return_value=None), patch("builtins.print"):
+            self.assertFalse(fisher_install())
 
 
 if __name__ == "__main__":

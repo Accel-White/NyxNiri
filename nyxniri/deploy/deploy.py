@@ -6,20 +6,18 @@ assets (wallpapers), hardware (NVIDIA patch), manifest (app discovery), preset
 (active variant). Modules/state/deps are lazy-imported to avoid cycles.
 """
 
-import os
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
+from contextlib import ExitStack
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 from nyxniri.constants import Colors, MAIN_WM, REPO_URL, THEME_ENGINE
-from nyxniri.core import get_env, log_msg, register_temp_path
+from nyxniri.core import get_env, log_msg
 from nyxniri.i18n import msg
-from nyxniri.network import fetch_raw_with_fallback
-from nyxniri.tui import read_key, responsive_hint, show_logo
+from nyxniri.tui import read_key, responsive_hint, show_logo, raw_input_mode, _drain_pending
 
 from nyxniri.deploy.atomic import (
     _cleanup_snapshots,
@@ -40,12 +38,10 @@ def discover_config_items() -> List[str]:
     global _CONFIG_ITEMS_CACHE
     if _CONFIG_ITEMS_CACHE:
         return _CONFIG_ITEMS_CACHE
-    apps = discover_deployable_apps()
-    if apps:
-        _CONFIG_ITEMS_CACHE = apps
-        return _CONFIG_ITEMS_CACHE
-    # Fallback when configs/ is unreadable (e.g. bundled engine without a repo)
-    _CONFIG_ITEMS_CACHE = ["fastfetch", "fish", "kitty", "niri", "noctalia", "starship.toml", "xdg-desktop-portal", "zed"]
+    # Honest empty when nothing is discoverable (broken/unreadable configs/);
+    # install.sh's engine_is_complete guards configs/ exists before we run,
+    # so a real empty here is an edge case — downstream degrades to "0 configs".
+    _CONFIG_ITEMS_CACHE = discover_deployable_apps()
     return _CONFIG_ITEMS_CACHE
 
 def _phase_atomic_deployment(
@@ -151,64 +147,8 @@ def _phase_post_install_services() -> None:
         subprocess.run([THEME_ENGINE, "msg", "plugins", "enable", f"{THEME_ENGINE}/mpvpaper"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
 
     if shutil.which("fish"):
-        print(msg("log_check_fisher"))
-        log_msg("INFO", "Checking Fisher plugin manager installation")
-        fish_check = subprocess.run(["fish", "-c", "functions -q fisher; echo $status"], capture_output=True, text=True, check=False)
-        if fish_check.returncode == 0 and fish_check.stdout.strip() == "0":
-            log_msg("INFO", "Fisher already installed, running update")
-            subprocess.run(["fish", "-c", "fisher update"], check=False)
-        else:
-            tfd, tname = tempfile.mkstemp(suffix=".fish")
-            os.close(tfd)
-            fisher_path = Path(tname)
-            register_temp_path(fisher_path)
-
-            msg_install = msg("log_install_fish_plugins")
-            msg_skip = msg("log_fisher_update_skipped")
-            if fetch_raw_with_fallback("jorgebucaran/fisher", "main", "functions/fisher.fish", fisher_path):
-                fish_code = (
-                    f"if not functions -q fisher; source '{fisher_path}' && fisher install jorgebucaran/fisher; end; "
-                    f"if test -f ~/.config/fish/fish_plugins && functions -q fisher; "
-                    f"echo '{msg_install}'; fisher update || echo '{msg_skip}'; end"
-                )
-                subprocess.run(["fish", "-c", fish_code], check=False)
-            else:
-                print(msg("log_fisher_install_skipped"))
-                log_msg("WARN", "Fisher auto-install skipped (network unreachable)")
-
-def fisher_uninstall() -> bool:
-    """Remove fisher and every plugin it installed (§8.4 decision #1: aggressive).
-
-    NyxNiri installed fisher → NyxNiri removes it. fish present: ask fisher to
-    ``remove --all`` (it knows its plugins), then drop the loader. fish absent:
-    degrade to a direct ``rm -rf`` of fisher.fish + conf.d/ — uninstall often
-    happens because the user already left fish, so the host may be gone. §8.6
-    """
-    env = get_env()
-    fish_dir = env.config_dir / "fish"
-    fisher_file = fish_dir / "functions" / "fisher.fish"
-    conf_d = fish_dir / "conf.d"
-
-    if shutil.which("fish"):
-        check = subprocess.run(
-            ["fish", "-c", "functions -q fisher; echo $status"],
-            capture_output=True, text=True, check=False,
-        )
-        if check.returncode == 0 and check.stdout.strip() == "0":
-            subprocess.run(
-                ["fish", "-c", "fisher remove --all"],
-                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            )
-            log_msg("INFO", "fisher remove --all ran")
-        # fisher not installed → no managed plugins to remove; just drop the loader.
-    else:
-        # Host gone — fisher can't enumerate plugins. Nuke its footprint directly.
-        if conf_d.is_dir():
-            shutil.rmtree(conf_d, ignore_errors=True)
-            log_msg("INFO", "Removed fish conf.d/ (fisher fallback, fish absent)")
-    fisher_file.unlink(missing_ok=True)
-    log_msg("INFO", "Uninstalled fisher + fish plugins")
-    return True
+        from nyxniri.modules.fisher import fisher_install
+        fisher_install()
 
 def render_completion_screen(
     mode: str = "install",
@@ -246,34 +186,12 @@ def render_completion_screen(
             sys.stdout.write(f"    {Colors.BOLD_YELLOW}[!]{Colors.RESET} {msg('summary_item_configs_skip')}\n")
 
         if mode in ("full", "update", "test"):
-            if wallpaper_result and wallpaper_result.downloaded:
-                wallpaper_key = "summary_item_wallpapers_downloaded"
-                wallpaper_color = Colors.BOLD_GREEN
-                wallpaper_icon = "[✓]"
-            elif wallpaper_result and wallpaper_result.download_failed and wallpaper_result.pack_present:
-                wallpaper_key = "summary_item_wallpapers_refresh_failed"
-                wallpaper_color = Colors.BOLD_YELLOW
-                wallpaper_icon = "[!]"
-            elif wallpaper_result and wallpaper_result.download_failed and wallpaper_result.fallback_synced:
-                wallpaper_key = "summary_item_wallpapers_failed_fallback"
-                wallpaper_color = Colors.BOLD_YELLOW
-                wallpaper_icon = "[!]"
-            elif wallpaper_result and wallpaper_result.download_failed:
-                wallpaper_key = "summary_item_wallpapers_failed"
-                wallpaper_color = Colors.BOLD_RED
-                wallpaper_icon = "[✗]"
-            elif (wallpaper_result and wallpaper_result.pack_present) or wallpapers_pack_present():
-                wallpaper_key = "summary_item_wallpapers_existing"
-                wallpaper_color = Colors.BOLD_GREEN
-                wallpaper_icon = "[✓]"
-            elif wallpaper_result and wallpaper_result.fallback_synced:
-                wallpaper_key = "summary_item_wallpapers_fallback"
-                wallpaper_color = Colors.BOLD_YELLOW
-                wallpaper_icon = "[!]"
+            if wallpaper_result is not None:
+                wallpaper_key, wallpaper_color, wallpaper_icon = wallpaper_result.status_line(wallpapers_pack_present())
+            elif wallpapers_pack_present():
+                wallpaper_key, wallpaper_color, wallpaper_icon = "summary_item_wallpapers_existing", Colors.BOLD_GREEN, "[✓]"
             else:
-                wallpaper_key = "summary_item_wallpapers_skip"
-                wallpaper_color = Colors.BOLD_YELLOW
-                wallpaper_icon = "[!]"
+                wallpaper_key, wallpaper_color, wallpaper_icon = "summary_item_wallpapers_skip", Colors.BOLD_YELLOW, "[!]"
             sys.stdout.write(f"    {wallpaper_color}{wallpaper_icon}{Colors.RESET} {msg(wallpaper_key)}\n")
 
         if mode in ("full", "update", "test") and fcitx5_installed():
@@ -310,7 +228,11 @@ def render_completion_screen(
     from nyxniri.deps import run_optional_apps_menu_loop
     focus = 0
     sys.stdout.write(Colors.CURSOR_HIDE)
+    fd = sys.stdin.fileno()
+    stack = ExitStack()
+    stack.enter_context(raw_input_mode(fd))
     try:
+        _drain_pending(fd)
         while True:
             sys.stdout.write(Colors.CLEAR_SCREEN)
             show_logo()
@@ -344,6 +266,8 @@ def render_completion_screen(
             elif key in ("0", "q", "Q", "ESC", "EXIT"):
                 break
     finally:
+        _drain_pending(fd, debounce=True)
+        stack.close()
         sys.stdout.write(Colors.CURSOR_SHOW)
         sys.stdout.flush()
 

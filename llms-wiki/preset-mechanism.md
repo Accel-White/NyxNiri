@@ -68,7 +68,10 @@ theme-sync / gtk 重渲染）。切个 kitty 预设不该顺带跑 fisher，无�
 nyxniri preset <app> list                # 列所有预设，* 标当前活动（list 即 status）
 nyxniri preset <app> apply <name>        # 切预设（apply default = 回默认 = reset）
 nyxniri preset <app> save <name>         # 当前配置存成用户预设（过滤 __custom__）
+nyxniri preset <app> edit <name>         # 在 $EDITOR 里直接改用户预设目录（改完重新 apply 生效）
 nyxniri preset <app> delete <name>       # 删用户预设（官方不能删）
 ```
 
-`save` 拒 `default`（保留字）、拒官方同名（官方优先）。`delete` 同样拒这两类。
+`save` 拒 `default`（保留字）、拒官方同名（官方优先）。`delete` 同样拒这两类。`edit` 也拒这两类
+（官方预设只读）——想改官方预设的口味，先 `apply` 它再 `save` 成用户预设。也可跳过命令，直接
+编辑 `~/.config/NyxNiri/presets/<app>/<name>/` 里的文件，`apply` 即部署。

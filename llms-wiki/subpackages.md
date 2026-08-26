@@ -9,7 +9,7 @@
 nyxniri/
 ├── __init__.py · __main__.py          包入口
 ├── constants.py                        路径 / 包名 / ANSI 色阶常量
-├── core.py                             Environment（run_mode、路径）、锁、日志、CLI 软链、PATH 遮蔽
+├── core.py                             Environment（run_mode、路径）、锁、日志、path 原语（remove_path/copy_path）、CLI 软链、PATH 遮蔽
 ├── i18n.py                             msg() + TRANSLATIONS（zh/en，test_i18n 自动校验）
 ├── tui.py                              Menu / CheckboxList / PresetSwitcher / 原语
 ├── network.py                          git pull / curl（带 connect-timeout + 容错）
@@ -29,11 +29,12 @@ nyxniri/
 │                                       render_completion_screen、deploy_selected_configs、test_deploy
 │
 ├── state/                              状态子包
-│   ├── backup.py                       快照 / 回滚 / 删除（_copy_path、_remove_path 共享工具在此）
+│   ├── backup.py                       快照 / 回滚 / 删除（path 原语 copy_path/remove_path 在 core.py）
 │   └── uninstall.py                    勾选式卸载（模块恢复先于 nyx_dir 删除）
 │
-├── modules/                            可选模块子包（同款 install|status|uninstall 三件套）
+├── modules/                            模块子包（同款 install|status|uninstall 三件套）
 │   ├── fcitx.py                        NyxMellow fcitx5 皮肤（classicui + quickphrase 备份/恢复）
+│   ├── fisher.py                       fisher 插件管理器（部署自动装，亦可单独 status/uninstall）
 │   ├── greeter.py                      Noctalia Greeter（/etc/greetd、polkit、/var/lib）
 │   └── gtktheme.py                     GTK Material You 主题渲染
 │
@@ -54,8 +55,8 @@ nyxniri/
   `fisher_uninstall`、preset 全套（`apply_preset`/`list_presets`/…）、manifest 全套
   （`load_manifest`/`discover_deployable_apps`/`discover_optional_apps`）…
 - `nyxniri.state/__init__`：`backup_configs`、`rollback_configs`、`list_backups`、`delete_backup`、
-  `get_all_backups`、`uninstall_nyxniri`、`_copy_path`、`_remove_path`
-- `nyxniri.modules/__init__`：fcitx/greeter/gtktheme 三件套动词（`fcitx_install`/`greeter_uninstall`/…）
+  `get_all_backups`、`uninstall_nyxniri`（path 原语 `copy_path`/`remove_path` 在 core.py，按需直连）
+- `nyxniri.modules/__init__`：fcitx/fisher/greeter/gtktheme 四件套动词（`fcitx_install`/`fisher_uninstall`/…）
 
 ## Import 约定（两套路径，按场景选）
 
@@ -89,6 +90,6 @@ CLI 的 `greeter`/`fcitx`/`gtk` 命令经 `_module_handler(module_name, triad_na
 - 顶层：`__init__ __main__ cli constants core deps doctor i18n network tui`
 - `deploy/`：`__init__ atomic assets deploy hardware manifest preset templates`
 - `state/`：`__init__ backup uninstall`
-- `modules/`：`__init__ fcitx greeter gtktheme`
+- `modules/`：`__init__ fcitx fisher greeter gtktheme`
 
 缺任何一个 `make install` 前就拦下，避免半残引擎跑起来。

@@ -1,7 +1,6 @@
 """Configuration snapshot, backup, rollback, and uninstallation management."""
 
 import datetime
-import os
 import re
 import shutil
 import sys
@@ -11,43 +10,18 @@ from typing import List, Optional
 
 from nyxniri.constants import Colors, PROJECT_NAME
 from nyxniri.core import (
+    copy_path,
     get_env,
     log_msg,
     register_temp_path,
 )
 from nyxniri.i18n import msg
-from nyxniri.tui import CheckboxEntry, CheckboxList, prompt_confirm, truncate_display
+from nyxniri.tui import CheckboxEntry, CheckboxList, drain_stdin, prompt_confirm, truncate_display
 
 
 _MANAGED_SNAPSHOT_RE = re.compile(
     r"^(?:(?:snapshot|pre_rollback)_\d{8}_\d{6}(?:_\d+){0,2}|dotfiles_backup_.+)$"
 )
-
-
-def _copy_path(src: Path, dest: Path) -> None:
-    """Copy one path while preserving a top-level symlink as a symlink."""
-    if src.is_symlink():
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.unlink(missing_ok=True)
-        dest.symlink_to(os.readlink(src))
-    elif src.is_dir():
-        shutil.copytree(src, dest, symlinks=True)
-    else:
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest)
-
-
-def _remove_path(path: Path) -> None:
-    """Remove a path without following a top-level symlink."""
-    try:
-        if path.is_symlink():
-            path.unlink(missing_ok=True)
-        elif path.is_dir():
-            shutil.rmtree(path, ignore_errors=True)
-        else:
-            path.unlink(missing_ok=True)
-    except OSError:
-        pass
 
 
 def get_backup_base_dir() -> Path:
@@ -79,7 +53,7 @@ def backup_configs(note: str = "", interactive: bool = True) -> Optional[Path]:
         cfg_path = env.config_dir / item
         if cfg_path.exists() or cfg_path.is_symlink():
             target = tmp_dir / item
-            _copy_path(cfg_path, target)
+            copy_path(cfg_path, target)
             if interactive:
                 print(msg("log_backup_item", item))
 
@@ -192,6 +166,7 @@ def rollback_configs(target_arg: str = "") -> bool:
         try:
             sys.stdout.write(msg("select_rollback_target"))
             sys.stdout.flush()
+            drain_stdin()
             val = sys.stdin.readline().strip()
             if not val.isdigit() or not (1 <= int(val) <= len(backups)):
                 print(msg("rollback_invalid_num"))

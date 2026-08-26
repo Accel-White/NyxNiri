@@ -15,6 +15,8 @@ empty, so a half-written state self-heals next run).
 
 import os
 import shutil
+import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -260,4 +262,30 @@ def delete_preset(app: str, name: str) -> bool:
         return False
     shutil.rmtree(target, ignore_errors=True)
     print(msg("preset_deleted", app, name))
+    return True
+
+def edit_preset(app: str, name: str) -> bool:
+    """Open a user preset's directory in $EDITOR (rejects default + official).
+
+    Default is reserved; official presets are repo-owned read-only. Only user
+    presets under ~/.config/NyxNiri/presets/<app>/<name>/ are editable in place;
+    re-running ``apply <name>`` deploys the edits. Non-interactive → hint path.
+    """
+    if name == "default":
+        print(msg("preset_name_reserved", name))
+        return False
+    env = get_env()
+    if (env.configs_src / app / "presets" / name).is_dir():
+        print(msg("preset_edit_official_denied", name))
+        return False
+    target = env.presets_dir / app / name
+    if not target.is_dir():
+        print(msg("preset_not_found", app, name))
+        return False
+    if not sys.stdin.isatty():
+        print(msg("preset_edit_notty", target))
+        return False
+    editor = os.environ.get("EDITOR") or os.environ.get("VISUAL") or "nano"
+    subprocess.run([editor, str(target)], check=False)
+    print(msg("preset_edit_opened", app, name))
     return True

@@ -18,6 +18,15 @@ def set_lang(lang: str) -> None:
     _CURRENT_LANG = "zh" if lang.startswith("zh") else "en"
     _MSG_CACHE.clear()
 
+def text(zh: str, en: str) -> str:
+    """Pick a one-off bilingual string by active language.
+
+    Escape hatch for diagnostic/status lines not worth a TRANSLATIONS entry
+    (``msg()`` remains the default for keyed strings). Centralizes the per-module
+    ``_text()`` copies that had spread across doctor/fcitx/greeter/gtktheme.
+    """
+    return zh if get_lang() == "zh" else en
+
 TRANSLATIONS: Dict[str, Dict[str, str]] = {
     # Status badges
     "installed": {
@@ -852,6 +861,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "zh": f"\n{Colors.BOLD_CYAN}:: Noctalia Greeter 状态检查{Colors.RESET}",
         "en": f"\n{Colors.BOLD_CYAN}:: Noctalia Greeter status{Colors.RESET}",
     },
+    "fisher_status_title": {
+        "zh": f"\n{Colors.BOLD_CYAN}:: fisher 插件管理器状态{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_CYAN}:: fisher plugin manager status{Colors.RESET}",
+    },
     "greeter_status_ok": {
         "zh": f"{Colors.BOLD_GREEN}[✓] Greeter 已就绪{Colors.RESET}",
         "en": f"{Colors.BOLD_GREEN}[✓] Greeter ready{Colors.RESET}",
@@ -1078,10 +1091,11 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
   theme [toggle|dark|light|sync|status]  切换或同步深浅主题
   bug | report                       导出诊断报告
   test                               执行开发者沙箱部署测试
-  preset <app> [list|apply <name>|save <name>|delete <name>]  切换或管理预设
+  preset <app> [list|apply <name>|save <name>|edit <name>|delete <name>]  切换或管理预设
   greeter [install|status|uninstall] 管理 Noctalia Greeter
   fcitx [install|status|uninstall]   管理 NyxMellow fcitx5 皮肤
   gtk [install|status|uninstall]     管理 GTK Material You 主题
+  fisher [install|status|uninstall] 管理 fisher 插件管理器
   help                               显示本帮助
   无参数                             打开交互式控制面板""",
         "en": """{0} dotfiles manager ({1})
@@ -1103,10 +1117,11 @@ Commands:
   theme [toggle|dark|light|sync|status]  Switch or sync light/dark theme
   bug | report                       Export a diagnostic report
   test                               Run the developer sandbox deploy
-  preset <app> [list|apply <name>|save <name>|delete <name>]  Switch or manage presets
+  preset <app> [list|apply <name>|save <name>|edit <name>|delete <name>]  Switch or manage presets
   greeter [install|status|uninstall] Manage Noctalia Greeter
   fcitx [install|status|uninstall]   Manage the NyxMellow fcitx5 skin
   gtk [install|status|uninstall]     Manage the GTK Material You theme
+  fisher [install|status|uninstall] Manage the fisher plugin manager
   help                               Show this help
   no arguments                       Open the interactive control panel""",
     },
@@ -1465,6 +1480,18 @@ Commands:
     "preset_deleted": {
         "zh": f"  {Colors.BOLD_GREEN}[✓]{Colors.RESET} 已删除 {{0}} 用户预设: {{1}}",
         "en": f"  {Colors.BOLD_GREEN}[✓]{Colors.RESET} Deleted {{0}} user preset: {{1}}",
+    },
+    "preset_edit_official_denied": {
+        "zh": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} '{{0}}' 是官方预设，不能编辑（先 save 成用户预设再改）",
+        "en": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} '{{0}}' is an official preset, can't edit (save a copy first)",
+    },
+    "preset_edit_notty": {
+        "zh": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} 非交互终端，无法打开编辑器。预设目录: {{0}}",
+        "en": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} Non-interactive terminal, can't open editor. Preset dir: {{0}}",
+    },
+    "preset_edit_opened": {
+        "zh": f"  {Colors.BOLD_GREEN}[✓]{Colors.RESET} 已在编辑器打开 {{0}} 预设 {{1}}\n  {Colors.DIM}改完重新 `nyxniri preset {{0}} apply {{1}}` 即生效{Colors.RESET}",
+        "en": f"  {Colors.BOLD_GREEN}[✓]{Colors.RESET} Opened {{0}} preset {{1}} in editor\n  {Colors.DIM}Re-run `nyxniri preset {{0}} apply {{1}}` to apply edits{Colors.RESET}",
     },
     "preset_warn_upstream_removed": {
         "zh": f"{Colors.BOLD_YELLOW}[!] {{0}}: 原预设 '{{1}}' 已被上游移除，已回退默认配置{Colors.RESET}",

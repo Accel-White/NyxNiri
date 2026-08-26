@@ -89,8 +89,8 @@ engine_is_complete() {
     for module in __init__ backup uninstall; do
         [ -f "$target_dir/nyxniri/state/$module.py" ] || return 1
     done
-    # modules/ subpackage (fcitx · greeter · gtktheme)
-    for module in __init__ fcitx greeter gtktheme; do
+    # modules/ subpackage (fcitx · fisher · greeter · gtktheme)
+    for module in __init__ fcitx fisher greeter gtktheme; do
         [ -f "$target_dir/nyxniri/modules/$module.py" ] || return 1
     done
     [ -f "$target_dir/configs/niri/config.kdl" ] \

@@ -9,11 +9,8 @@ from pathlib import Path
 
 from nyxniri.constants import Colors, FCITX_THEME, PROJECT_NAME, THEME_ENGINE
 from nyxniri.core import get_env, log_msg
-from nyxniri.i18n import get_lang, msg
+from nyxniri.i18n import msg, text
 
-
-def _text(zh: str, en: str) -> str:
-    return zh if get_lang() == "zh" else en
 
 def _fcitx_paths():
     env = get_env()
@@ -264,9 +261,9 @@ def fcitx_status() -> None:
     print(msg("fcitx_status_title"))
 
     if fcitx5_installed():
-        print(msg("doctor_ok", _text("fcitx5: 已安装", "fcitx5: installed")))
+        print(msg("doctor_ok", text("fcitx5: 已安装", "fcitx5: installed")))
     else:
-        print(msg("doctor_warn", _text("fcitx5: 未安装", "fcitx5: not installed")))
+        print(msg("doctor_warn", text("fcitx5: 未安装", "fcitx5: not installed")))
 
     if fcitx_templates_registered():
         print(msg("fcitx_registered", str(noctalia_conf)))
@@ -274,16 +271,16 @@ def fcitx_status() -> None:
         print(msg("fcitx_not_registered", str(noctalia_conf)))
 
     if theme_dir.is_dir():
-        print(msg("doctor_ok", _text(f"主题目录: {theme_dir}", f"Theme directory: {theme_dir}")))
+        print(msg("doctor_ok", text(f"主题目录: {theme_dir}", f"Theme directory: {theme_dir}")))
         if (theme_dir / "theme.conf").is_file() and (theme_dir / "panel.svg").is_file() and (theme_dir / "highlight.svg").is_file():
-            print(msg("doctor_ok", _text("渲染文件: 已生成并跟随 Noctalia 配色", "Rendered files: present and following Noctalia colors")))
+            print(msg("doctor_ok", text("渲染文件: 已生成并跟随 Noctalia 配色", "Rendered files: present and following Noctalia colors")))
         else:
-            print(msg("doctor_warn", _text(
+            print(msg("doctor_warn", text(
                 f"渲染文件缺失；请运行 {THEME_ENGINE} msg config-reload 或 nyxniri fcitx install",
                 f"Rendered files are missing; run {THEME_ENGINE} msg config-reload or nyxniri fcitx install",
             )))
     else:
-        print(msg("doctor_warn", _text(f"主题目录缺失: {theme_dir}", f"Theme directory is missing: {theme_dir}")))
+        print(msg("doctor_warn", text(f"主题目录缺失: {theme_dir}", f"Theme directory is missing: {theme_dir}")))
 
     if classicui.is_file():
         try:
@@ -296,7 +293,7 @@ def fcitx_status() -> None:
         except Exception:
             pass
     else:
-        print(msg("doctor_warn", _text("classicui.conf: 缺失", "classicui.conf: missing")))
+        print(msg("doctor_warn", text("classicui.conf: 缺失", "classicui.conf: missing")))
 
 def fcitx_uninstall() -> bool:
     """Uninstall NyxMellow skin, unregister templates, and revert classicui settings."""

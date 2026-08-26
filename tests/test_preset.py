@@ -352,5 +352,43 @@ class TestPresetSwitcher(unittest.TestCase):
         self.assertIsNone(sw.run())
 
 
+class TestEditPreset(unittest.TestCase):
+    """edit_preset: rejects default/official/missing; opens editor on a user preset."""
+
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+        self.env = self._ctx.env
+
+    def tearDown(self):
+        self._ctx.__exit__()
+
+    def test_rejects_default(self):
+        self.assertFalse(preset.edit_preset("kitty", "default"))
+
+    def test_rejects_official(self):
+        # 'transparent' is a shipped official preset — read-only.
+        self.assertFalse(preset.edit_preset("kitty", "transparent"))
+
+    def test_rejects_missing(self):
+        self.assertFalse(preset.edit_preset("kitty", "ghost"))
+
+    def test_non_tty_hints_path(self):
+        target = self.env.presets_dir / "kitty" / "mine"
+        target.mkdir(parents=True)
+        with patch("sys.stdin.isatty", return_value=False), patch("builtins.print"):
+            self.assertFalse(preset.edit_preset("kitty", "mine"))
+
+    def test_opens_editor_on_user_preset(self):
+        target = self.env.presets_dir / "kitty" / "mine"
+        target.mkdir(parents=True)
+        (target / "kitty.conf").write_text("# mine")
+        with patch("sys.stdin.isatty", return_value=True), \
+             patch.dict("os.environ", {"EDITOR": "myed"}), \
+             patch.object(preset.subprocess, "run") as mock_run:
+            self.assertTrue(preset.edit_preset("kitty", "mine"))
+        mock_run.assert_called_once_with(["myed", str(target)], check=False)
+
+
 if __name__ == "__main__":
     unittest.main()

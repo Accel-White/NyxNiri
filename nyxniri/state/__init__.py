@@ -1,8 +1,9 @@
 """State management — configuration snapshots and uninstall.
 
 backup: snapshot / rollback / delete (the "save state" verbs).
-uninstall: checkbox-style removal (§8). Re-exports keep external imports
-shallow (§13).
+uninstall: checkbox-style removal (§8). Path primitives copy_path /
+remove_path live in core (shared with deploy.atomic); re-exports here keep
+external imports shallow (§13).
 """
 
 from nyxniri.state.backup import (
@@ -12,8 +13,6 @@ from nyxniri.state.backup import (
     delete_backup,
     get_all_backups,
     get_backup_base_dir,
-    _copy_path,
-    _remove_path,
 )
 from nyxniri.state.uninstall import uninstall_nyxniri
 

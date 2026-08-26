@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from nyxniri.core import get_env, log_msg, register_temp_path
+from nyxniri.core import get_env, log_msg, register_temp_path, remove_path
 from nyxniri.i18n import msg
 
 
@@ -51,12 +51,12 @@ def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]
                 old_dest = dest.with_name(f"{dest.name}.old.{pid}")
                 dest.rename(old_dest)
                 tmp_file.rename(dest)
-                _remove_path(old_dest)
+                remove_path(old_dest)
             else:
                 tmp_file.rename(dest)
             return True
         except Exception as e:
-            _remove_path(tmp_file)
+            remove_path(tmp_file)
             if old_dest is not None and old_dest.exists():
                 try:
                     old_dest.rename(dest)
@@ -71,7 +71,7 @@ def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]
     try:
         dest_parent.mkdir(parents=True, exist_ok=True)
         if tmp_new.exists() or tmp_new.is_symlink():
-            _remove_path(tmp_new)
+            remove_path(tmp_new)
         shutil.copytree(src, tmp_new, symlinks=True, ignore=_deploy_ignore_factory(src))
 
         # Dunder Protocol: Scan and inherit *__custom__* files and directories
@@ -121,7 +121,7 @@ def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]
             dest.rename(old_dest)
             try:
                 tmp_new.rename(dest)
-                _remove_path(old_dest)
+                remove_path(old_dest)
             except Exception:
                 old_dest.rename(dest)
                 raise
@@ -130,22 +130,9 @@ def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]
             tmp_new.rename(dest)
             return True
     except Exception as e:
-        _remove_path(tmp_new)
+        remove_path(tmp_new)
         log_msg("ERROR", f"Atomic replace failed for directory {dest}: {e}")
         return False
-
-
-def _remove_path(path: Path) -> None:
-    """Remove a path without following a top-level symlink."""
-    try:
-        if path.is_symlink():
-            path.unlink(missing_ok=True)
-        elif path.is_dir():
-            shutil.rmtree(path, ignore_errors=True)
-        else:
-            path.unlink(missing_ok=True)
-    except OSError:
-        pass
 
 
 def _snapshot_preserved(dest: Path, preserve: List[str]) -> List[Tuple[str, Path]]:

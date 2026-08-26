@@ -182,5 +182,51 @@ class TestWallpaperNoClobber(unittest.TestCase):
             shutil.rmtree(fake_clone, ignore_errors=True)
 
 
+class TestWallpaperStatus(unittest.TestCase):
+    """WallpaperDeployResult.status_line: each outcome → (key, color, icon) shape."""
+
+    def _r(self, **kw):
+        from nyxniri.deploy.assets import WallpaperDeployResult
+        base = dict(download_attempted=False, downloaded=False,
+                    pack_present=False, fallback_synced=False)
+        base.update(kw)
+        return WallpaperDeployResult(**base)
+
+    def test_downloaded(self):
+        k, c, i = self._r(downloaded=True).status_line(False)
+        self.assertEqual(k, "summary_item_wallpapers_downloaded")
+        self.assertEqual(i, "[✓]")
+
+    def test_refresh_failed(self):
+        k, _, _ = self._r(download_attempted=True, downloaded=False, pack_present=True).status_line(False)
+        self.assertEqual(k, "summary_item_wallpapers_refresh_failed")
+
+    def test_failed_with_fallback(self):
+        k, _, _ = self._r(download_attempted=True, downloaded=False, fallback_synced=True).status_line(False)
+        self.assertEqual(k, "summary_item_wallpapers_failed_fallback")
+
+    def test_failed_no_pack(self):
+        k, _, i = self._r(download_attempted=True, downloaded=False).status_line(False)
+        self.assertEqual(k, "summary_item_wallpapers_failed")
+        self.assertEqual(i, "[✗]")
+
+    def test_existing_from_result(self):
+        k, _, _ = self._r(pack_present=True).status_line(False)
+        self.assertEqual(k, "summary_item_wallpapers_existing")
+
+    def test_existing_from_disk_probe(self):
+        # result silent about pack, but live disk says present → existing
+        k, _, _ = self._r().status_line(True)
+        self.assertEqual(k, "summary_item_wallpapers_existing")
+
+    def test_fallback_only(self):
+        k, _, _ = self._r(fallback_synced=True).status_line(False)
+        self.assertEqual(k, "summary_item_wallpapers_fallback")
+
+    def test_skip(self):
+        k, _, _ = self._r().status_line(False)
+        self.assertEqual(k, "summary_item_wallpapers_skip")
+
+
 if __name__ == "__main__":
     unittest.main()

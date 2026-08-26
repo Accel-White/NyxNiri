@@ -17,6 +17,13 @@ from nyxniri.modules.fcitx import (
     fcitx_restart,
     fcitx_trigger_render,
 )
+from nyxniri.modules.fisher import (
+    fisher_installed,
+    fisher_status_label,
+    fisher_install,
+    fisher_status,
+    fisher_uninstall,
+)
 from nyxniri.modules.greeter import (
     greeter_installed,
     greeter_install,
@@ -38,6 +45,8 @@ __all__ = [
     "fcitx_status_label", "fcitx_uninstall", "fcitx_configure_quickphrase",
     "fcitx_backup_quickphrase", "fcitx_templates_registered", "fcitx_restart",
     "fcitx_trigger_render",
+    "fisher_installed", "fisher_status_label", "fisher_install", "fisher_status",
+    "fisher_uninstall",
     "greeter_installed", "greeter_install", "greeter_status",
     "greeter_status_label", "greeter_uninstall",
     "gtktheme_registered", "gtktheme_rendered", "gtktheme_trigger_render",

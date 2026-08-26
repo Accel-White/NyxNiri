@@ -52,7 +52,7 @@ class TestUninstallNonInteractive(unittest.TestCase):
                     with patch("nyxniri.state.uninstall.get_all_backups", return_value=[]):
                         with patch("nyxniri.modules.fcitx.fcitx_uninstall"):
                             with patch("nyxniri.modules.greeter.greeter_uninstall"):
-                                with patch("nyxniri.state.uninstall._remove_path"):
+                                with patch("nyxniri.state.uninstall.remove_path"):
                                     with patch("nyxniri.state.uninstall.get_pics_dir", return_value=self.env.home / "Pictures"):
                                         result = uninstall_nyxniri("purge")
 
@@ -75,7 +75,7 @@ class TestModeAliases(unittest.TestCase):
         from nyxniri.state.uninstall import uninstall_nyxniri
 
         with patch("sys.stdin.isatty", return_value=False), patch("builtins.print"), \
-             patch("nyxniri.state.uninstall._copy_path"), patch("nyxniri.state.uninstall._remove_path"):
+             patch("nyxniri.state.uninstall.copy_path"), patch("nyxniri.state.uninstall.remove_path"):
             with patch("nyxniri.modules.fcitx.fcitx5_installed", return_value=False), \
                  patch("nyxniri.modules.gtktheme.gtktheme_registered", return_value=False), \
                  patch("nyxniri.modules.greeter.greeter_installed", return_value=False):
@@ -93,7 +93,7 @@ class TestModeAliases(unittest.TestCase):
                     with patch("nyxniri.state.uninstall.get_all_backups", return_value=[]):
                         with patch("nyxniri.modules.fcitx.fcitx_uninstall"):
                             with patch("nyxniri.modules.greeter.greeter_uninstall"):
-                                with patch("nyxniri.state.uninstall._remove_path"):
+                                with patch("nyxniri.state.uninstall.remove_path"):
                                     with patch("nyxniri.state.uninstall.get_pics_dir", return_value=self.env.home / "Pictures"):
                                         result = uninstall_nyxniri("3")
                                         self.assertTrue(result)

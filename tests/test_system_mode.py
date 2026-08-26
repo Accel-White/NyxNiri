@@ -5,12 +5,15 @@ PATH occlusion warning, safe_git_pull system branch, and ensure_nyxniri_symlink
 no-op in system mode.
 """
 
+import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 import nyxniri.core as core
+import nyxniri.tui as tui
 from tests.utils import TempEnv
 
 
@@ -122,6 +125,62 @@ class TestSafeGitPullSystemBranch(unittest.TestCase):
              patch("builtins.print"):
             result = safe_git_pull(self._ctx.env.repo_dir)
         self.assertIsNone(result, "system mode must skip git pull (return None)")
+
+
+class TestRemovePath(unittest.TestCase):
+    """core.remove_path: symlink-to-dir is unlinked, not rmtree'd through the link.
+
+    Regression guard for the cleanup_temp_paths latent bug (is_dir() follows the
+    link → would delete the target's contents). The symlink check precedes is_dir().
+    """
+
+    def test_symlink_to_dir_unlinks_link_not_target(self):
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t)
+            target_dir = root / "real"
+            target_dir.mkdir()
+            (target_dir / "file").write_text("payload")
+            link = root / "link"
+            link.symlink_to(target_dir)
+            core.remove_path(link)
+            self.assertFalse(link.exists(), "symlink must be removed")
+            self.assertTrue(target_dir.is_dir(), "target dir must survive (link not followed)")
+            self.assertTrue((target_dir / "file").exists(), "target contents must survive")
+
+    def test_regular_dir_removed(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t) / "sub"
+            d.mkdir()
+            (d / "f").write_text("x")
+            core.remove_path(d)
+            self.assertFalse(d.exists())
+
+    def test_missing_path_is_noop(self):
+        # Must not raise on a path that does not exist.
+        core.remove_path(Path("/nonexistent/nyxniri-does-not-exist"))
+
+
+class TestRawInputMode(unittest.TestCase):
+    """raw_input_mode no-ops on non-tty stdin (tests rely on this); drain discards bytes."""
+
+    def test_noop_on_non_tty_stdin(self):
+        # Real stdin in tests isn't a tty; raw_input_mode must not call tcsetattr
+        # and must not raise. PresetSwitcher/Menu tests depend on this (they mock
+        # isatty=True + read_key, and the real fd fails tcgetattr → silent skip).
+        with tui.raw_input_mode(sys.stdin.fileno()):
+            pass
+        # reaching here without raising is the contract
+        self.assertTrue(True)
+
+    def test_drain_pending_discards_pipe_bytes(self):
+        r, w = os.pipe()
+        os.write(w, b"abc")
+        os.close(w)
+        tui._drain_pending(r)  # must drain "abc" without blocking, then return at EOF
+        self.assertEqual(os.read(r, 64), b"")  # fully drained (EOF)
+
+    def test_drain_stdin_noop_on_non_tty(self):
+        tui.drain_stdin()  # guarded by isatty() → no-op, no raise/block
 
 
 if __name__ == "__main__":

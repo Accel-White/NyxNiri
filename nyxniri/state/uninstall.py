@@ -1,6 +1,6 @@
 """Checkbox-style uninstall (§8): the user picks what to remove.
 
-Shared path utilities (_copy_path, _remove_path) and snapshot lookup
+Shared path primitives (copy_path, remove_path from core) and snapshot lookup
 (get_all_backups, rollback_configs) come from state.backup — the legacy
 'restore' mode folds into rollback. Execution order (§8.6): module
 uninstallers first (fcitx reads .prev in state_dir), then user-territory
@@ -12,16 +12,16 @@ import sys
 from pathlib import Path
 
 from nyxniri.constants import CLI_CMD, PROJECT_NAME
-from nyxniri.core import get_env, get_pics_dir, log_msg
+from nyxniri.core import get_env, get_pics_dir, log_msg, copy_path, remove_path
 from nyxniri.i18n import msg
-from nyxniri.tui import CheckboxEntry, CheckboxList, prompt_confirm
-from nyxniri.state.backup import _copy_path, _remove_path, get_all_backups, rollback_configs
+from nyxniri.tui import CheckboxEntry, CheckboxList, drain_stdin, prompt_confirm
+from nyxniri.state.backup import get_all_backups, rollback_configs
 
 
 def _rm_report(path: Path) -> None:
     """Remove a path and print a result line ([✓] removed / [!] skipped)."""
     if path.is_symlink() or path.exists():
-        _remove_path(path)
+        remove_path(path)
         print(msg("uninstall_removed", str(path)))
     else:
         print(msg("uninstall_skipped", str(path)))
@@ -35,8 +35,9 @@ def uninstall_nyxniri(mode: str = "") -> bool:
     non-interactive = all selected. Legacy 'restore' rolls back to the origin
     snapshot (folded into `nyxniri rollback`).
     """
-    from nyxniri.deploy.deploy import discover_config_items, fisher_uninstall
+    from nyxniri.deploy.deploy import discover_config_items
     from nyxniri.modules.fcitx import fcitx5_installed, fcitx_uninstall
+    from nyxniri.modules.fisher import fisher_installed, fisher_uninstall
     from nyxniri.modules.greeter import greeter_installed, greeter_uninstall
     from nyxniri.modules.gtktheme import gtktheme_registered, gtktheme_uninstall
 
@@ -63,7 +64,7 @@ def uninstall_nyxniri(mode: str = "") -> bool:
     has_fcitx = fcitx5_installed()
     has_gtk = gtktheme_registered()
     has_greeter = greeter_installed()
-    has_fisher = (env.config_dir / "fish" / "functions" / "fisher.fish").is_file()
+    has_fisher = fisher_installed()
 
     # --- Build checkbox entries (defaults = standard scope) ---
     entries = [
@@ -122,6 +123,11 @@ def uninstall_nyxniri(mode: str = "") -> bool:
     # delete the archive we just created.
     existing_archives = sorted(env.config_dir.glob(f"{PROJECT_NAME}_archive_*"))
 
+    # Drain the confirming Enter's residue + any held-repeat burst before any
+    # module uninstaller runs — greeter's sudo reads /dev/tty directly (bypassing
+    # read_key), so stale \r would feed its password prompt as bad input.
+    drain_stdin()
+
     # 1. Module uninstallers FIRST — fcitx reads .prev in state_dir; greeter's
     #    sudo restore+rm runs here. nyx_dir/state must outlive these.
     for key, fn, label in (
@@ -149,8 +155,8 @@ def uninstall_nyxniri(mode: str = "") -> bool:
             p = env.config_dir / item
             if p.exists() or p.is_symlink():
                 if archive_dir is not None:
-                    _copy_path(p, archive_dir / item)
-                _remove_path(p)
+                    copy_path(p, archive_dir / item)
+                remove_path(p)
                 print(msg("log_remove_item", item))
         if archive_dir is not None:
             print(msg("uninstall_archived", str(archive_dir)))
@@ -158,7 +164,7 @@ def uninstall_nyxniri(mode: str = "") -> bool:
     # 3. nyx_dir (~/.config/NyxNiri/: snapshots + presets) + legacy ~/.config/ snapshots.
     if "nyx_dir" in selected:
         for backup in get_all_backups():
-            _remove_path(backup)
+            remove_path(backup)
         _rm_report(env.config_dir / PROJECT_NAME)
 
     # 4. Archives (~/.config/NyxNiri_archive_*) — gap #1 fix. Only pre-existing
