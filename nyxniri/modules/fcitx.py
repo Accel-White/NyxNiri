@@ -126,8 +126,43 @@ def fcitx_configure_quickphrase() -> None:
     """Configure QuickPhrase hotkey in quickphrase.conf."""
     env = get_env()
     qp_conf = env.config_dir / "fcitx5" / "conf" / "quickphrase.conf"
+    fcitx_backup_quickphrase()
     _update_ini_file(qp_conf, "Hotkey", "TriggerKey", "Super+semicolon")
     _update_ini_file(qp_conf, "Hotkey", "AlternativeTriggerKey", "")
+
+def fcitx_backup_quickphrase() -> None:
+    """Save prior QuickPhrase hotkeys before NyxNiri overrides them.
+
+    Mirrors fcitx_backup_theme_settings: an Existed= flag distinguishes
+    'file didn't exist' (uninstall deletes it) from 'existed with other hotkeys'
+    (uninstall restores the saved lines). Idempotent.
+    """
+    env = get_env()
+    qp_conf = env.config_dir / "fcitx5" / "conf" / "quickphrase.conf"
+    state = env.state_dir / f"fcitx-{FCITX_THEME}-quickphrase.prev"
+    state.parent.mkdir(parents=True, exist_ok=True)
+    if state.is_file():
+        return
+
+    existed = 0
+    tk, atk = "", ""
+    if qp_conf.is_file():
+        existed = 1
+        try:
+            content = qp_conf.read_text(encoding="utf-8", errors="ignore")
+            m_tk = re.search(r"^TriggerKey=(.*)", content, re.MULTILINE)
+            if m_tk:
+                tk = m_tk.group(1).strip()
+            m_atk = re.search(r"^AlternativeTriggerKey=(.*)", content, re.MULTILINE)
+            if m_atk:
+                atk = m_atk.group(1).strip()
+        except Exception:
+            pass
+
+    state.write_text(
+        f"Existed={existed}\nTriggerKey={tk}\nAlternativeTriggerKey={atk}\n",
+        encoding="utf-8",
+    )
 
 def fcitx_restart() -> None:
     """Restart running fcitx5 daemon to load updated skin."""
@@ -314,6 +349,36 @@ def fcitx_uninstall() -> bool:
         except Exception:
             pass
         state_file.unlink(missing_ok=True)
+
+    # Revert quickphrase.conf (same backup/restore mechanism as classicui)
+    env = get_env()
+    qp_conf = env.config_dir / "fcitx5" / "conf" / "quickphrase.conf"
+    qp_state = env.state_dir / f"fcitx-{FCITX_THEME}-quickphrase.prev"
+    if qp_state.is_file():
+        try:
+            qs = qp_state.read_text(encoding="utf-8")
+            m_ex = re.search(r"^Existed=(.*)", qs, re.MULTILINE)
+            m_tk = re.search(r"^TriggerKey=(.*)", qs, re.MULTILINE)
+            m_atk = re.search(r"^AlternativeTriggerKey=(.*)", qs, re.MULTILINE)
+            existed = m_ex.group(1).strip() if m_ex else "0"
+            tk = m_tk.group(1).strip() if m_tk else ""
+            atk = m_atk.group(1).strip() if m_atk else ""
+            if existed != "1":
+                qp_conf.unlink(missing_ok=True)
+            elif qp_conf.is_file():
+                content = qp_conf.read_text(encoding="utf-8")
+                if tk:
+                    content = re.sub(r"^TriggerKey=.*", f"TriggerKey={tk}", content, flags=re.MULTILINE)
+                else:
+                    content = re.sub(r"^TriggerKey=.*\n?", "", content, flags=re.MULTILINE)
+                if atk:
+                    content = re.sub(r"^AlternativeTriggerKey=.*", f"AlternativeTriggerKey={atk}", content, flags=re.MULTILINE)
+                else:
+                    content = re.sub(r"^AlternativeTriggerKey=.*\n?", "", content, flags=re.MULTILINE)
+                qp_conf.write_text(content, encoding="utf-8")
+        except Exception:
+            pass
+        qp_state.unlink(missing_ok=True)
 
     enabled_marker.unlink(missing_ok=True)
     fcitx_restart()

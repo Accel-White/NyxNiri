@@ -211,14 +211,14 @@ def _check_disk_space(env) -> None:
 
 def _check_fcitx_skin(env) -> None:
     if shutil.which("fcitx5") or (env.config_dir / "fcitx5" / "conf" / "classicui.conf").is_file():
-        from nyxniri.fcitx import fcitx_enabled
+        from nyxniri.modules.fcitx import fcitx_enabled
         if fcitx_enabled():
             print(msg("doctor_ok", _text("Fcitx5: NyxMellow 皮肤已启用", "Fcitx5: NyxMellow skin is enabled")))
         else:
             print(msg("doctor_warn", _text(f"Fcitx5: {FCITX_THEME} 皮肤未启用", f"Fcitx5: {FCITX_THEME} skin not enabled")))
 
 def _check_gtk_theme(env) -> None:
-    from nyxniri.gtktheme import gtktheme_registered, gtktheme_rendered
+    from nyxniri.modules.gtktheme import gtktheme_registered, gtktheme_rendered
     if gtktheme_rendered():
         print(msg("doctor_ok", _text("GTK 主题: 已渲染并跟随壁纸", "GTK theme: rendered, following wallpaper")))
     elif gtktheme_registered():
@@ -239,8 +239,36 @@ def _check_vm(env) -> None:
             pass
 
 def _check_greeter(env) -> None:
-    from nyxniri.greeter import greeter_status
+    from nyxniri.modules.greeter import greeter_status
     greeter_status()
+
+
+def _check_path_occlusion(env) -> None:
+    """System mode only: warn if a user-territory link shadows the package."""
+    from nyxniri.core import check_path_occlusion
+    if env.run_mode == "system":
+        check_path_occlusion()
+
+
+def _check_preset_drift(env) -> None:
+    """Warn if an app's active preset is no longer in repo or user presets.
+
+    Lets users catch 'your kitty transparent preset was removed upstream' even
+    without running update — the dest is frozen, but doctor surfaces it. §11
+    """
+    from nyxniri.deploy import discover_config_items
+    from nyxniri.deploy import read_active_preset
+    for app in discover_config_items():
+        active = read_active_preset(app)
+        if active == "default":
+            continue
+        official = env.configs_src / app / "presets" / active
+        user = env.presets_dir / app / active
+        if not official.is_dir() and not user.is_dir():
+            print(msg("doctor_warn", _text(
+                f"{app}: 活动预设 '{active}' 已不在仓库（~/.config/{app} 已冻结，未重新部署）",
+                f"{app}: active preset '{active}' is gone from the repo (~/.config/{app} frozen, not redeployed)",
+            )))
 
 
 # Ordered registry of all health checks.
@@ -267,6 +295,8 @@ DOCTOR_CHECKS = [
     _check_gtk_theme,
     _check_vm,
     _check_greeter,
+    _check_path_occlusion,
+    _check_preset_drift,
 ]
 
 def run_doctor() -> bool:
@@ -364,7 +394,7 @@ def generate_bug_report() -> Optional[Path]:
     except Exception:
         pass
     if shutil.which("fcitx5") or (env.config_dir / "fcitx5" / "conf" / "classicui.conf").is_file():
-        from nyxniri.fcitx import fcitx_enabled
+        from nyxniri.modules.fcitx import fcitx_enabled
         health_lines.append(f"fcitx5 nyxmellow: {'enabled' if fcitx_enabled() else 'NOT enabled'}")
     health_checks = "\n".join(health_lines)
 

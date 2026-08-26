@@ -42,6 +42,22 @@ def cleanup_temp_paths() -> None:
 atexit.register(cleanup_temp_paths)
 
 # --- Path Resolution & Environment Context ---
+def _detect_run_mode(root_dir: Path, cache_dir: Path):
+    """Decide (run_mode, mode_label, repo_dir) from the package's root_dir.
+
+    §5.2 — "where you run it is the mode it is". The .system-install marker wins
+    first so a system package at /usr/share/nyxniri (which also ships configs/
+    + assets/) is not mis-detected as 'repo'.
+    """
+    if (root_dir / ".system-install").is_file():
+        return ("system", "System Package", root_dir)
+    if root_dir.resolve() == cache_dir.resolve():
+        return ("standalone", "Remote Cache", cache_dir)
+    if (root_dir / CONFIG_DIR_NAME).is_dir() and (root_dir / ASSETS_DIR_NAME).is_dir():
+        return ("repo", "Local Path", root_dir)
+    return ("standalone", "Remote Cache", cache_dir)
+
+
 class Environment:
     def __init__(self):
         self.home = Path(os.environ.get("HOME", str(Path.home())))
@@ -49,26 +65,20 @@ class Environment:
         self.cache_dir = self.home / ".cache" / PROJECT_NAME
         self.config_dir = self.home / ".config"
 
-        # Discover execution location & mode
+        # Discover execution location & mode. §5.2: the .system-install marker
+        # is checked first — a system package under /usr/share/nyxniri also has
+        # configs/+assets/ and would otherwise mis-detect as 'repo'.
         current_file = Path(__file__).resolve()
         pkg_dir = current_file.parent
         root_dir = pkg_dir.parent
-
-        if root_dir.resolve() == self.cache_dir.resolve():
-            self.run_mode = "standalone"
-            self.mode_label = "Remote Cache"
-            self.repo_dir = self.cache_dir
-        elif (root_dir / CONFIG_DIR_NAME).is_dir() and (root_dir / ASSETS_DIR_NAME).is_dir():
-            self.run_mode = "repo"
-            self.mode_label = "Local Path"
-            self.repo_dir = root_dir
-        else:
-            self.run_mode = "standalone"
-            self.mode_label = "Remote Cache"
-            self.repo_dir = self.cache_dir
+        self.run_mode, self.mode_label, self.repo_dir = _detect_run_mode(root_dir, self.cache_dir)
 
         self.configs_src = self.repo_dir / CONFIG_DIR_NAME
         self.assets_src = self.repo_dir / ASSETS_DIR_NAME
+        # NyxNiri's own home under ~/.config: backups, presets, active state.
+        # (state_dir holds runtime transient; nyx_dir holds user data — §10.4)
+        self.nyx_dir = self.config_dir / PROJECT_NAME
+        self.presets_dir = self.nyx_dir / "presets"
         self.version = get_version(self.repo_dir)
 
 _ENV: Optional[Environment] = None
@@ -232,8 +242,17 @@ def log_msg(level: str, message: str) -> None:
 
 # --- CLI Binary Symlink ---
 def ensure_nyxniri_symlink() -> None:
-    """Ensure ~/.local/bin/nyxniri points to install.sh."""
+    """Ensure ~/.local/bin/nyxniri points to install.sh.
+
+    In system mode the package owns /usr/bin/nyxniri and must not touch the
+    user's ~/.local/bin/nyxniri (§5.3). A stale user link shadowing the system
+    package is surfaced separately by check_path_occlusion().
+    """
     env = get_env()
+    if env.run_mode == "system":
+        # Package owns the CLI entry; do not (re)create a user-territory link.
+        return
+
     bin_dir = env.home / ".local/bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
     target_bin = bin_dir / CLI_CMD
@@ -252,3 +271,24 @@ def ensure_nyxniri_symlink() -> None:
         root_installer.chmod(0o755)
     except Exception:
         pass
+
+
+def check_path_occlusion() -> bool:
+    """In system mode, warn if ~/.local/bin/nyxniri shadows /usr/bin/nyxniri.
+
+    ~/.local/bin precedes /usr/bin on PATH, so a stale user link (left from a
+    prior curl/git install) silently overrides the system package — the user
+    would be running old code while thinking pacman updates them. This check
+    is called at the top of update/doctor for a persistent reminder (§5.3).
+    Returns True if an occlusion was reported.
+    """
+    env = get_env()
+    if env.run_mode != "system":
+        return False
+    user_link = env.home / ".local/bin" / CLI_CMD
+    if user_link.is_symlink() or user_link.exists():
+        from nyxniri.i18n import msg
+        print(msg("path_occlusion_warn"))
+        log_msg("WARN", "User-territory nyxniri link shadows the system package")
+        return True
+    return False

@@ -13,6 +13,7 @@ from nyxniri.constants import (
     GREETER_PKG,
     GREETER_POLKIT_RULE,
     GREETER_SESSION_BIN,
+    GREETER_STATE_DIR,
     MAIN_WM,
     THEME_ENGINE,
 )
@@ -128,9 +129,9 @@ def greeter_install() -> bool:
         print(msg("greeter_config_failed", str(GREETER_ETC_CFG)))
 
     state_cmd = (
-        f"mkdir -p /var/lib/{GREETER_PKG} && "
-        f"(chown -R greeter:greeter /var/lib/{GREETER_PKG} 2>/dev/null || true) && "
-        f"chmod 755 /var/lib/{GREETER_PKG}"
+        f"mkdir -p {GREETER_STATE_DIR} && "
+        f"(chown -R greeter:greeter {GREETER_STATE_DIR} 2>/dev/null || true) && "
+        f"chmod 755 {GREETER_STATE_DIR}"
     )
     res_s = subprocess.run(["sudo", "sh", "-c", state_cmd], check=False)
     if res_s.returncode == 0:
@@ -208,6 +209,10 @@ def greeter_uninstall() -> bool:
     if GREETER_POLKIT_RULE.is_file():
         subprocess.run(["sudo", "rm", "-f", str(GREETER_POLKIT_RULE)], check=False)
         print(msg("greeter_uninstall_polkit"))
+
+    # Remove the greeter's state directory (created at install; previously leaked)
+    subprocess.run(["sudo", "rm", "-rf", str(GREETER_STATE_DIR)], check=False)
+    print(msg("greeter_uninstall_state_dir", str(GREETER_STATE_DIR)))
 
     print(msg("greeter_uninstall_done"))
     log_msg("INFO", "Uninstalled Noctalia Greeter configuration")

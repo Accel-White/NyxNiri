@@ -25,7 +25,7 @@ class TestAtomicReplaceFileRollback(unittest.TestCase):
 
     def test_file_replace_rollback_on_second_rename_failure(self):
         """If tmp_file.rename(dest) fails, dest must be restored from old_dest."""
-        from nyxniri.deploy import atomic_replace_item
+        from nyxniri.deploy.atomic import atomic_replace_item
 
         with tempfile.TemporaryDirectory() as workdir:
             workdir = Path(workdir)
@@ -51,7 +51,7 @@ class TestAtomicReplaceFileRollback(unittest.TestCase):
 
     def test_file_replace_normal_success(self):
         """Normal file replace should succeed."""
-        from nyxniri.deploy import atomic_replace_item
+        from nyxniri.deploy.atomic import atomic_replace_item
 
         with tempfile.TemporaryDirectory() as workdir:
             workdir = Path(workdir)
@@ -77,7 +77,7 @@ class TestAtomicReplaceDirRollback(unittest.TestCase):
 
     def test_dir_replace_rollback_on_rename_failure(self):
         """If tmp_new.rename(dest) fails, dest must be restored from old_dest."""
-        from nyxniri.deploy import atomic_replace_item
+        from nyxniri.deploy.atomic import atomic_replace_item
 
         with tempfile.TemporaryDirectory() as workdir:
             workdir = Path(workdir)
@@ -153,7 +153,7 @@ class TestWallpaperNoClobber(unittest.TestCase):
 
     def test_existing_wallpaper_not_overwritten(self):
         """When downloading wallpaper pack, existing files must be preserved."""
-        from nyxniri.deploy import deploy_wallpapers
+        from nyxniri.deploy.assets import deploy_wallpapers
 
         wp_dest = self.env.home / "Pictures" / "Wallpapers"
         wp_dest.mkdir(parents=True, exist_ok=True)
@@ -167,10 +167,10 @@ class TestWallpaperNoClobber(unittest.TestCase):
         (fake_clone / "video" / "test.mp4").write_text("video")
 
         try:
-            with patch("nyxniri.deploy.git_clone_timeout", return_value=True):
-                with patch("nyxniri.deploy.tempfile.mkdtemp", return_value=str(fake_clone)):
-                    with patch("nyxniri.deploy._wallpaper_pack_present_at", return_value=True):
-                        with patch("nyxniri.deploy.wallpapers_pack_present", return_value=False):
+            with patch("nyxniri.deploy.assets.git_clone_timeout", return_value=True):
+                with patch("nyxniri.deploy.assets.tempfile.mkdtemp", return_value=str(fake_clone)):
+                    with patch("nyxniri.deploy.assets._wallpaper_pack_present_at", return_value=True):
+                        with patch("nyxniri.deploy.assets.wallpapers_pack_present", return_value=False):
                             with patch("builtins.print"):
                                 deploy_wallpapers(do_download=True)
 

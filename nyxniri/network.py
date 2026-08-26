@@ -276,6 +276,15 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
 
     run_mode = get_env().run_mode
     env = {**os.environ, "LC_ALL": "C"}
+
+    # System package mode: the source tree is owned by pacman, not git. Refuse
+    # `git pull` and point the user at pacman — honest over fancy (§5.6): we
+    # can't know upstream's version without hitting AUR RPC / GitHub API, which
+    # would violate the pure-stdlib principle. pacman reports updates itself.
+    if run_mode == "system":
+        print(msg("update_use_pacman"))
+        log_msg("INFO", "System package mode: refusing git pull (pacman manages updates)")
+        return None
     # Check for uncommitted changes
     res_status = subprocess.run(
         ["git", "status", "--porcelain"],

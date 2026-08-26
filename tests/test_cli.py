@@ -28,7 +28,7 @@ class TestGreeterExitCode(unittest.TestCase):
             with patch("nyxniri.cli.acquire_lock"):
                 with patch("nyxniri.cli.init_logger"):
                     with patch("nyxniri.cli.ensure_nyxniri_symlink"):
-                        with patch("nyxniri.greeter.greeter_install", return_value=False):
+                        with patch("nyxniri.modules.greeter.greeter_install", return_value=False):
                             with self.assertRaises(SystemExit) as ctx:
                                 main()
                             self.assertEqual(ctx.exception.code, 1)
@@ -40,7 +40,7 @@ class TestGreeterExitCode(unittest.TestCase):
             with patch("nyxniri.cli.acquire_lock"):
                 with patch("nyxniri.cli.init_logger"):
                     with patch("nyxniri.cli.ensure_nyxniri_symlink"):
-                        with patch("nyxniri.greeter.greeter_install", return_value=True):
+                        with patch("nyxniri.modules.greeter.greeter_install", return_value=True):
                             with self.assertRaises(SystemExit) as ctx:
                                 main()
                             self.assertEqual(ctx.exception.code, 0)
@@ -63,7 +63,7 @@ class TestFcitxExitCode(unittest.TestCase):
             with patch("nyxniri.cli.acquire_lock"):
                 with patch("nyxniri.cli.init_logger"):
                     with patch("nyxniri.cli.ensure_nyxniri_symlink"):
-                        with patch("nyxniri.fcitx.fcitx_uninstall", return_value=False):
+                        with patch("nyxniri.modules.fcitx.fcitx_uninstall", return_value=False):
                             with self.assertRaises(SystemExit) as ctx:
                                 main()
                             self.assertEqual(ctx.exception.code, 1)
@@ -86,7 +86,7 @@ class TestGtkExitCode(unittest.TestCase):
             with patch("nyxniri.cli.acquire_lock"):
                 with patch("nyxniri.cli.init_logger"):
                     with patch("nyxniri.cli.ensure_nyxniri_symlink"):
-                        with patch("nyxniri.gtktheme.gtktheme_install", return_value=False):
+                        with patch("nyxniri.modules.gtktheme.gtktheme_install", return_value=False):
                             with self.assertRaises(SystemExit) as ctx:
                                 main()
                             self.assertEqual(ctx.exception.code, 1)
@@ -98,7 +98,7 @@ class TestGtkExitCode(unittest.TestCase):
             with patch("nyxniri.cli.acquire_lock"):
                 with patch("nyxniri.cli.init_logger"):
                     with patch("nyxniri.cli.ensure_nyxniri_symlink"):
-                        with patch("nyxniri.gtktheme.gtktheme_install", return_value=True):
+                        with patch("nyxniri.modules.gtktheme.gtktheme_install", return_value=True):
                             with self.assertRaises(SystemExit) as ctx:
                                 main()
                             self.assertEqual(ctx.exception.code, 0)

@@ -77,8 +77,21 @@ engine_is_complete() {
     local target_dir="$1"
     local module
     [ -f "$target_dir/install.sh" ] || return 1
-    for module in __init__ __main__ backup cli constants core deploy deps doctor fcitx greeter gtktheme i18n network tui; do
+    # Top-level engine modules (infrastructure + entrypoints, §13)
+    for module in __init__ __main__ cli constants core deps doctor i18n network tui; do
         [ -f "$target_dir/nyxniri/$module.py" ] || return 1
+    done
+    # deploy/ subpackage (atomic · manifest · templates · assets · hardware · preset · deploy)
+    for module in __init__ atomic assets deploy hardware manifest preset templates; do
+        [ -f "$target_dir/nyxniri/deploy/$module.py" ] || return 1
+    done
+    # state/ subpackage (backup · uninstall)
+    for module in __init__ backup uninstall; do
+        [ -f "$target_dir/nyxniri/state/$module.py" ] || return 1
+    done
+    # modules/ subpackage (fcitx · greeter · gtktheme)
+    for module in __init__ fcitx greeter gtktheme; do
+        [ -f "$target_dir/nyxniri/modules/$module.py" ] || return 1
     done
     [ -f "$target_dir/configs/niri/config.kdl" ] \
         && [ -f "$target_dir/configs/noctalia/noctalia-config.toml" ] \
@@ -134,21 +147,21 @@ main() {
     # 3. Check for python3
     if ! command -v python3 >/dev/null 2>&1; then
         printf '%s[✗] %s%s\n' "$RED" \
-            "$(say "未找到 python3，请先安装 Python 3.10+。" "python3 is required but missing. Please install Python 3.10+ first.")" \
+            "$(say "未找到 python3，请先安装 Python 3.11+。" "python3 is required but missing. Please install Python 3.11+ first.")" \
             "$OFF" >&2
         exit 1
     fi
     local python_version py_major py_minor
     python_version="$(python3 -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')" || {
         printf '%s[✗] %s%s\n' "$RED" \
-            "$(say "无法确定 Python 版本，请安装 Python 3.10+。" "Could not determine the Python version. Please install Python 3.10+.")" \
+            "$(say "无法确定 Python 版本，请安装 Python 3.11+。" "Could not determine the Python version. Please install Python 3.11+.")" \
             "$OFF" >&2
         exit 1
     }
     IFS=. read -r py_major py_minor <<< "$python_version"
-    if [ "$py_major" -lt 3 ] || { [ "$py_major" -eq 3 ] && [ "$py_minor" -lt 10 ]; }; then
+    if [ "$py_major" -lt 3 ] || { [ "$py_major" -eq 3 ] && [ "$py_minor" -lt 11 ]; }; then
         printf '%s[✗] %s%s\n' "$RED" \
-            "$(say "需要 Python 3.10+（当前 $python_version），请升级后重试。" "Python 3.10+ is required (found $python_version). Please upgrade python3 and retry.")" \
+            "$(say "需要 Python 3.11+（当前 $python_version），请升级后重试。" "Python 3.11+ is required (found $python_version). Please upgrade python3 and retry.")" \
             "$OFF" >&2
         exit 1
     fi

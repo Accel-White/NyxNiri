@@ -1,0 +1,23 @@
+"""State management — configuration snapshots and uninstall.
+
+backup: snapshot / rollback / delete (the "save state" verbs).
+uninstall: checkbox-style removal (§8). Re-exports keep external imports
+shallow (§13).
+"""
+
+from nyxniri.state.backup import (
+    backup_configs,
+    rollback_configs,
+    list_backups,
+    delete_backup,
+    get_all_backups,
+    get_backup_base_dir,
+    _copy_path,
+    _remove_path,
+)
+from nyxniri.state.uninstall import uninstall_nyxniri
+
+__all__ = [
+    "backup_configs", "rollback_configs", "list_backups", "delete_backup",
+    "get_all_backups", "get_backup_base_dir", "uninstall_nyxniri",
+]

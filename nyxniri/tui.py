@@ -11,7 +11,7 @@ import termios
 import tty
 import unicodedata
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Any, Callable, List, Optional, Tuple
 
 from nyxniri.constants import Colors
 from nyxniri.core import Environment, get_env
@@ -118,6 +118,7 @@ def responsive_hint(key: str) -> str:
         "dep_menu_hint": "checklist_hint_short",
         "opt_apps_menu_hint": "checklist_hint_short",
         "summary_action_hint": "summary_action_hint_short",
+        "preset_switcher_hint": "preset_switcher_hint_short",
     }
     return msg(short_keys.get(key, key))
 
@@ -467,6 +468,154 @@ class CheckboxList:
                         self.entries[entry_idx].checked = not self.entries[entry_idx].checked
                 elif key == "ENTER":
                     return [e.key for e in self.entries if not e.is_separator and e.checked]
+        finally:
+            sys.stdout.write(Colors.CURSOR_SHOW)
+            sys.stdout.flush()
+
+# --- Component: Dual-Pane Preset Switcher (§9) ---
+class PresetSwitcher:
+    """Two-column preset switcher: left = apps, right = presets of the focused app.
+
+    The ranger/mc model: one cursor that lives in one pane at a time. ←/→ move
+    the cursor between panes; ↑/↓ move within the active pane. Enter applies the
+    (focused app, focused preset) pair; q/ESC cancels. The active preset is
+    always marked ``>``; the focused app's preset list re-renders on switch,
+    landing its cursor on the active preset.
+
+    Decoupled from deploy/preset: the caller supplies the app list and a
+    callback returning ``[(preset_name, is_active)]`` for an app. ``run()``
+    returns the chosen ``(app, preset)`` pair, or None on cancel.
+    """
+
+    def __init__(
+        self,
+        apps: List[str],
+        presets_for: Callable[[str], List[Tuple[str, bool]]],
+        title_key: str = "preset_switcher_title",
+        hint_key: str = "preset_switcher_hint",
+    ):
+        self.apps = apps
+        self.presets_for = presets_for
+        self.title_key = title_key
+        self.hint_key = hint_key
+
+    def run(self) -> Optional[Tuple[str, str]]:
+        if not self.apps or not sys.stdin.isatty():
+            return None
+        env = get_env()
+        left = 0
+        pane = "left"
+        right_cache: dict = {}
+        right_idx = 0
+
+        def right_items(app: str) -> List[Tuple[str, bool]]:
+            if app not in right_cache:
+                right_cache[app] = list(self.presets_for(app))
+            return right_cache[app]
+
+        def land_on_active(app: str) -> int:
+            for i, (_, is_active) in enumerate(right_items(app)):
+                if is_active:
+                    return i
+            return 0
+
+        right_idx = land_on_active(self.apps[left])
+        sys.stdout.write(Colors.CURSOR_HIDE)
+        try:
+            while True:
+                sys.stdout.write("\033[?25l\033[H")
+                show_logo(env)
+                title = msg(self.title_key).strip("\n")
+                write_cleared(f"{title}\n\n")
+
+                app = self.apps[left]
+                presets = right_items(app)
+                size = shutil.get_terminal_size((80, 24))
+                cols, terminal_lines = size.columns, size.lines
+                left_w = min(24, max(8, cols // 3))
+                gap = 3
+                right_w = max(8, cols - left_w - gap - 4)
+
+                hdr_l = msg("preset_switcher_col_app")
+                hdr_r = msg("preset_switcher_col_preset", app)
+                write_cleared(
+                    f"  {Colors.BOLD_WHITE}{pad_display(hdr_l, left_w)}{Colors.RESET}"
+                    f"{' ' * gap}{Colors.BOLD_WHITE}{truncate_display(hdr_r, right_w)}{Colors.RESET}\n"
+                )
+                write_cleared(
+                    f"  {Colors.DARK_GRAY}{'─' * left_w}{Colors.RESET}"
+                    f"{' ' * gap}{Colors.DARK_GRAY}{'─' * min(right_w, 16)}{Colors.RESET}\n"
+                )
+
+                rows = max(len(self.apps), len(presets))
+                visible = max(4, terminal_lines - 16)
+                active_cursor = left if pane == "left" else right_idx
+                start = max(0, min(active_cursor - visible // 2, rows - visible))
+                end = min(rows, start + visible)
+                if start > 0:
+                    write_cleared(f"  {Colors.DARK_GRAY}...{Colors.RESET}\n")
+                for i in range(start, end):
+                    # left cell
+                    if i < len(self.apps):
+                        a = self.apps[i]
+                        is_left_focus = i == left
+                        if pane == "left" and is_left_focus:
+                            lpre = f"{Colors.BOLD_CYAN}❯ {Colors.RESET}"
+                            lcol = Colors.BOLD_WHITE
+                        elif is_left_focus:
+                            lpre = f"{Colors.DARK_GRAY}❯ {Colors.RESET}"
+                            lcol = Colors.DARK_GRAY
+                        else:
+                            lpre = "  "
+                            lcol = ""
+                        lcell = f"{lpre}{lcol}{truncate_display(a, left_w - 2)}{Colors.RESET}"
+                    else:
+                        lcell = ""
+                    # right cell
+                    if i < len(presets):
+                        pname, is_active = presets[i]
+                        marker = f"{Colors.BOLD_GREEN}>{Colors.RESET}" if is_active else " "
+                        if pane == "right" and i == right_idx:
+                            rpre = f"{Colors.BOLD_CYAN}❯ {Colors.RESET}"
+                            rcol = Colors.BOLD_WHITE
+                        else:
+                            rpre = "  "
+                            rcol = ""
+                        rcell = f"{rpre}{marker} {rcol}{truncate_display(pname, right_w - 4)}{Colors.RESET}"
+                    else:
+                        rcell = ""
+                    write_cleared(f"  {pad_display(lcell, left_w + 2)}{' ' * gap}{rcell}\033[K\n")
+                if end < rows:
+                    write_cleared(f"  {Colors.DARK_GRAY}...{Colors.RESET}\n")
+
+                hint = responsive_hint(self.hint_key).strip("\n")
+                write_cleared(f"\n{hint}\n")
+                sys.stdout.write("\033[J")
+                sys.stdout.flush()
+
+                key = read_key()
+                if key in ("LEFT", "h", "H"):
+                    pane = "left"
+                elif key in ("RIGHT", "l", "L"):
+                    if presets:
+                        pane = "right"
+                elif key in ("UP", "k", "K"):
+                    if pane == "left":
+                        left = (left - 1) % len(self.apps)
+                        right_idx = land_on_active(self.apps[left])
+                    elif presets:
+                        right_idx = (right_idx - 1) % len(presets)
+                elif key in ("DOWN", "j", "J"):
+                    if pane == "left":
+                        left = (left + 1) % len(self.apps)
+                        right_idx = land_on_active(self.apps[left])
+                    elif presets:
+                        right_idx = (right_idx + 1) % len(presets)
+                elif key in ("ENTER", "SPACE"):
+                    if presets:
+                        return (self.apps[left], presets[right_idx][0])
+                elif key in ("0", "q", "Q", "ESC", "EXIT"):
+                    return None
         finally:
             sys.stdout.write(Colors.CURSOR_SHOW)
             sys.stdout.flush()
