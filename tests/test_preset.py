@@ -348,8 +348,8 @@ class TestPresetSwitcher(unittest.TestCase):
 
     def test_no_tty_returns_none(self):
         sw = PresetSwitcher(["kitty"], lambda a: [("default", True)])
-        # Default test stdin is not a tty → run() short-circuits.
-        self.assertIsNone(sw.run())
+        with patch("sys.stdin.isatty", return_value=False):
+            self.assertIsNone(sw.run())
 
 
 class TestEditPreset(unittest.TestCase):

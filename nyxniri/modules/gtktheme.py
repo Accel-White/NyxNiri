@@ -36,6 +36,11 @@ def gtktheme_registered() -> bool:
         return False
 
 
+def gtktheme_status_label() -> str:
+    """Return compact status label for menus."""
+    return msg("status_enabled") if gtktheme_registered() else msg("status_not_installed")
+
+
 def gtktheme_rendered() -> bool:
     """Check if gtk.css files exist and contain rendered M3 colors."""
     _, gtk3_css, gtk4_css = _paths()

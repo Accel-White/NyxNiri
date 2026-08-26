@@ -52,6 +52,16 @@ from nyxniri.modules.greeter import (
     greeter_status_label,
     greeter_uninstall,
 )
+from nyxniri.modules import (
+    fisher_install,
+    fisher_status,
+    fisher_status_label,
+    fisher_uninstall,
+    gtktheme_install,
+    gtktheme_status,
+    gtktheme_status_label,
+    gtktheme_uninstall,
+)
 from nyxniri.state import (
     backup_configs,
     delete_backup,
@@ -436,6 +446,38 @@ def fcitx_menu_loop() -> None:
         elif choice == 2: fcitx_uninstall(); press_any_key()
         elif choice == 3: break
 
+def gtk_menu_loop() -> None:
+    """GTK Material You theme interactive submenu."""
+    while True:
+        items = [
+            MenuItem(label=msg("gtk_sub_install")),
+            MenuItem(label=msg("gtk_sub_status")),
+            MenuItem(label=msg("gtk_sub_uninstall"), style="warn"),
+            MenuItem(label=msg("gtk_sub_back"), style="subtle"),
+        ]
+        menu = Menu("gtk_menu_title", items, hint_key="submenu_hint")
+        choice = menu.run()
+        if choice == 0: gtktheme_install(); press_any_key()
+        elif choice == 1: gtktheme_status(); press_any_key()
+        elif choice == 2: gtktheme_uninstall(); press_any_key()
+        elif choice == 3: break
+
+def fisher_menu_loop() -> None:
+    """fisher plugin manager interactive submenu."""
+    while True:
+        items = [
+            MenuItem(label=msg("fisher_sub_install")),
+            MenuItem(label=msg("fisher_sub_status")),
+            MenuItem(label=msg("fisher_sub_uninstall"), style="warn"),
+            MenuItem(label=msg("fisher_sub_back"), style="subtle"),
+        ]
+        menu = Menu("fisher_menu_title", items, hint_key="submenu_hint")
+        choice = menu.run()
+        if choice == 0: fisher_install(); press_any_key()
+        elif choice == 1: fisher_status(); press_any_key()
+        elif choice == 2: fisher_uninstall(); press_any_key()
+        elif choice == 3: break
+
 def deps_menu_loop() -> None:
     """Dependencies & Recommended apps submenu."""
     if not sys.stdin.isatty():
@@ -454,30 +496,28 @@ def deps_menu_loop() -> None:
         elif choice == 1: run_optional_apps_menu_loop(); press_any_key()
         elif choice == 2: break
 
-def optional_modules_menu_loop() -> None:
-    """Optional modules interactive submenu."""
+def extensions_menu_loop() -> None:
+    """Extensions interactive submenu: greeter / fcitx / gtk / fisher."""
     while True:
-        label0 = pad_display(msg("optmod_sub_apps"), 26)
-        label1 = pad_display("Noctalia Greeter", 26) + greeter_status_label()
-        label2 = pad_display(msg("optmod_sub_fcitx"), 26) + fcitx_status_label()
-        label3 = pad_display(msg("optmod_sub_wallpapers"), 26) + (msg("status_wallpapers_installed") if wallpapers_pack_present() else msg("status_wallpapers_missing"))
+        label_greeter = pad_display(msg("ext_sub_greeter"), 26) + greeter_status_label()
+        label_fcitx = pad_display(msg("ext_sub_fcitx"), 26) + fcitx_status_label()
+        label_gtk = pad_display(msg("ext_sub_gtk"), 26) + gtktheme_status_label()
+        label_fisher = pad_display(msg("ext_sub_fisher"), 26) + fisher_status_label()
 
         items = [
-            MenuItem(label=label0),
-            MenuItem(label=label1),
-            MenuItem(label=label2),
-            MenuItem(label=label3),
-            MenuItem(label=msg("optmod_purge"), style="warn"),
-            MenuItem(label=msg("optmod_back"), style="subtle"),
+            MenuItem(label=label_greeter),
+            MenuItem(label=label_fcitx),
+            MenuItem(label=label_gtk),
+            MenuItem(label=label_fisher),
+            MenuItem(label=msg("ext_back"), style="subtle"),
         ]
-        menu = Menu("optmod_menu_title", items, hint_key="submenu_hint")
+        menu = Menu("ext_menu_title", items, hint_key="submenu_hint")
         choice = menu.run()
-        if choice == 0: run_optional_apps_menu_loop()
-        elif choice == 1: greeter_menu_loop()
-        elif choice == 2: fcitx_menu_loop()
-        elif choice == 3: deploy_wallpapers(do_download=True); press_any_key()
-        elif choice == 4: uninstall_nyxniri("purge"); press_any_key()
-        elif choice == 5: break
+        if choice == 0: greeter_menu_loop()
+        elif choice == 1: fcitx_menu_loop()
+        elif choice == 2: gtk_menu_loop()
+        elif choice == 3: fisher_menu_loop()
+        elif choice == 4: break
 
 def preset_switcher_loop() -> None:
     """Interactive dual-pane preset switcher (§9). Left = apps, right = presets."""
@@ -501,15 +541,20 @@ def main_menu_loop() -> None:
     env = get_env()
     while True:
         items = [
+            # 部署
             MenuItem(label=msg("menu_opt1"), group_header=msg("menu_group_deploy")),
             MenuItem(label=msg("menu_opt_preset")),
             MenuItem(label=msg("menu_opt2")),
+            # 管理
             MenuItem(label=msg("menu_opt3"), group_header=msg("menu_group_maint")),
             MenuItem(label=msg("menu_opt4")),
-            MenuItem(label=msg("menu_opt5")),
+            MenuItem(label=msg("menu_opt7"), style="warn"),
+            # 诊断
+            MenuItem(label=msg("menu_opt5"), group_header=msg("menu_group_system")),
             MenuItem(label=msg("menu_opt6")),
-            MenuItem(label=msg("menu_opt7"), group_header=msg("menu_group_system"), style="warn"),
+            # 扩展
             MenuItem(label=msg("menu_opt8")),
+            # 退出
             MenuItem(label=msg("menu_opt0"), style="subtle"),
         ]
         menu = Menu("menu_title", items, hint_key="menu_hint")
@@ -536,16 +581,16 @@ def main_menu_loop() -> None:
                 print(msg("updating_failed"), file=sys.stderr)
             press_any_key()
         elif choice == 5:
-            run_doctor()
-            press_any_key()
-        elif choice == 6:
-            generate_bug_report()
-            press_any_key()
-        elif choice == 7:
             uninstall_nyxniri("")
             press_any_key()
+        elif choice == 6:
+            run_doctor()
+            press_any_key()
+        elif choice == 7:
+            generate_bug_report()
+            press_any_key()
         elif choice == 8:
-            optional_modules_menu_loop()
+            extensions_menu_loop()
         elif choice == 9:
             sys.exit(0)
 

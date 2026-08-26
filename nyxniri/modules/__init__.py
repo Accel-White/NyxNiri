@@ -34,6 +34,7 @@ from nyxniri.modules.greeter import (
 from nyxniri.modules.gtktheme import (
     gtktheme_registered,
     gtktheme_rendered,
+    gtktheme_status_label,
     gtktheme_trigger_render,
     gtktheme_install,
     gtktheme_status,
@@ -49,6 +50,7 @@ __all__ = [
     "fisher_uninstall",
     "greeter_installed", "greeter_install", "greeter_status",
     "greeter_status_label", "greeter_uninstall",
-    "gtktheme_registered", "gtktheme_rendered", "gtktheme_trigger_render",
-    "gtktheme_install", "gtktheme_status", "gtktheme_uninstall",
+    "gtktheme_registered", "gtktheme_rendered", "gtktheme_status_label",
+    "gtktheme_trigger_render", "gtktheme_install", "gtktheme_status",
+    "gtktheme_uninstall",
 ]
