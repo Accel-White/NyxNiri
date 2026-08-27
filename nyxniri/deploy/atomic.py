@@ -8,9 +8,8 @@ The atomic_replace_item swap-then-preserve is the heart of NyxNiri's deploy
 
 import os
 import shutil
-import tempfile
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 from nyxniri.core import get_env, log_msg, register_temp_path, remove_path
 from nyxniri.i18n import msg
@@ -34,8 +33,13 @@ def _deploy_ignore_factory(root_src: Path):
     return _ignore
 
 
-def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]] = None, test_mode: bool = False) -> bool:
-    """Atomic swap deployment via sibling temp directories with Dunder Protocol preservation."""
+def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]] = None, test_mode: bool = False, preserve: Optional[List[str]] = None) -> bool:
+    """Atomic swap deployment via sibling temp directories with Dunder Protocol preservation.
+
+    ``preserve`` injects manifest-declared files (e.g. monitor.kdl) into tmp_new
+    *before* the rename, so the swapped-in directory is already complete — no
+    post-rename restore window for inotify watchers to catch a half-state.
+    """
     pid = os.getpid()
     dest_parent = dest.parent
     home = get_env().home
@@ -116,6 +120,19 @@ def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]
                         if preserved_log is not None:
                             preserved_log.append(f"~/.config/{rel_display}/")
 
+        # Manifest-declared preserve: inject into tmp_new before swap so the
+        # renamed directory is already complete (no post-rename restore window).
+        if preserve and dest.is_dir():
+            for rel in preserve:
+                src_p = dest / rel
+                if src_p.is_file():
+                    tgt_p = tmp_new / rel
+                    tgt_p.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src_p, tgt_p)
+                    print(msg("log_keep_preserved_file", dest.name, rel))
+                    if preserved_log is not None:
+                        preserved_log.append(f"~/.config/{dest.name}/{rel}")
+
         if dest.exists() or dest.is_symlink():
             old_dest = dest.with_name(f"{dest.name}.old.{pid}")
             dest.rename(old_dest)
@@ -133,52 +150,3 @@ def atomic_replace_item(src: Path, dest: Path, preserved_log: Optional[List[str]
         remove_path(tmp_new)
         log_msg("ERROR", f"Atomic replace failed for directory {dest}: {e}")
         return False
-
-
-def _snapshot_preserved(dest: Path, preserve: List[str]) -> List[Tuple[str, Path]]:
-    """Snapshot manifest-declared preserve files from dest before atomic replace.
-
-    Deliberately separate from the Dunder __custom__ walk: preserve is by
-    explicit declaration (files referenced by name, e.g. monitor.kdl), Dunder
-    is by magic filename. Two mechanisms, two purposes — do not merge.
-    """
-    snaps: List[Tuple[str, Path]] = []
-    for rel in preserve:
-        p = dest / rel
-        if not p.is_file():
-            continue
-        tfd, tname = tempfile.mkstemp()
-        os.close(tfd)
-        tmp = Path(tname)
-        register_temp_path(tmp)
-        try:
-            shutil.copy2(p, tmp)
-        except Exception as e:
-            tmp.unlink(missing_ok=True)
-            log_msg("ERROR", f"Failed to snapshot preserved file {rel}: {e}")
-            continue
-        snaps.append((rel, tmp))
-    return snaps
-
-
-def _restore_preserved(dest: Path, snaps: List[Tuple[str, Path]], preserved_log: Optional[List[str]]) -> None:
-    """Restore snapshotted preserve files onto freshly-deployed dest."""
-    for rel, tmp in snaps:
-        try:
-            target = dest / rel
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(tmp, target)
-            tmp.unlink(missing_ok=True)
-            print(msg("log_keep_preserved_file", dest.name, rel))
-            if preserved_log is not None:
-                preserved_log.append(f"~/.config/{dest.name}/{rel}")
-        except Exception as e:
-            log_msg("ERROR", f"Failed to restore preserved file {rel}: {e}")
-
-
-def _cleanup_snapshots(snaps: List[Tuple[str, Path]]) -> None:
-    for _, tmp in snaps:
-        try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
-            pass

@@ -29,6 +29,25 @@ def get_backup_base_dir() -> Path:
     return get_env().config_dir / PROJECT_NAME / "backups"
 
 
+MAX_SNAPSHOTS = 30
+
+
+def _prune_old_snapshots(base_dir: Path) -> None:
+    """Keep at most MAX_SNAPSHOTS managed snapshots; drop oldest beyond that."""
+    if not base_dir.is_dir():
+        return
+    snapshots = [
+        d for d in base_dir.iterdir()
+        if d.is_dir() and not d.is_symlink() and _MANAGED_SNAPSHOT_RE.fullmatch(d.name)
+    ]
+    if len(snapshots) <= MAX_SNAPSHOTS:
+        return
+    snapshots.sort(key=lambda p: p.name, reverse=True)
+    for old in snapshots[MAX_SNAPSHOTS:]:
+        shutil.rmtree(old, ignore_errors=True)
+        log_msg("INFO", f"Pruned old snapshot {old.name}")
+
+
 def backup_configs(note: str = "", interactive: bool = True) -> Optional[Path]:
     """Create a complete snapshot of all active dotfiles configurations."""
     from nyxniri.deploy.deploy import discover_config_items
@@ -61,6 +80,7 @@ def backup_configs(note: str = "", interactive: bool = True) -> Optional[Path]:
         (tmp_dir / "note.txt").write_text(note.strip(), encoding="utf-8")
 
     tmp_dir.rename(backup_dir)
+    _prune_old_snapshots(base_dir)
     if interactive:
         print(msg("backup_done", str(backup_dir)))
     log_msg("INFO", f"Created configuration snapshot at {backup_dir}")
@@ -254,7 +274,7 @@ def delete_backup(target_arg: str = "") -> bool:
 
     if not deleted:
         return False
-    remaining = len(get_all_backups())
+    remaining = len(backups) - len(deleted)
     if len(deleted) == 1:
         print(msg("delete_done", deleted[0].name, remaining))
     else:

@@ -31,6 +31,8 @@ def fisher_install() -> bool:
     """Bootstrap fisher + run plugin update; auto-invoked by deploy post-install.
 
     No-op (returns False) when fish isn't installed — fisher needs the fish host.
+    ``fisher update`` only runs when fish_plugins changed since last call (mtime
+    probe), avoiding a network round-trip on every install.
     """
     if not shutil.which("fish"):
         return False
@@ -38,11 +40,32 @@ def fisher_install() -> bool:
     log_msg("INFO", "Checking Fisher plugin manager installation")
     fish_check = subprocess.run(
         ["fish", "-c", "functions -q fisher; echo $status"],
-        capture_output=True, text=True, check=False,
+        capture_output=True, text=True, check=False, timeout=10,
     )
     if fish_check.returncode == 0 and fish_check.stdout.strip() == "0":
-        log_msg("INFO", "Fisher already installed, running update")
-        subprocess.run(["fish", "-c", "fisher update"], check=False)
+        fish_plugins = get_env().config_dir / "fish" / "fish_plugins"
+        need_update = True
+        if fish_plugins.is_file():
+            state_file = get_env().state_dir / "fish_plugins.mtime"
+            current_mtime = str(fish_plugins.stat().st_mtime_ns)
+            stored_mtime = ""
+            if state_file.is_file():
+                try:
+                    stored_mtime = state_file.read_text(encoding="utf-8").strip()
+                except Exception:
+                    pass
+            need_update = current_mtime != stored_mtime
+            if need_update:
+                try:
+                    state_file.parent.mkdir(parents=True, exist_ok=True)
+                    state_file.write_text(current_mtime, encoding="utf-8")
+                except Exception:
+                    pass
+        if need_update:
+            log_msg("INFO", "Fisher installed, running update")
+            subprocess.run(["fish", "-c", "fisher update"], check=False, timeout=60)
+        else:
+            log_msg("INFO", "Fisher installed, fish_plugins unchanged")
         return True
 
     tfd, tname = tempfile.mkstemp(suffix=".fish")
@@ -58,7 +81,7 @@ def fisher_install() -> bool:
             f"if test -f ~/.config/fish/fish_plugins && functions -q fisher; "
             f"echo '{msg_install}'; fisher update || echo '{msg_skip}'; end"
         )
-        subprocess.run(["fish", "-c", fish_code], check=False)
+        subprocess.run(["fish", "-c", fish_code], check=False, timeout=60)
         return True
     print(msg("log_fisher_install_skipped"))
     log_msg("WARN", "Fisher auto-install skipped (network unreachable)")
@@ -80,12 +103,12 @@ def fisher_uninstall() -> bool:
     if shutil.which("fish"):
         check = subprocess.run(
             ["fish", "-c", "functions -q fisher; echo $status"],
-            capture_output=True, text=True, check=False,
+            capture_output=True, text=True, check=False, timeout=10,
         )
         if check.returncode == 0 and check.stdout.strip() == "0":
             subprocess.run(
                 ["fish", "-c", "fisher remove --all"],
-                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30,
             )
             log_msg("INFO", "fisher remove --all ran")
         # fisher not installed → no managed plugins to remove; just drop the loader.

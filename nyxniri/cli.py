@@ -1,6 +1,7 @@
 """CLI entry point, command-line arguments dispatcher, and interactive control panel menus."""
 
 import os
+import shutil
 import subprocess
 import sys
 from typing import List, Optional
@@ -360,8 +361,11 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
             if src.exists() and dest.exists():
                 diff_cmds.append(f"diff -urN --color=always '{dest}' '{src}'")
         if diff_cmds:
-            full_cmd = " ; ".join(diff_cmds) + " | less -R"
-            subprocess.run(full_cmd, shell=True, check=False)
+            full_cmd = " ; ".join(diff_cmds)
+            if shutil.which("less"):
+                subprocess.run(full_cmd + " | less -R", shell=True, check=False)
+            else:
+                subprocess.run(full_cmd, shell=True, check=False)
     else:
         print(msg("log_config_deploy_skipped"))
     return True
@@ -576,7 +580,11 @@ def main_menu_loop() -> None:
                 print(msg("updating_done"))
                 press_any_key()
                 # Re-exec to load new code
-                os.execv(sys.executable, [sys.executable, "-m", "nyxniri"])
+                try:
+                    os.execv(sys.executable, [sys.executable, "-m", "nyxniri"])
+                except Exception as e:
+                    log_msg("ERROR", f"Re-exec failed: {e}")
+                    print(msg("update_restart_needed"), file=sys.stderr)
             elif update_result is False:
                 print(msg("updating_failed"), file=sys.stderr)
             press_any_key()

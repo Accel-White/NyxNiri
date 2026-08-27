@@ -164,9 +164,9 @@ def fcitx_backup_quickphrase() -> None:
 def fcitx_restart() -> None:
     """Restart running fcitx5 daemon to load updated skin."""
     if fcitx5_installed():
-        res = subprocess.run(["pgrep", "-x", "fcitx5"], capture_output=True, check=False)
+        res = subprocess.run(["pgrep", "-x", "fcitx5"], capture_output=True, check=False, timeout=5)
         if res.returncode == 0:
-            subprocess.run(["pkill", "-x", "fcitx5"], check=False)
+            subprocess.run(["pkill", "-x", "fcitx5"], check=False, timeout=5)
             time.sleep(1)
             subprocess.Popen(["fcitx5", "-d"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print(msg("fcitx_restarted"))
@@ -174,8 +174,8 @@ def fcitx_restart() -> None:
 def fcitx_trigger_render() -> None:
     """Ask Noctalia daemon to render templates for current palette."""
     if noctalia_available():
-        subprocess.run([THEME_ENGINE, "msg", "config-reload"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
-        res = subprocess.run([THEME_ENGINE, "msg", "templates-apply"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        subprocess.run([THEME_ENGINE, "msg", "config-reload"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=15)
+        res = subprocess.run([THEME_ENGINE, "msg", "templates-apply"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=30)
         if res.returncode == 0:
             print(msg("fcitx_render_ok"))
         else:
