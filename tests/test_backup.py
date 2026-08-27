@@ -132,5 +132,50 @@ class TestBackupInteractiveFlag(unittest.TestCase):
         mock_print.assert_called()
 
 
+class TestSnapshotRotation(unittest.TestCase):
+    """_prune_old_snapshots keeps MAX_SNAPSHOTS, deletes oldest beyond that."""
+
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+        self.env = self._ctx.env
+        self.base_dir = self.env.config_dir / "NyxNiri" / "backups"
+        self.base_dir.mkdir(parents=True, exist_ok=True)
+
+    def tearDown(self):
+        self._ctx.__exit__()
+
+    def test_excess_snapshots_pruned_oldest_first(self):
+        """Beyond MAX_SNAPSHOTS, oldest (by name) are removed."""
+        from nyxniri.state.backup import _prune_old_snapshots, MAX_SNAPSHOTS
+
+        for i in range(MAX_SNAPSHOTS + 3):
+            d = self.base_dir / f"snapshot_20260101_000000_{i:06d}"
+            d.mkdir()
+
+        _prune_old_snapshots(self.base_dir)
+
+        remaining = sorted(d.name for d in self.base_dir.iterdir() if d.is_dir())
+        self.assertEqual(len(remaining), MAX_SNAPSHOTS,
+                         "Should keep exactly MAX_SNAPSHOTS")
+        # Oldest 3 (indices 0,1,2) pruned; newest 30 (indices 3..32) kept
+        self.assertNotIn("snapshot_20260101_000000_000000", remaining)
+        self.assertIn("snapshot_20260101_000000_000003", remaining)
+        self.assertIn("snapshot_20260101_000000_000032", remaining)
+
+    def test_at_or_below_limit_no_prune(self):
+        """At or below MAX_SNAPSHOTS → nothing removed."""
+        from nyxniri.state.backup import _prune_old_snapshots, MAX_SNAPSHOTS
+
+        for i in range(MAX_SNAPSHOTS):
+            d = self.base_dir / f"snapshot_20260101_000000_{i:06d}"
+            d.mkdir()
+
+        _prune_old_snapshots(self.base_dir)
+
+        remaining = [d for d in self.base_dir.iterdir() if d.is_dir()]
+        self.assertEqual(len(remaining), MAX_SNAPSHOTS)
+
+
 if __name__ == "__main__":
     unittest.main()

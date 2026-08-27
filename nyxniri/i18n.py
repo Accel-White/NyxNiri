@@ -1451,6 +1451,10 @@ Commands:
         "zh": f"{Colors.BOLD_RED}[✗] 更新失败。请检查网络与 Git 状态后重试 nyxniri update。{Colors.RESET}",
         "en": f"{Colors.BOLD_RED}[✗] Update failed. Check the network and Git state, then retry nyxniri update.{Colors.RESET}",
     },
+    "update_restart_needed": {
+        "zh": f"{Colors.BOLD_YELLOW}[!] 更新已完成，但自动重启失败。请手动重新运行 nyxniri。{Colors.RESET}",
+        "en": f"{Colors.BOLD_YELLOW}[!] Update complete, but auto-restart failed. Please re-run nyxniri manually.{Colors.RESET}",
+    },
     "dirty_tree_warn": {
         "zh": f"{Colors.BOLD_YELLOW}[!] {{0}} 存在未提交的改动。{Colors.RESET}",
         "en": f"{Colors.BOLD_YELLOW}[!] Uncommitted local changes detected in {{0}}.{Colors.RESET}",

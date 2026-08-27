@@ -1,5 +1,6 @@
 """System health diagnostics (System Doctor) and diagnostic report exporter."""
 
+import concurrent.futures
 import datetime
 import os
 import platform
@@ -44,7 +45,7 @@ def _check_noctalia(env) -> None:
         print(msg("doctor_err", text(f"{THEME_ENGINE}: 未在 PATH 中找到", f"{THEME_ENGINE}: not found in PATH")))
     else:
         try:
-            res = subprocess.run([THEME_ENGINE, "msg", "status"], capture_output=True, check=False)
+            res = subprocess.run([THEME_ENGINE, "msg", "status"], capture_output=True, check=False, timeout=10)
             if res.returncode == 0:
                 print(msg("doctor_ok", text(f"{THEME_ENGINE}: 守护进程响应正常", f"{THEME_ENGINE}: daemon is responding")))
             else:
@@ -111,7 +112,7 @@ def _check_orbit(env) -> None:
     try:
         res = subprocess.run(
             [sys.executable, "-c", "import gi; gi.require_version('Gtk', '3.0'); gi.require_version('GtkLayerShell', '0.1')"],
-            capture_output=True, check=False,
+            capture_output=True, check=False, timeout=10,
         )
         if res.returncode == 0:
             print(msg("doctor_ok", text("Orbit: GtkLayerShell Python 运行环境可用", "Orbit: GtkLayerShell Python runtime is available")))
@@ -155,11 +156,14 @@ def _check_brightness(env) -> None:
 def _check_portal_active(env) -> None:
     portal_active = False
     if shutil.which("systemctl"):
-        res = subprocess.run(["systemctl", "--user", "is-active", "xdg-desktop-portal"], capture_output=True, check=False)
-        portal_active = res.returncode == 0
+        try:
+            res = subprocess.run(["systemctl", "--user", "is-active", "xdg-desktop-portal"], capture_output=True, check=False, timeout=10)
+            portal_active = res.returncode == 0
+        except Exception:
+            pass
     if not portal_active:
         try:
-            res = subprocess.run(["pgrep", "-f", "xdg-desktop-portal"], capture_output=True, check=False)
+            res = subprocess.run(["pgrep", "-f", "xdg-desktop-portal"], capture_output=True, check=False, timeout=10)
             portal_active = res.returncode == 0
         except Exception:
             pass
@@ -170,11 +174,14 @@ def _check_portal_active(env) -> None:
 
 def _check_portal_gtk(env) -> None:
     if shutil.which("pacman"):
-        res = subprocess.run(["pacman", "-Qq", "xdg-desktop-portal-gtk"], capture_output=True, check=False)
-        if res.returncode == 0:
-            print(msg("doctor_ok", text("桌面门户: xdg-desktop-portal-gtk 后端已安装", "Desktop Portal: xdg-desktop-portal-gtk backend is installed")))
-        else:
-            print(msg("doctor_warn", text("桌面门户: 缺少 xdg-desktop-portal-gtk", "Desktop Portal: xdg-desktop-portal-gtk is missing")))
+        try:
+            res = subprocess.run(["pacman", "-Qq", "xdg-desktop-portal-gtk"], capture_output=True, check=False, timeout=10)
+            if res.returncode == 0:
+                print(msg("doctor_ok", text("桌面门户: xdg-desktop-portal-gtk 后端已安装", "Desktop Portal: xdg-desktop-portal-gtk backend is installed")))
+            else:
+                print(msg("doctor_warn", text("桌面门户: 缺少 xdg-desktop-portal-gtk", "Desktop Portal: xdg-desktop-portal-gtk is missing")))
+        except Exception:
+            pass
 
 def _check_portal_config(env) -> None:
     portal_conf = env.config_dir / "xdg-desktop-portal" / "niri-portals.conf"
@@ -188,7 +195,7 @@ _MIB_KIB = 1024
 
 def _check_disk_space(env) -> None:
     try:
-        res = subprocess.run(["df", "-k", "--output=avail", str(env.home)], capture_output=True, text=True, check=False)
+        res = subprocess.run(["df", "-k", "--output=avail", str(env.home)], capture_output=True, text=True, check=False, timeout=10)
         lines = res.stdout.strip().splitlines()
         if len(lines) >= 2:
             free_kb = int(lines[1].strip())
@@ -228,7 +235,7 @@ def _check_gtk_theme(env) -> None:
 def _check_vm(env) -> None:
     if shutil.which("lspci"):
         try:
-            res = subprocess.run(["lspci"], capture_output=True, text=True, check=False, env={**os.environ, "LC_ALL": "C"})
+            res = subprocess.run(["lspci"], capture_output=True, text=True, check=False, env={**os.environ, "LC_ALL": "C"}, timeout=10)
             if re.search(r"VMware|VirtualBox|QEMU|Virtio", res.stdout, re.IGNORECASE):
                 print(msg("doctor_warn", text("检测到虚拟机。请确保 VM 设置中已启用 3D 图形加速", "Virtual Machine detected. Ensure 3D Graphics Acceleration is enabled in VM settings")))
         except Exception:
@@ -306,6 +313,17 @@ def run_doctor() -> bool:
     log_msg("INFO", "System Doctor executed")
     return True
 
+
+def _run_cmd(cmd: List[str], timeout: int = 15):
+    """Run a command with timeout; return None if binary missing or command fails."""
+    if not shutil.which(cmd[0]):
+        return None
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, check=False, env={**os.environ, "LC_ALL": "C"}, timeout=timeout)
+    except Exception:
+        return None
+
+
 def generate_bug_report() -> Optional[Path]:
     """Generate a clean, standardized Markdown bug report aggregating system state."""
     print(msg("generating_report"))
@@ -313,6 +331,32 @@ def generate_bug_report() -> Optional[Path]:
     env.state_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     report_file = env.state_dir / f"nyxniri-bug-report-{timestamp}.md"
+
+    # Parallel collection of all subprocess-based info
+    version_cmds = {}
+    for cmd in (MAIN_WM, THEME_ENGINE, "fish", "starship", "kitty", "mpvpaper", "wpctl", "ddcutil", "brightnessctl"):
+        if not shutil.which(cmd):
+            continue
+        if cmd == "wpctl":
+            version_cmds[cmd] = ["wireplumber", "--version"]
+        elif cmd == "mpvpaper":
+            version_cmds[cmd] = ["pacman", "-Q", "mpvpaper", "mpvpaper-git"]
+        else:
+            version_cmds[cmd] = [cmd, "--version"]
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        futures = {
+            "lspci": pool.submit(_run_cmd, ["lspci"]),
+            "niri_outputs": pool.submit(_run_cmd, [MAIN_WM, "msg", "outputs"]),
+            "journalctl": pool.submit(_run_cmd, ["journalctl", "--user", "-n", "30", "--no-pager"]),
+            "noctalia_status": pool.submit(_run_cmd, [THEME_ENGINE, "msg", "status"]),
+            "portal_status": pool.submit(_run_cmd, ["systemctl", "--user", "status", "xdg-desktop-portal"]),
+            "df_home": pool.submit(_run_cmd, ["df", "-h", str(env.home)]),
+            "portal_gtk": pool.submit(_run_cmd, ["pacman", "-Qq", "xdg-desktop-portal-gtk"]),
+        }
+        version_futures = {cmd: pool.submit(_run_cmd, vc) for cmd, vc in version_cmds.items()}
+        results = {key: fut.result() for key, fut in futures.items()}
+        version_results = {cmd: fut.result() for cmd, fut in version_futures.items()}
 
     # OS Info
     os_name = "Linux"
@@ -329,66 +373,62 @@ def generate_bug_report() -> Optional[Path]:
 
     # GPU
     gpu_info = "Unknown"
-    try:
-        res = subprocess.run(["lspci"], capture_output=True, text=True, check=False, env={**os.environ, "LC_ALL": "C"})
-        gpu_lines = [line for line in res.stdout.splitlines() if "VGA" in line or "3D" in line or "Display" in line]
+    lspci_res = results.get("lspci")
+    if lspci_res:
+        gpu_lines = [line for line in lspci_res.stdout.splitlines() if "VGA" in line or "3D" in line or "Display" in line]
         if gpu_lines:
             gpu_info = "\n".join(gpu_lines)
-    except Exception:
-        pass
 
     # Connected Displays
     displays = "Unknown"
-    if shutil.which(MAIN_WM):
-        res = subprocess.run([MAIN_WM, "msg", "outputs"], capture_output=True, text=True, check=False)
-        displays = res.stdout.strip() if res.returncode == 0 and res.stdout.strip() else f"{MAIN_WM} msg outputs failed"
+    niri_res = results.get("niri_outputs")
+    if niri_res:
+        displays = niri_res.stdout.strip() if niri_res.returncode == 0 and niri_res.stdout.strip() else f"{MAIN_WM} msg outputs failed"
 
     # Tool Versions
     tool_lines = []
     for cmd in (MAIN_WM, THEME_ENGINE, "fish", "starship", "kitty", "mpvpaper", "wpctl", "ddcutil", "brightnessctl"):
-        if shutil.which(cmd):
-            ver = ""
-            if cmd == "wpctl":
-                res = subprocess.run(["wireplumber", "--version"], capture_output=True, text=True, check=False)
-                ver = next((l for l in res.stdout.splitlines() if "libwireplumber" in l.lower()), "")
-                if not ver:
-                    res = subprocess.run(["pacman", "-Q", "wireplumber"], capture_output=True, text=True, check=False)
-                    ver = res.stdout.strip() or "installed"
-            elif cmd == "mpvpaper":
-                res = subprocess.run(["pacman", "-Q", "mpvpaper", "mpvpaper-git"], capture_output=True, text=True, check=False)
-                ver = res.stdout.splitlines()[0] if res.stdout.strip() else "installed"
-            else:
-                res = subprocess.run([cmd, "--version"], capture_output=True, text=True, check=False)
-                ver = res.stdout.splitlines()[0] if res.stdout.strip() else (res.stderr.splitlines()[0] if res.stderr.strip() else "installed")
-            tool_lines.append(f"{cmd}: {ver}")
-        else:
+        if not shutil.which(cmd):
             tool_lines.append(f"{cmd}: NOT INSTALLED")
+            continue
+        res = version_results.get(cmd)
+        if not res:
+            tool_lines.append(f"{cmd}: NOT INSTALLED")
+            continue
+        if cmd == "wpctl":
+            ver = next((l for l in res.stdout.splitlines() if "libwireplumber" in l.lower()), "")
+            if not ver:
+                wp_fallback = _run_cmd(["pacman", "-Q", "wireplumber"])
+                ver = wp_fallback.stdout.strip() if wp_fallback else "installed"
+        elif cmd == "mpvpaper":
+            ver = res.stdout.splitlines()[0] if res.stdout.strip() else "installed"
+        else:
+            ver = res.stdout.splitlines()[0] if res.stdout.strip() else (res.stderr.splitlines()[0] if res.stderr.strip() else "installed")
+        tool_lines.append(f"{cmd}: {ver}")
     tool_versions = "\n".join(tool_lines)
 
     # Daemon & Service Status
     daemon_lines = []
-    if shutil.which(THEME_ENGINE):
-        res = subprocess.run([THEME_ENGINE, "msg", "status"], capture_output=True, text=True, check=False)
+    noct_res = results.get("noctalia_status")
+    if noct_res:
         daemon_lines.append(f"--- {THEME_ENGINE} status ---")
-        daemon_lines.append(res.stdout.strip() if res.returncode == 0 else f"{THEME_ENGINE} daemon not responding")
-    if shutil.which("systemctl"):
-        res = subprocess.run(["systemctl", "--user", "status", "xdg-desktop-portal"], capture_output=True, text=True, check=False)
+        daemon_lines.append(noct_res.stdout.strip() if noct_res.returncode == 0 else f"{THEME_ENGINE} daemon not responding")
+    portal_res = results.get("portal_status")
+    if portal_res:
         daemon_lines.append("\n--- Desktop portal status ---")
-        daemon_lines.append("\n".join(res.stdout.splitlines()[:10]) if res.stdout.strip() else "xdg-desktop-portal service check failed")
+        daemon_lines.append("\n".join(portal_res.stdout.splitlines()[:10]) if portal_res.stdout.strip() else "xdg-desktop-portal service check failed")
     daemon_status = "\n".join(daemon_lines)
 
     # Health Checks
     health_lines = []
-    if shutil.which("pacman"):
-        res = subprocess.run(["pacman", "-Qq", "xdg-desktop-portal-gtk"], capture_output=True, text=True, check=False)
-        health_lines.append(f"xdg-desktop-portal-gtk: {'installed' if res.returncode == 0 else 'NOT INSTALLED'}")
-    try:
-        res = subprocess.run(["df", "-h", str(env.home)], capture_output=True, text=True, check=False)
-        lines = res.stdout.strip().splitlines()
+    portal_gtk_res = results.get("portal_gtk")
+    if portal_gtk_res:
+        health_lines.append(f"xdg-desktop-portal-gtk: {'installed' if portal_gtk_res.returncode == 0 else 'NOT INSTALLED'}")
+    df_res = results.get("df_home")
+    if df_res:
+        lines = df_res.stdout.strip().splitlines()
         if len(lines) >= 2:
             health_lines.append(f"home free space: {lines[1].split()[3]}")
-    except Exception:
-        pass
     if shutil.which("fcitx5") or (env.config_dir / "fcitx5" / "conf" / "classicui.conf").is_file():
         from nyxniri.modules.fcitx import fcitx_enabled
         health_lines.append(f"fcitx5 nyxmellow: {'enabled' if fcitx_enabled() else 'NOT enabled'}")
@@ -405,11 +445,10 @@ def generate_bug_report() -> Optional[Path]:
         hook_log = f"No hook.log found at {hook_log_path}"
 
     # Systemd Journal
-    if shutil.which("journalctl"):
-        res = subprocess.run(["journalctl", "--user", "-n", "30", "--no-pager"], capture_output=True, text=True, check=False)
-        journal = res.stdout.strip() if res.stdout.strip() else "journalctl log access unavailable"
-    else:
-        journal = "journalctl not available"
+    journal_res = results.get("journalctl")
+    journal = "journalctl not available"
+    if journal_res:
+        journal = journal_res.stdout.strip() if journal_res.stdout.strip() else "journalctl log access unavailable"
 
     # Recent install log (last 30 lines)
     recent_log = "No log found."

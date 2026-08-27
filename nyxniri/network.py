@@ -117,6 +117,7 @@ def _with_git_progress(command: List[str]) -> Tuple[List[str], bool]:
 def _run_git_transfer(command: List[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
     """Run a Git network command with native TTY progress and quiet automation output."""
     progress_command, show_progress = _with_git_progress(command)
+    kwargs.setdefault("timeout", 120)
     return subprocess.run(
         progress_command,
         capture_output=not show_progress,
@@ -308,8 +309,8 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
         if not prompt_confirm("dirty_tree_confirm", "n"):
             print(msg("update_cancelled_dirty"))
             return None
-        subprocess.run(["git", "reset", "--hard", "HEAD"], cwd=target_dir, check=False, env=env)
-        subprocess.run(["git", "clean", "-fd"], cwd=target_dir, check=False, env=env)
+        subprocess.run(["git", "reset", "--hard", "HEAD"], cwd=target_dir, check=False, env=env, timeout=15)
+        subprocess.run(["git", "clean", "-fd"], cwd=target_dir, check=False, env=env, timeout=15)
 
     # Fetch & pull
     sys.stdout.write(msg("checking_updates") + "\n")
@@ -340,6 +341,7 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
             text=True,
             check=False,
             env=env,
+            timeout=15,
         )
         return res_reset.returncode == 0
     log_msg("ERROR", f"Failed to update repository: {target_dir}")
