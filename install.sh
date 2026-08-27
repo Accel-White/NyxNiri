@@ -24,6 +24,11 @@ GIT_MIRROR_REGISTRY=(
     "gh-proxy.org|https://gh-proxy.org/https://github.com/ech678/NyxNiri.git"
 )
 
+# NYXNIRI_REPO: 指定后单源直连(不回退官方),服务 fork 与内网镜像场景
+if [ -n "${NYXNIRI_REPO:-}" ]; then
+    GIT_MIRROR_REGISTRY=("Custom|${NYXNIRI_REPO}")
+fi
+
 git_clone_timeout() {
     local url="$1" target_dir="$2"
     local git_args=(clone)
