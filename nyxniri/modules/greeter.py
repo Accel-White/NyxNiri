@@ -22,6 +22,87 @@ from nyxniri.i18n import msg, text
 
 CONFLICT_DMS = ["sddm", "lightdm", "gdm", "ly"]
 
+
+def _enabled_conflicting_dm() -> Optional[str]:
+    """Return the enabled display manager that currently owns the login alias."""
+    if not shutil.which("systemctl"):
+        return None
+    for dm in CONFLICT_DMS:
+        res = subprocess.run(["systemctl", "is-enabled", dm], capture_output=True, check=False)
+        if res.returncode == 0:
+            return dm
+    return None
+
+
+def _greetd_unit_available() -> bool:
+    """Check the unit before changing the working display manager."""
+    if not shutil.which("systemctl"):
+        return False
+    res = subprocess.run(["systemctl", "cat", "greetd"], capture_output=True, check=False)
+    return res.returncode == 0
+
+
+def _restore_display_manager(previous_dm: Optional[str]) -> bool:
+    """Clear a partial greetd enable and restore the previous login alias."""
+    try:
+        subprocess.run(["sudo", "systemctl", "disable", "greetd"], check=False)
+    except OSError:
+        pass
+
+    if not previous_dm:
+        return True
+
+    try:
+        subprocess.run(
+            ["sudo", "systemctl", "enable", "--force", previous_dm], check=False
+        )
+        restored = subprocess.run(
+            ["systemctl", "is-enabled", previous_dm], capture_output=True, check=False
+        ).returncode == 0
+    except OSError:
+        restored = False
+
+    if restored:
+        print(msg("greeter_dm_restored", previous_dm))
+    else:
+        print(msg("greeter_dm_restore_failed", previous_dm))
+    return restored
+
+
+def _switch_to_greetd(previous_dm: Optional[str]) -> bool:
+    """Enable greetd for the next boot, rolling back an incomplete switch."""
+    switch_started = False
+    committed = False
+    try:
+        if previous_dm:
+            switch_started = True
+            disabled = subprocess.run(
+                ["sudo", "systemctl", "disable", previous_dm], check=False
+            )
+            if disabled.returncode != 0:
+                print(msg("greeter_dm_disable_failed", previous_dm))
+                return False
+
+        switch_started = True
+        subprocess.run(["sudo", "systemctl", "enable", "greetd"], check=False)
+        enabled = subprocess.run(
+            ["systemctl", "is-enabled", "greetd"], capture_output=True, check=False
+        )
+        if enabled.returncode != 0:
+            print(msg("greeter_enable_failed"))
+            return False
+
+        committed = True
+        print(msg("greeter_enabled"))
+        return True
+    except OSError:
+        print(msg("greeter_enable_failed"))
+        return False
+    finally:
+        if switch_started and not committed:
+            _restore_display_manager(previous_dm)
+
+
 def greeter_installed() -> bool:
     """Check if noctalia-greeter session binary exists in PATH."""
     return shutil.which(GREETER_SESSION_BIN) is not None
@@ -93,13 +174,6 @@ def greeter_install() -> bool:
     if not greeter_install_packages():
         return False
 
-    # Check for conflicting display managers
-    for dm in CONFLICT_DMS:
-        if shutil.which("systemctl"):
-            res = subprocess.run(["systemctl", "is-enabled", dm], capture_output=True, check=False)
-            if res.returncode == 0:
-                print(msg("greeter_dm_conflict", dm))
-
     # Backup & Write /etc/greetd/config.toml
     sess_path = shutil.which(GREETER_SESSION_BIN) or f"/usr/bin/{GREETER_SESSION_BIN}"
     sess_arg = _greeter_session_arg()
@@ -115,7 +189,10 @@ def greeter_install() -> bool:
 
     bak = Path(f"{GREETER_ETC_CFG}.nyxniri.bak")
     backup_cmd = f"mkdir -p {GREETER_ETC_CFG.parent} && if [ -f {GREETER_ETC_CFG} ] && [ ! -f {bak} ]; then cp {GREETER_ETC_CFG} {bak}; fi"
-    subprocess.run(["sudo", "sh", "-c", backup_cmd], check=False)
+    res_b = subprocess.run(["sudo", "sh", "-c", backup_cmd], check=False)
+    if res_b.returncode != 0:
+        print(msg("greeter_cmd_failed", str(bak)))
+        return False
 
     write_cmd = f"cat << 'EOF' > {GREETER_ETC_CFG}\n{toml_content}\nEOF"
     res_w = subprocess.run(["sudo", "sh", "-c", write_cmd], check=False)
@@ -123,6 +200,7 @@ def greeter_install() -> bool:
         print(msg("greeter_config_written", str(GREETER_ETC_CFG)))
     else:
         print(msg("greeter_config_failed", str(GREETER_ETC_CFG)))
+        return False
 
     state_cmd = (
         f"mkdir -p {GREETER_STATE_DIR} && "
@@ -132,6 +210,9 @@ def greeter_install() -> bool:
     res_s = subprocess.run(["sudo", "sh", "-c", state_cmd], check=False)
     if res_s.returncode == 0:
         print(msg("greeter_state_dir_created"))
+    else:
+        print(msg("greeter_cmd_failed", str(GREETER_STATE_DIR)))
+        return False
 
     # Polkit rule
     polkit_rule = (
@@ -148,13 +229,19 @@ def greeter_install() -> bool:
         print(msg("greeter_polkit_written", str(GREETER_POLKIT_RULE)))
     else:
         print(msg("greeter_polkit_failed"))
+        return False
 
-    # Enable greetd
-    res_e = subprocess.run(["sudo", "systemctl", "enable", "greetd"], check=False)
-    if res_e.returncode == 0:
-        print(msg("greeter_enabled"))
-    else:
-        print(msg("greeter_enable_failed"))
+    # Switch only after every prerequisite is ready. Do not use --now here: stopping
+    # the active display manager would terminate the current graphical session.
+    if not _greetd_unit_available():
+        print(msg("greeter_service_missing"))
+        return False
+
+    previous_dm = _enabled_conflicting_dm()
+    if previous_dm:
+        print(msg("greeter_dm_conflict", previous_dm))
+    if not _switch_to_greetd(previous_dm):
+        return False
 
     print(msg("greeter_reboot_hint"))
     log_msg("INFO", "Configured Noctalia Greeter")

@@ -854,8 +854,24 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_YELLOW}[!] Noctalia Greeter setup skipped{Colors.RESET}",
     },
     "greeter_dm_conflict": {
-        "zh": f"{Colors.BOLD_YELLOW}[!] 存在冲突的显示管理器 ({{0}})，请先手动将其禁用。{Colors.RESET}",
-        "en": f"{Colors.BOLD_YELLOW}[!] Conflicting display manager detected ({{0}}). Please disable it manually.{Colors.RESET}",
+        "zh": f"{Colors.BOLD_YELLOW}[!] 检测到已启用的显示管理器 ({{0}})，现在切换到 greetd{Colors.RESET}",
+        "en": f"{Colors.BOLD_YELLOW}[!] Enabled display manager detected ({{0}}); switching to greetd{Colors.RESET}",
+    },
+    "greeter_dm_disable_failed": {
+        "zh": f"{Colors.BOLD_RED}[!] 停用 {{0}} 失败，已取消切换{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[!] Failed to disable {{0}}; switch cancelled{Colors.RESET}",
+    },
+    "greeter_dm_restored": {
+        "zh": f"{Colors.BOLD_GREEN}[✓] 已恢复原显示管理器 {{0}}{Colors.RESET}",
+        "en": f"{Colors.BOLD_GREEN}[✓] Restored the previous display manager: {{0}}{Colors.RESET}",
+    },
+    "greeter_dm_restore_failed": {
+        "zh": f"{Colors.BOLD_RED}[!] 无法恢复 {{0}}，重启前请运行: sudo systemctl disable greetd && sudo systemctl enable {{0}}{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[!] Could not restore {{0}}. Before reboot, run: sudo systemctl disable greetd && sudo systemctl enable {{0}}{Colors.RESET}",
+    },
+    "greeter_service_missing": {
+        "zh": f"{Colors.BOLD_RED}[!] 未找到 greetd 服务，显示管理器保持不变{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[!] greetd service not found; display manager left unchanged{Colors.RESET}",
     },
     "greeter_config_written": {
         "zh": f"{Colors.BOLD_GREEN}[✓] 已写入 greetd 配置: {{0}}{Colors.RESET}",
@@ -894,8 +910,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_GREEN}[✓] greetd service already enabled{Colors.RESET}",
     },
     "greeter_enable_failed": {
-        "zh": f"{Colors.BOLD_RED}[!] 启用 greetd 服务失败。请手动运行: sudo systemctl enable greetd{Colors.RESET}",
-        "en": f"{Colors.BOLD_RED}[!] Failed to enable greetd. Run manually: sudo systemctl enable greetd{Colors.RESET}",
+        "zh": f"{Colors.BOLD_RED}[!] greetd 启用后验证失败，正在恢复原登录状态{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[!] greetd did not verify as enabled; restoring the previous login state{Colors.RESET}",
     },
     "greeter_reboot_hint": {
         "zh": f"{Colors.BOLD_CYAN}重启后生效。主题同步: Noctalia 设置 → 安全 → Noctalia Greeter → Sync Now{Colors.RESET}",

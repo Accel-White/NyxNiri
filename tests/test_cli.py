@@ -163,6 +163,70 @@ class TestUpdateForcePath(unittest.TestCase):
         mock_wp.assert_called_once_with(do_download=True)
         mock_greeter.assert_called_once()
 
+    def test_force_returns_false_when_greeter_fails(self):
+        from nyxniri.cli import offer_overwrite_upgrade
+
+        with patch("nyxniri.cli.deploy_selected_configs", return_value=[]):
+            with patch("nyxniri.cli.deploy_wallpapers"):
+                with patch("nyxniri.cli.fcitx_enabled", return_value=False):
+                    with patch("nyxniri.cli.greeter_install", return_value=False):
+                        with patch("nyxniri.cli.render_completion_screen") as mock_render:
+                            result = offer_overwrite_upgrade("--force")
+
+        self.assertFalse(result)
+        mock_render.assert_not_called()
+
+
+class TestGreeterWorkflowFailure(unittest.TestCase):
+    """Greeter setup failures must stop install and interactive update workflows."""
+
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+
+    def tearDown(self):
+        self._ctx.__exit__()
+
+    @staticmethod
+    def _greeter_only_selection():
+        return {
+            "configs": [],
+            "wallpapers": False,
+            "fcitx": False,
+            "greeter": True,
+            "backup": False,
+        }
+
+    def test_install_returns_false_when_greeter_fails(self):
+        from nyxniri.cli import install_configs_workflow
+
+        with patch("sys.stdin.isatty", return_value=True):
+            with patch("nyxniri.cli.run_master_component_menu", return_value=self._greeter_only_selection()):
+                with patch("nyxniri.cli._phase_preflight_check"):
+                    with patch("nyxniri.cli.deploy_wallpapers"):
+                        with patch("nyxniri.cli.greeter_install", return_value=False):
+                            with patch("nyxniri.cli.render_completion_screen") as mock_render:
+                                with patch("builtins.print"):
+                                    result = install_configs_workflow("config")
+
+        self.assertFalse(result)
+        mock_render.assert_not_called()
+
+    def test_interactive_update_returns_false_when_greeter_fails(self):
+        from nyxniri.cli import offer_overwrite_upgrade
+
+        with patch("sys.stdin.isatty", return_value=True):
+            with patch("nyxniri.cli.Menu") as mock_menu:
+                mock_menu.return_value.run.return_value = 0
+                with patch("nyxniri.cli.run_master_component_menu", return_value=self._greeter_only_selection()):
+                    with patch("nyxniri.cli.greeter_install", return_value=False):
+                        with patch("nyxniri.cli.render_completion_screen") as mock_render:
+                            with patch("builtins.print"):
+                                result = offer_overwrite_upgrade()
+
+        self.assertFalse(result)
+        mock_render.assert_not_called()
+
 
 class TestUpdateChecksNewDeps(unittest.TestCase):
     """update command should call check_new_deps_post_update after deploy."""
