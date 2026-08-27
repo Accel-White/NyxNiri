@@ -1471,6 +1471,14 @@ Commands:
         "zh": f"\n{Colors.BOLD_CYAN}系统包由 pacman 管理，已跳过 git pull。更新请运行: sudo pacman -Syu nyxniri-git{Colors.RESET}\n",
         "en": f"\n{Colors.BOLD_CYAN}System package is managed by pacman; git pull skipped. Run: sudo pacman -Syu nyxniri-git{Colors.RESET}\n",
     },
+    "update_pin_target": {
+        "zh": f"{Colors.BOLD_BLUE}:: 正在切换到指定版本 ({{0}})…{Colors.RESET}",
+        "en": f"{Colors.BOLD_BLUE}:: Switching to pinned ref ({{0}})…{Colors.RESET}",
+    },
+    "update_pin_done": {
+        "zh": f"{Colors.BOLD_GREEN}[✓] 已固定到指定版本: {{0}}{Colors.RESET}",
+        "en": f"{Colors.BOLD_GREEN}[✓] Pinned to ref: {{0}}{Colors.RESET}",
+    },
     "path_occlusion_warn": {
         "zh": f"{Colors.BOLD_YELLOW}[!] 检测到 ~/.local/bin/nyxniri 遮蔽了系统包 (/usr/bin/nyxniri)。建议删除旧软链以使用系统包: rm ~/.local/bin/nyxniri{Colors.RESET}",
         "en": f"{Colors.BOLD_YELLOW}[!] ~/.local/bin/nyxniri is shadowing the system package (/usr/bin/nyxniri). Remove the stale link to use the package: rm ~/.local/bin/nyxniri{Colors.RESET}",

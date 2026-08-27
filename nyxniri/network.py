@@ -344,3 +344,90 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
         return res_reset.returncode == 0
     log_msg("ERROR", f"Failed to update repository: {target_dir}")
     return False
+
+
+def safe_git_checkout_ref(target_dir: Path, ref: str) -> Optional[bool]:
+    """Pin the repository to an explicit ref: fetch it, then hard reset to FETCH_HEAD.
+
+    Same contract as safe_git_pull (True=updated, None=skipped, False=failed),
+    but the target is a user-specified tag/commit instead of the branch tip.
+    Dirty trees are refused outright: a pinned reset is destructive, and
+    silently skipping would defeat the point of asking for an exact version.
+    """
+    if not shutil.which("git"):
+        print(msg("git_required"))
+        return False
+
+    if not (target_dir / ".git").is_dir():
+        log_msg("ERROR", f"Update target is not a Git repository: {target_dir}")
+        return False
+
+    run_mode = get_env().run_mode
+    env = {**os.environ, "LC_ALL": "C"}
+
+    if run_mode == "system":
+        print(msg("update_use_pacman"))
+        log_msg("INFO", "System package mode: refusing pinned checkout (pacman manages updates)")
+        return None
+
+    res_status = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=target_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+    if res_status.stdout.strip():
+        print(msg("dirty_tree_warn", str(target_dir)))
+        print(msg("update_cancelled_dirty"))
+        log_msg("WARN", f"Refused pinned checkout on dirty tree: {target_dir}")
+        return False
+
+    sys.stdout.write(msg("update_pin_target", ref) + "\n")
+
+    # Resolve local names (tags/branches/short SHAs) to a full commit first:
+    # abbreviated SHAs are not valid fetch refspecs on strict servers.
+    resolved = ""
+    res_verify = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+        cwd=target_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+    if res_verify.returncode == 0:
+        resolved = res_verify.stdout.strip()
+
+    fetch_attempts = [
+        ["git", *_GIT_NET, "-c", "uploadpack.allowAnySHA1InWant=1", "fetch", "--depth", "1", "origin", ref],
+    ]
+    if resolved and resolved.lower() != ref.lower():
+        fetch_attempts.append(
+            ["git", *_GIT_NET, "-c", "uploadpack.allowAnySHA1InWant=1", "fetch", "--depth", "1", "origin", resolved]
+        )
+
+    fetch_ok = False
+    for fetch_cmd in fetch_attempts:
+        if _run_git_transfer(fetch_cmd, cwd=target_dir, env=env).returncode == 0:
+            fetch_ok = True
+            break
+    if not fetch_ok:
+        log_msg("ERROR", f"Failed to fetch pinned ref {ref}: {target_dir}")
+        return False
+
+    res_reset = subprocess.run(
+        ["git", "reset", "--hard", "FETCH_HEAD"],
+        cwd=target_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+    if res_reset.returncode != 0:
+        log_msg("ERROR", f"Failed to reset to pinned ref {ref}: {target_dir}")
+        return False
+
+    print(msg("update_pin_done", ref))
+    return True
