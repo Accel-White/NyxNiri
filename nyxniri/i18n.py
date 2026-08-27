@@ -60,12 +60,12 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "Software & Dependencies",
     },
     "menu_group_maint": {
-        "zh": f"\n  {Colors.BOLD_BLUE}管理{Colors.RESET}",
-        "en": f"\n  {Colors.BOLD_BLUE}Manage{Colors.RESET}",
+        "zh": f"  {Colors.BOLD_BLUE}管理{Colors.RESET}",
+        "en": f"  {Colors.BOLD_BLUE}Manage{Colors.RESET}",
     },
     "menu_group_system": {
-        "zh": f"\n  {Colors.BOLD_BLUE}诊断{Colors.RESET}",
-        "en": f"\n  {Colors.BOLD_BLUE}Diagnostics{Colors.RESET}",
+        "zh": f"  {Colors.BOLD_BLUE}诊断{Colors.RESET}",
+        "en": f"  {Colors.BOLD_BLUE}Diagnostics{Colors.RESET}",
     },
     "menu_opt3": {
         "zh": "快照管理",
@@ -1574,8 +1574,8 @@ Commands:
         "en": "App",
     },
     "preset_switcher_col_preset": {
-        "zh": "预设 ({{0}})",
-        "en": "Presets ({{0}})",
+        "zh": f"预设 ({{0}})",
+        "en": f"Presets ({{0}})",
     },
 }
 

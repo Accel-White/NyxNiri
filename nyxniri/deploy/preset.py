@@ -191,9 +191,14 @@ def apply_preset(app: str, name: str) -> bool:
     Runs only atomic_replace + template render for this app — no hardware
     patches, no post-install services (§9: switching kitty must not rerun
     fisher). Writes the active file AFTER deploy succeeds (iron law, §3.2).
+
+    The manifest ``preserve`` list (e.g. niri/monitor.kdl, niri/effects.kdl) is
+    honoured just like the full-deploy path: a preset switch must not wipe
+    runtime-managed files the new variant doesn't ship.
     """
     from nyxniri.deploy.templates import _phase_render_templates
     from nyxniri.deploy.atomic import atomic_replace_item
+    from nyxniri.deploy.manifest import load_manifest_for
 
     env = get_env()
     dest = env.config_dir / app
@@ -202,8 +207,16 @@ def apply_preset(app: str, name: str) -> bool:
         print(msg("preset_not_found", app, name))
         return False
 
+    # Preserve the same manifest-declared files the full deploy would; a preset
+    # switch is otherwise indistinguishable to runtime state like effects.kdl.
+    preserve = None
+    try:
+        preserve = load_manifest_for(app).preserve or None
+    except Exception:
+        pass
+
     preserved_log: List[str] = []
-    if not atomic_replace_item(src, dest, preserved_log=preserved_log):
+    if not atomic_replace_item(src, dest, preserved_log=preserved_log, preserve=preserve):
         _render_preset_result(app, name, preserved_log, failed=True)
         return False
 

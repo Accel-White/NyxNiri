@@ -524,7 +524,12 @@ def extensions_menu_loop() -> None:
         elif choice == 4: break
 
 def preset_switcher_loop() -> None:
-    """Interactive dual-pane preset switcher (§9). Left = apps, right = presets."""
+    """Interactive dual-pane preset switcher (§9). Left = apps, right = presets.
+
+    Stays open after an apply: the switcher re-enters with refreshed active
+    state so the user sees the ``>`` marker move and can keep switching. Cancel
+    (q/ESC) returns to the main menu.
+    """
     if not sys.stdin.isatty():
         print(msg("interactive_terminal_required"), file=sys.stderr)
         return
@@ -534,11 +539,15 @@ def preset_switcher_loop() -> None:
     def presets_for(app: str):
         return [(name, is_active) for name, _, is_active in collect_presets(app)]
 
-    chosen = PresetSwitcher(apps, presets_for).run()
-    if chosen:
+    while True:
+        chosen = PresetSwitcher(apps, presets_for).run()
+        if not chosen:
+            return  # ESC/q → back to main menu
         app, name = chosen
         apply_preset(app, name)
         press_any_key()
+        # loop: a fresh PresetSwitcher reads live active state via collect_presets,
+        # so the cursor lands on the newly-active preset and `>` reflects it.
 
 def main_menu_loop() -> None:
     """Main NyxNiri control panel interactive loop."""

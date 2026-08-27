@@ -48,6 +48,10 @@ class TerminalGuard:
                 termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, cls._orig_attr)
             except Exception:
                 pass
+        # Belt-and-suspenders: if a signal crashed a mouse-enabled loop before
+        # interactive_screen's finally ran, disable tracking + show cursor so
+        # the terminal isn't left in a quirked state.
+        sys.stdout.write("\033[?1006l\033[?1002l")
         sys.stdout.write(Colors.CURSOR_SHOW)
         sys.stdout.flush()
 
@@ -126,8 +130,31 @@ def responsive_hint(key: str) -> str:
 
 
 # --- Single Key Event Listener ---
-def read_key() -> str:
-    """Listen for a single keyboard event using raw unbuffered OS file descriptor reads."""
+@dataclass
+class MouseEvent:
+    """A decoded SGR mouse report (``\\x1b[<btn;col;row(M|m)``).
+
+    Only emitted when the caller enabled mouse tracking via
+    ``interactive_screen(mouse=True)``; otherwise no such sequence reaches
+    read_key(). ``kind`` is one of PRESS / WHEEL_UP / WHEEL_DOWN. col/row are
+    1-based terminal coordinates matching cursor-position addressing.
+    """
+    kind: str
+    col: int
+    row: int
+
+
+_MOUSE_RE = re.compile(rb"\x1b\[<(\d+);(\d+);(\d+)([Mm])")
+
+
+def read_key() -> Any:
+    """Listen for a single keyboard event using raw unbuffered OS file descriptor reads.
+
+    Returns a ``str`` for keyboard events, or a ``MouseEvent`` when the caller
+    has enabled SGR mouse tracking. Mouse tracking is off by default, so for
+    every component but PresetSwitcher(mouse=True) no mouse sequence ever
+    arrives and the mouse branch is inert.
+    """
     if not sys.stdin.isatty():
         return "ENTER"
 
@@ -147,7 +174,23 @@ def read_key() -> str:
         if raw_bytes == b"\x1b":
             return "ESC"
 
-        # 2. Arrow keys (CSI: \x1b[ and SS3: \x1bO)
+        # 2. SGR mouse report (\x1b[<btn;col;row(M|m)) — only when caller enabled tracking
+        m = _MOUSE_RE.match(raw_bytes)
+        if m:
+            btn = int(m.group(1))
+            col = int(m.group(2))
+            row = int(m.group(3))
+            release = m.group(4) == b"m"
+            if release:
+                return "MOUSE_RELEASE"
+            # SGR button encoding: low bits = button, +8 = wheel, +64 = motion
+            if btn & 64:
+                kind = "WHEEL_DOWN" if (btn & 1) else "WHEEL_UP"
+            else:
+                kind = "PRESS"
+            return MouseEvent(kind=kind, col=col, row=row)
+
+        # 3. Arrow keys (CSI: \x1b[ and SS3: \x1bO)
         if raw_bytes in (b"\x1b[A", b"\x1bOA"):
             return "UP"
         if raw_bytes in (b"\x1b[B", b"\x1bOB"):
@@ -157,7 +200,7 @@ def read_key() -> str:
         if raw_bytes in (b"\x1b[D", b"\x1bOD"):
             return "LEFT"
 
-        # 3. CSI Extended keys (Home, End, PageUp, PageDown)
+        # 4. CSI Extended keys (Home, End, PageUp, PageDown)
         if raw_bytes.startswith(b"\x1b["):
             code = raw_bytes[2:]
             if code in (b"H", b"1~"):
@@ -170,7 +213,7 @@ def read_key() -> str:
                 return "PAGEDOWN"
             return "ESC"
 
-        # 4. Standard control keys
+        # 5. Standard control keys
         if raw_bytes in (b"\r", b"\n"):
             return "ENTER"
         if raw_bytes == b" ":
@@ -178,7 +221,7 @@ def read_key() -> str:
         if raw_bytes in (b"\x03", b"\x04"):  # Ctrl+C / Ctrl+D — both exit
             return "EXIT"
 
-        # 5. Normal UTF-8 single character
+        # 6. Normal UTF-8 single character
         try:
             return raw_bytes.decode("utf-8")
         except UnicodeDecodeError:
@@ -301,8 +344,54 @@ def write_cleared(text: str) -> None:
         else:
             sys.stdout.write(f"{line}\033[K\n")
 
-def show_logo(env: Optional[Environment] = None) -> None:
-    """Render the official NyxNiri ASCII brand header."""
+
+# --- Loop scaffold (shared by Menu / CheckboxList / PresetSwitcher / select_language) ---
+RESERVED_ROWS = 18  # per-frame vertical budget: logo + title + hint
+
+
+@contextmanager
+def interactive_screen(clear_first: bool = True, mouse: bool = False):
+    """Shared scaffolding for a full-screen interactive loop.
+
+    Clears once on entry (unless ``clear_first=False``), enters echo-off raw
+    mode, hides the cursor, and drains stale input; yields the stdin fd. On
+    exit (return, exception, or SystemExit) it drains the auto-repeat burst,
+    restores cooked mode, disables mouse tracking if it was enabled, and
+    re-shows the cursor — the body only owns the per-frame redraw
+    (``\\033[H`` + show_logo + rows + hint) and key dispatch.
+
+    ``mouse=True`` enables SGR mouse tracking (1002 + 1006) for the loop's
+    lifetime; read_key() then yields MouseEvent for clicks/wheel. Off by
+    default so non-mouse components see no mouse sequence at all.
+    """
+    fd = sys.stdin.fileno()
+    if clear_first:
+        clear_screen()
+    sys.stdout.write(Colors.CURSOR_HIDE)
+    if mouse:
+        # 1002 = button-event tracking, 1006 = SGR coordinate encoding
+        sys.stdout.write("\033[?1002h\033[?1006h")
+    stack = ExitStack()
+    stack.enter_context(raw_input_mode(fd))
+    try:
+        _drain_pending(fd)
+        yield fd
+    finally:
+        _drain_pending(fd, debounce=True)
+        stack.close()
+        if mouse:
+            sys.stdout.write("\033[?1006l\033[?1002l")
+        sys.stdout.write(Colors.CURSOR_SHOW)
+        sys.stdout.flush()
+
+
+def show_logo(env: Optional[Environment] = None) -> int:
+    """Render the official NyxNiri ASCII brand header.
+
+    Returns the number of terminal rows written, so callers that track absolute
+    row positions (e.g. PresetSwitcher mouse hit-mapping) can account for the
+    header height without re-deriving the layout branches here.
+    """
     if env is None:
         env = get_env()
 
@@ -315,7 +404,7 @@ def show_logo(env: Optional[Environment] = None) -> None:
             f"  {Colors.DARK_GRAY}{mode_line}{Colors.RESET}\n\n"
         )
         write_cleared(logo)
-        return
+        return logo.count("\n")
 
     mode_line = truncate_display(
         f"Mode: {env.mode_label} ({env.repo_dir})",
@@ -334,9 +423,12 @@ def show_logo(env: Optional[Environment] = None) -> None:
         f"  {Colors.DARK_GRAY}{mode_line}{Colors.RESET}\n\n"
     )
     write_cleared(logo)
+    return logo.count("\n")
 
-def render_menu_item(idx: int, label: str, focus: int, style: str = "normal") -> None:
+def render_menu_item(idx: int, label: str, focus: int, style: str = "normal", cols: Optional[int] = None) -> None:
     """Render a single interactive menu row with line-level erase."""
+    if cols is None:
+        cols = shutil.get_terminal_size((80, 24)).columns
     if idx == focus:
         prefix = f"  {Colors.BOLD_CYAN}❯ {Colors.RESET}"
         if style == "warn":
@@ -353,20 +445,16 @@ def render_menu_item(idx: int, label: str, focus: int, style: str = "normal") ->
             color = Colors.DARK_GRAY
         else:
             color = ""
-    available = max(1, shutil.get_terminal_size((80, 24)).columns - display_width(prefix) - 1)
+    available = max(1, cols - display_width(prefix) - 1)
     clipped_label = truncate_display(label, available)
     sys.stdout.write(f"{prefix}{color}{clipped_label}{Colors.RESET}\033[K\n")
 
-def render_check_row(is_focus: bool, check_str: str, label: str) -> None:
+def render_check_row(is_focus: bool, check_str: str, label: str, cols: Optional[int] = None) -> None:
     """Render a single checkbox item row with line-level erase."""
+    if cols is None:
+        cols = shutil.get_terminal_size((80, 24)).columns
     prefix = f"  {Colors.BOLD_CYAN}❯ {Colors.RESET}" if is_focus else "    "
-    available = max(
-        1,
-        shutil.get_terminal_size((80, 24)).columns
-        - display_width(prefix)
-        - display_width(check_str)
-        - 2,
-    )
+    available = max(1, cols - display_width(prefix) - display_width(check_str) - 2)
     clipped_label = truncate_display(label, available)
     if is_focus:
         sys.stdout.write(
@@ -435,25 +523,19 @@ class Menu:
         if not sys.stdin.isatty():
             return len(self.items) - 1
 
-        clear_screen()
         focus = initial_focus
         max_idx = len(self.items) - 1
         env = get_env()
 
-        sys.stdout.write(Colors.CURSOR_HIDE)
-        fd = sys.stdin.fileno()
-        stack = ExitStack()
-        stack.enter_context(raw_input_mode(fd))
-        try:
-            _drain_pending(fd)
+        with interactive_screen():
             while True:
+                cols, terminal_lines = shutil.get_terminal_size((80, 24))
                 sys.stdout.write("\033[?25l\033[H")
                 show_logo(env)
                 title = msg(self.title_key).strip("\n")
                 write_cleared(f"{title}\n\n")
 
-                terminal_lines = shutil.get_terminal_size((80, 24)).lines
-                visible_count = max(3, terminal_lines - 18)
+                visible_count = max(3, terminal_lines - RESERVED_ROWS)
                 start = max(0, min(focus - visible_count // 2, len(self.items) - visible_count))
                 end = min(len(self.items), start + visible_count)
                 if start > 0:
@@ -461,12 +543,11 @@ class Menu:
                 for curr_idx in range(start, end):
                     item = self.items[curr_idx]
                     if item.group_header:
-                        header = truncate_display(
-                            item.group_header,
-                            max(1, shutil.get_terminal_size((80, 24)).columns - 1),
-                        )
+                        if curr_idx > 0:
+                            write_cleared("\n")
+                        header = truncate_display(item.group_header, max(1, cols - 1))
                         write_cleared(f"{header}\n")
-                    render_menu_item(curr_idx, item.label, focus, item.style)
+                    render_menu_item(curr_idx, item.label, focus, item.style, cols)
                 if end < len(self.items):
                     write_cleared(f"    {Colors.DARK_GRAY}...{Colors.RESET}\n")
 
@@ -488,11 +569,6 @@ class Menu:
                     return max_idx
                 elif key in ("ESC", "EXIT"):
                     return max_idx
-        finally:
-            _drain_pending(fd, debounce=True)
-            stack.close()
-            sys.stdout.write(Colors.CURSOR_SHOW)
-            sys.stdout.flush()
 
 # --- Component: Checkbox Checklist ---
 @dataclass
@@ -518,26 +594,20 @@ class CheckboxList:
                 return [e.key for e in self.entries if not e.is_separator and e.checked]
             return None
 
-        clear_screen()
         selectable = [idx for idx, entry in enumerate(self.entries) if not entry.is_separator]
         focus_pos = 0
-
         env = get_env()
-        sys.stdout.write(Colors.CURSOR_HIDE)
-        fd = sys.stdin.fileno()
-        stack = ExitStack()
-        stack.enter_context(raw_input_mode(fd))
-        try:
-            _drain_pending(fd)
+
+        with interactive_screen():
             while True:
+                cols, terminal_lines = shutil.get_terminal_size((80, 24))
                 sys.stdout.write("\033[?25l\033[H")
                 show_logo(env)
                 title = msg(self.title_key).strip("\n")
                 write_cleared(f"{title}\n\n")
 
                 focus = selectable[focus_pos]
-                terminal_lines = shutil.get_terminal_size((80, 24)).lines
-                visible_count = max(4, terminal_lines - 18)
+                visible_count = max(4, terminal_lines - RESERVED_ROWS)
                 start = max(
                     0,
                     min(focus - visible_count // 2, len(self.entries) - visible_count),
@@ -556,7 +626,7 @@ class CheckboxList:
                         if entry.checked
                         else f"{Colors.DARK_GRAY}[ ]{Colors.RESET}"
                     )
-                    render_check_row(idx == focus, check_str, entry.label)
+                    render_check_row(idx == focus, check_str, entry.label, cols)
                 if end < len(self.entries):
                     write_cleared(f"    {Colors.DARK_GRAY}...{Colors.RESET}\n")
 
@@ -590,11 +660,6 @@ class CheckboxList:
                         self.entries[entry_idx].checked = not self.entries[entry_idx].checked
                 elif key == "ENTER":
                     return [e.key for e in self.entries if not e.is_separator and e.checked]
-        finally:
-            _drain_pending(fd, debounce=True)
-            stack.close()
-            sys.stdout.write(Colors.CURSOR_SHOW)
-            sys.stdout.flush()
 
 # --- Component: Dual-Pane Preset Switcher (§9) ---
 class PresetSwitcher:
@@ -603,12 +668,27 @@ class PresetSwitcher:
     The ranger/mc model: one cursor that lives in one pane at a time. ←/→ move
     the cursor between panes; ↑/↓ move within the active pane. Enter applies the
     (focused app, focused preset) pair; q/ESC cancels. The active preset is
-    always marked ``>``; the focused app's preset list re-renders on switch,
-    landing its cursor on the active preset.
+    marked ``>`` (green); when that row is also focused the cyan ``❯`` takes its
+    place. The focused app's preset list re-renders on switch, landing its cursor
+    on the active preset.
 
     Decoupled from deploy/preset: the caller supplies the app list and a
     callback returning ``[(preset_name, is_active)]`` for an app. ``run()``
     returns the chosen ``(app, preset)`` pair, or None on cancel.
+
+    Glyph vocabulary (single-glyph state machine, unified across panes):
+      ``❯`` cyan  — live cursor row (whole screen has exactly one)
+      ``>``  green — in-place selection: left = app whose presets are shown,
+                     right = the currently active preset
+      `` ``  none  — otherwise
+    Pane identity is shown by a leading bar: ``▌`` cyan on the active pane,
+    ``│`` dark-gray on the inactive one — so the cursor's home pane is readable
+    at a glance without scanning for ``❯``.
+
+    Mouse: SGR tracking is enabled for the loop. Clicking a left-pane row
+    browses that app (cursor lands on its active preset); clicking a right-pane
+    row applies that preset immediately and returns. Wheel scrolls the active
+    pane.
     """
 
     def __init__(
@@ -644,77 +724,94 @@ class PresetSwitcher:
             return 0
 
         right_idx = land_on_active(self.apps[left])
-        sys.stdout.write(Colors.CURSOR_HIDE)
-        fd = sys.stdin.fileno()
-        stack = ExitStack()
-        stack.enter_context(raw_input_mode(fd))
-        try:
-            _drain_pending(fd)
+        with interactive_screen(clear_first=False, mouse=True):
             while True:
                 sys.stdout.write("\033[?25l\033[H")
-                show_logo(env)
+                logo_rows = show_logo(env)
                 title = msg(self.title_key).strip("\n")
                 write_cleared(f"{title}\n\n")
 
                 app = self.apps[left]
                 presets = right_items(app)
-                size = shutil.get_terminal_size((80, 24))
-                cols, terminal_lines = size.columns, size.lines
+                cols, terminal_lines = shutil.get_terminal_size((80, 24))
                 left_w = min(24, max(8, cols // 3))
                 gap = 3
                 right_w = max(8, cols - left_w - gap - 4)
+                # column geometry (1-based, for mouse hit-testing):
+                #   col 1            = left pane bar
+                #   col 3..2+left_w  = left content
+                #   col 3+left_w..   = gap (3 wide)
+                #   col 3+left_w+gap = right pane bar
+                #   col 5+left_w+gap = right content
+                left_col_end = 2 + left_w
+                gap_mid = 2 + left_w + gap // 2 + 1
+                right_bar_col = 3 + left_w + gap
+
+                bar_on = f"{Colors.BOLD_CYAN}▌{Colors.RESET}"
+                bar_off = f"{Colors.DARK_GRAY}│{Colors.RESET}"
 
                 hdr_l = msg("preset_switcher_col_app")
                 hdr_r = msg("preset_switcher_col_preset", app)
+                rule_w = min(right_w, left_w)  # both columns share this content width → symmetric
                 write_cleared(
-                    f"  {Colors.BOLD_WHITE}{pad_display(hdr_l, left_w)}{Colors.RESET}"
-                    f"{' ' * gap}{Colors.BOLD_WHITE}{truncate_display(hdr_r, right_w)}{Colors.RESET}\n"
-                )
-                write_cleared(
-                    f"  {Colors.DARK_GRAY}{'─' * left_w}{Colors.RESET}"
-                    f"{' ' * gap}{Colors.DARK_GRAY}{'─' * min(right_w, 16)}{Colors.RESET}\n"
+                    f"{bar_on if pane == 'left' else bar_off} {Colors.BOLD_WHITE}{pad_display(hdr_l, left_w)}{Colors.RESET}"
+                    f"{' ' * gap}{bar_on if pane == 'right' else bar_off} {Colors.BOLD_WHITE}{pad_display(truncate_display(hdr_r, rule_w), rule_w)}{Colors.RESET}\n"
                 )
 
                 rows = max(len(self.apps), len(presets))
-                visible = max(4, terminal_lines - 16)
+                visible = max(4, terminal_lines - 15)  # logo+title+1-line col header+hint
                 active_cursor = left if pane == "left" else right_idx
                 start = max(0, min(active_cursor - visible // 2, rows - visible))
                 end = min(rows, start + visible)
+                # hit_map: absolute terminal row (1-based) -> list index i.
+                # show_logo returns its newline count; the cursor then sits one
+                # row below, and title(1) + blank(1) + header(1) = 3 rows
+                # precede the first data row (no rule line — the bar stays
+                # vertically continuous header→data).
+                hit_map: List[Tuple[int, int]] = []
+                cur_row = logo_rows + 1 + 3
                 if start > 0:
-                    write_cleared(f"  {Colors.DARK_GRAY}...{Colors.RESET}\n")
+                    write_cleared(f"{Colors.DARK_GRAY} ...{Colors.RESET}\n")
+                    cur_row += 1
                 for i in range(start, end):
-                    # left cell
+                    # left cell — single-glyph state machine, mirrors the right pane
                     if i < len(self.apps):
                         a = self.apps[i]
-                        is_left_focus = i == left
-                        if pane == "left" and is_left_focus:
-                            lpre = f"{Colors.BOLD_CYAN}❯ {Colors.RESET}"
+                        if pane == "left" and i == left:
+                            lglyph = f"{Colors.BOLD_CYAN}❯{Colors.RESET}"
                             lcol = Colors.BOLD_WHITE
-                        elif is_left_focus:
-                            lpre = f"{Colors.DARK_GRAY}❯ {Colors.RESET}"
-                            lcol = Colors.DARK_GRAY
-                        else:
-                            lpre = "  "
+                        elif pane == "right" and i == left:
+                            lglyph = f"{Colors.BOLD_GREEN}>{Colors.RESET}"
                             lcol = ""
-                        lcell = f"{lpre}{lcol}{truncate_display(a, left_w - 2)}{Colors.RESET}"
+                        else:
+                            lglyph = " "
+                            lcol = ""
+                        lcell = f"{lglyph} {lcol}{truncate_display(a, left_w - 2)}{Colors.RESET}"
                     else:
                         lcell = ""
-                    # right cell
+                    # right cell — one leading glyph: ❯ focused / > active / space neither
                     if i < len(presets):
                         pname, is_active = presets[i]
-                        marker = f"{Colors.BOLD_GREEN}>{Colors.RESET}" if is_active else " "
                         if pane == "right" and i == right_idx:
-                            rpre = f"{Colors.BOLD_CYAN}❯ {Colors.RESET}"
+                            glyph = f"{Colors.BOLD_CYAN}❯{Colors.RESET}"
                             rcol = Colors.BOLD_WHITE
-                        else:
-                            rpre = "  "
+                        elif is_active:
+                            glyph = f"{Colors.BOLD_GREEN}>{Colors.RESET}"
                             rcol = ""
-                        rcell = f"{rpre}{marker} {rcol}{truncate_display(pname, right_w - 4)}{Colors.RESET}"
+                        else:
+                            glyph = " "
+                            rcol = ""
+                        rcell = f"{glyph} {rcol}{truncate_display(pname, right_w - 2)}{Colors.RESET}"
                     else:
                         rcell = ""
-                    write_cleared(f"  {pad_display(lcell, left_w + 2)}{' ' * gap}{rcell}\033[K\n")
+                    write_cleared(
+                        f"{bar_on if pane == 'left' else bar_off} {pad_display(lcell, left_w)}"
+                        f"{' ' * gap}{bar_on if pane == 'right' else bar_off} {rcell}\033[K\n"
+                    )
+                    hit_map.append((cur_row, i))
+                    cur_row += 1
                 if end < rows:
-                    write_cleared(f"  {Colors.DARK_GRAY}...{Colors.RESET}\n")
+                    write_cleared(f"{Colors.DARK_GRAY} ...{Colors.RESET}\n")
 
                 hint = responsive_hint(self.hint_key).strip("\n")
                 write_cleared(f"\n{hint}\n")
@@ -722,6 +819,34 @@ class PresetSwitcher:
                 sys.stdout.flush()
 
                 key = read_key()
+
+                # --- mouse dispatch ---
+                if isinstance(key, MouseEvent):
+                    if key.kind in ("WHEEL_UP", "WHEEL_DOWN"):
+                        delta = -1 if key.kind == "WHEEL_UP" else 1
+                        if pane == "left":
+                            left = (left + delta) % len(self.apps)
+                            right_idx = land_on_active(self.apps[left])
+                        elif presets:
+                            right_idx = (right_idx + delta) % len(presets)
+                    elif key.kind == "PRESS":
+                        # find the clicked data row
+                        hit_i = next((i for (r, i) in hit_map if r == key.row), None)
+                        if hit_i is not None and start <= hit_i < end:
+                            if key.col <= gap_mid:
+                                # left pane: browse app (no apply)
+                                if hit_i < len(self.apps):
+                                    left = hit_i
+                                    pane = "left"
+                                    right_idx = land_on_active(self.apps[left])
+                            else:
+                                # right pane: apply preset immediately
+                                if hit_i < len(presets):
+                                    return (self.apps[left], presets[hit_i][0])
+                    # MOUSE_RELEASE and out-of-bounds clicks: ignore, redraw
+                    continue
+
+                # --- keyboard dispatch ---
                 if key in ("LEFT", "h", "H"):
                     pane = "left"
                 elif key in ("RIGHT", "l", "L"):
@@ -744,11 +869,6 @@ class PresetSwitcher:
                         return (self.apps[left], presets[right_idx][0])
                 elif key in ("0", "q", "Q", "ESC", "EXIT"):
                     return None
-        finally:
-            _drain_pending(fd, debounce=True)
-            stack.close()
-            sys.stdout.write(Colors.CURSOR_SHOW)
-            sys.stdout.flush()
 
 # --- Component: Language Selection ---
 def select_language() -> str:
@@ -757,17 +877,11 @@ def select_language() -> str:
         from nyxniri.i18n import get_lang
         return get_lang()
 
-    clear_screen()
     from nyxniri.i18n import set_lang
     env = get_env()
     focus = 1  # Default to Simplified Chinese
 
-    sys.stdout.write(Colors.CURSOR_HIDE)
-    fd = sys.stdin.fileno()
-    stack = ExitStack()
-    stack.enter_context(raw_input_mode(fd))
-    try:
-        _drain_pending(fd)
+    with interactive_screen():
         while True:
             sys.stdout.write("\033[?25l\033[H")
             show_logo(env)
@@ -797,8 +911,3 @@ def select_language() -> str:
                 return chosen
             elif key in ("ESC", "EXIT"):
                 sys.exit(130)
-    finally:
-        _drain_pending(fd, debounce=True)
-        stack.close()
-        sys.stdout.write(Colors.CURSOR_SHOW)
-        sys.stdout.flush()

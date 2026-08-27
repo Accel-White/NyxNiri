@@ -5,6 +5,7 @@ upstream-removed warning, state file read/write, and __custom__ preservation
 across preset switches (regression guard for the copytree ignore change).
 """
 
+import os
 import tempfile
 import unittest
 from io import StringIO
@@ -306,6 +307,45 @@ class TestApplyNarrowPath(unittest.TestCase):
         svc.assert_not_called()
 
 
+class TestPresetSwitchPreservesManifestFiles(unittest.TestCase):
+    """The narrow deploy path honours the manifest ``preserve`` list.
+
+    Regression guard: applying a preset must not wipe runtime-managed files the
+    new variant doesn't ship — specifically niri/effects.kdl (a symlink whose
+    target encodes EyeCare on/off) and niri/monitor.kdl (user-generated). Both
+    are declared in niri/.module.toml preserve and must survive a switch.
+    """
+
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+        self.env = self._ctx.env
+        self.niri_dest = self.env.config_dir / "niri"
+        # Deploy niri defaults first so monitor.kdl + effects_*.kdl exist.
+        from nyxniri.deploy.atomic import atomic_replace_item
+        atomic_replace_item(self.env.configs_src / "niri", self.niri_dest)
+        # Create the runtime effects.kdl symlink (as deploy.py does on first install).
+        effects_normal = self.niri_dest / "effects_normal.kdl"
+        self.effects_sym = self.niri_dest / "effects.kdl"
+        self.effects_sym.symlink_to(effects_normal)
+        # Mark monitor.kdl so we can detect a wipe.
+        self.monitor = self.niri_dest / "monitor.kdl"
+        with self.monitor.open("a") as f:
+            f.write("# USER-MARKER\n")
+
+    def tearDown(self):
+        self._ctx.__exit__()
+
+    def test_effects_kdl_symlink_survives_preset_switch(self):
+        self.assertTrue(preset.apply_preset("niri", "default"))
+        self.assertTrue(self.effects_sym.is_symlink(), "effects.kdl symlink was wiped")
+        self.assertIn("effects_normal.kdl", os.readlink(self.effects_sym))
+
+    def test_monitor_kdl_survives_preset_switch(self):
+        self.assertTrue(preset.apply_preset("niri", "default"))
+        self.assertIn("# USER-MARKER", self.monitor.read_text())
+
+
 class TestPresetSwitcher(unittest.TestCase):
     """§14 U1: dual-pane focus behavior via a mocked key stream."""
 
@@ -350,6 +390,111 @@ class TestPresetSwitcher(unittest.TestCase):
         sw = PresetSwitcher(["kitty"], lambda a: [("default", True)])
         with patch("sys.stdin.isatty", return_value=False):
             self.assertIsNone(sw.run())
+
+
+class TestPresetSwitcherMouse(unittest.TestCase):
+    """Mouse interaction: left-click browses, right-click applies, wheel scrolls.
+
+    Row geometry is fixed by the full-size logo (11 newlines) + title + blank +
+    1 header row = first data row at terminal row 15. Tests pin the terminal
+    size so the layout is deterministic.
+    """
+
+    def _run_keys(self, switcher, keys):
+        import os
+        import nyxniri.tui as tui
+        # os.terminal_size is a tuple subclass with .columns/.lines — supports both
+        # the `cols, lines = get_terminal_size(...)` unpacking and attribute access.
+        fake_size = os.terminal_size((80, 24))
+        with patch("sys.stdin.isatty", return_value=True), \
+             patch("nyxniri.tui.read_key", side_effect=keys), \
+             patch.object(tui.shutil, "get_terminal_size", return_value=fake_size), \
+             patch("sys.stdout", new_callable=StringIO):
+            return switcher.run()
+
+    def _click(self, col, row):
+        from nyxniri.tui import MouseEvent
+        return MouseEvent(kind="PRESS", col=col, row=row)
+
+    def _wheel(self, kind, col=3, row=15):
+        from nyxniri.tui import MouseEvent
+        return MouseEvent(kind=kind, col=col, row=row)
+
+    def test_right_click_applies_preset_immediately(self):
+        # kitty is the focused app (row 1 of data = terminal row 15). Click its
+        # 'default' preset in the right pane -> apply and return, no Enter needed.
+        sw = PresetSwitcher(["kitty"], lambda a: [("default", True), ("transparent", False)])
+        # RIGHT to enter right pane is NOT required for click-to-apply: a click
+        # in the right column applies directly.
+        self.assertEqual(self._run_keys(sw, [self._click(40, 15)]), ("kitty", "default"))
+
+    def test_right_click_second_preset_applies_it(self):
+        sw = PresetSwitcher(["kitty"], lambda a: [("default", True), ("transparent", False)])
+        # transparent is data row 1 = terminal row 16; right column is col 40.
+        self.assertEqual(self._run_keys(sw, [self._click(40, 16)]), ("kitty", "transparent"))
+
+    def test_left_click_browses_app_without_applying(self):
+        # Two apps: fastfetch (row 15), kitty (row 16). Click kitty in the left
+        # column -> browse (cursor moves to kitty) but does NOT apply; a follow-up
+        # Enter applies kitty's active preset, proving the click only browsed.
+        sw = PresetSwitcher(
+            ["fastfetch", "kitty"],
+            lambda a: [("default", True), ("transparent", False)] if a == "kitty" else [("default", True)],
+        )
+        self.assertEqual(
+            self._run_keys(sw, [self._click(3, 16), "ENTER"]),
+            ("kitty", "default"),
+        )
+
+    def test_left_click_does_not_steal_apply_from_right_column(self):
+        # Clicking the left column must never apply. With focus on fastfetch,
+        # a left click on fastfetch's row then Enter applies fastfetch/default
+        # (not kitty) — proves left click only moved cursor within left pane.
+        sw = PresetSwitcher(
+            ["fastfetch", "kitty"],
+            lambda a: [("default", True)] if a == "fastfetch" else [("transparent", True)],
+        )
+        self.assertEqual(
+            self._run_keys(sw, [self._click(3, 15), "ENTER"]),
+            ("fastfetch", "default"),
+        )
+
+    def test_wheel_down_on_left_cycles_app(self):
+        sw = PresetSwitcher(
+            ["fastfetch", "kitty"],
+            lambda a: [("default", True)] if a == "fastfetch" else [("transparent", True)],
+        )
+        # wheel-down in left pane -> fastfetch to kitty; Enter applies kitty/transparent.
+        self.assertEqual(
+            self._run_keys(sw, [self._wheel("WHEEL_DOWN"), "ENTER"]),
+            ("kitty", "transparent"),
+        )
+
+    def test_wheel_up_on_left_cycles_backwards(self):
+        sw = PresetSwitcher(
+            ["fastfetch", "kitty"],
+            lambda a: [("default", True)] if a == "fastfetch" else [("transparent", True)],
+        )
+        # DOWN to kitty first, then WHEEL_UP back to fastfetch, Enter -> fastfetch/default.
+        self.assertEqual(
+            self._run_keys(sw, ["DOWN", self._wheel("WHEEL_UP"), "ENTER"]),
+            ("fastfetch", "default"),
+        )
+
+    def test_wheel_on_right_moves_preset_cursor(self):
+        sw = PresetSwitcher(["kitty"], lambda a: [("default", True), ("transparent", False)])
+        # RIGHT to right pane, WHEEL_DOWN to transparent, Enter applies it.
+        self.assertEqual(
+            self._run_keys(sw, ["RIGHT", self._wheel("WHEEL_DOWN", col=40), "ENTER"]),
+            ("kitty", "transparent"),
+        )
+
+    def test_click_on_header_row_is_ignored(self):
+        # Row 13 = the blank line between title and header (no data). A click
+        # there must not apply; follow-up Enter applies the focused default,
+        # proving the click was ignored.
+        sw = PresetSwitcher(["kitty"], lambda a: [("default", True)])
+        self.assertEqual(self._run_keys(sw, [self._click(40, 13), "ENTER"]), ("kitty", "default"))
 
 
 class TestEditPreset(unittest.TestCase):
