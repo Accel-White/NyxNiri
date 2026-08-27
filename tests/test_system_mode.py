@@ -114,8 +114,6 @@ class TestSafeGitPullSystemBranch(unittest.TestCase):
         self._ctx.__enter__()
         self._ctx.env.run_mode = "system"
         # safe_git_pull needs a .git dir + git binary to reach the system branch.
-        self._ctx.env.repo_dir = self._ctx.env.home / "repo"
-        self._ctx.env.repo_dir.mkdir()
         (self._ctx.env.repo_dir / ".git").mkdir(exist_ok=True)
 
     def tearDown(self):

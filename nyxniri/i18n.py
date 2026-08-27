@@ -1545,22 +1545,6 @@ Commands:
         "zh": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} {{0}} 没有名为 '{{1}}' 的预设",
         "en": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} No preset '{{1}}' for {{0}}",
     },
-    "preset_invalid_app": {
-        "zh": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} 无效或不可部署的应用名称",
-        "en": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} Invalid or non-deployable app name",
-    },
-    "preset_invalid_name": {
-        "zh": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} 无效的预设名称，请只使用单个名称",
-        "en": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} Invalid preset name; use a single name",
-    },
-    "preset_path_unsafe": {
-        "zh": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} 预设路径已变化或包含不安全的符号链接，操作已取消",
-        "en": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} Preset path changed or contains an unsafe symlink; cancelled",
-    },
-    "preset_active_not_durable": {
-        "zh": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} 已切换，但无法确认预设状态已持久化",
-        "en": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} Switched, but could not confirm the active state was persisted",
-    },
     "preset_name_reserved": {
         "zh": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} 预设名 '{{0}}' 是保留字（apply default = 回默认）",
         "en": f"  {Colors.BOLD_YELLOW}[!]{Colors.RESET} Preset name '{{0}}' is reserved (apply default = reset)",
@@ -1606,8 +1590,8 @@ Commands:
         "en": f"{Colors.BOLD_YELLOW}[!] {{0}}: active preset '{{1}}' is no longer in the repo; ~/.config/{{0}} is frozen, not redeployed{Colors.RESET}\n    {Colors.BOLD_CYAN}Run `{Colors.RESET}nyxniri preset {{0}} list{Colors.BOLD_CYAN}` to pick a new preset{Colors.RESET}",
     },
     "preset_warn_invalid_active": {
-        "zh": f"{Colors.BOLD_YELLOW}[!] {{0}}: 活动预设状态无效，当前配置保持冻结{Colors.RESET}",
-        "en": f"{Colors.BOLD_YELLOW}[!] {{0}}: active preset state is invalid; current config remains frozen{Colors.RESET}",
+        "zh": f"{Colors.BOLD_YELLOW}[!] {{0}}: 活动预设状态无效，当前 ~/.config/{{0}} 内容保持冻结，未重新部署{Colors.RESET}",
+        "en": f"{Colors.BOLD_YELLOW}[!] {{0}}: active preset state is invalid; ~/.config/{{0}} is frozen, not redeployed{Colors.RESET}",
     },
     "preset_switcher_title": {
         "zh": "预设管理",
@@ -1624,10 +1608,6 @@ Commands:
     "preset_status_active": {
         "zh": f"{Colors.BOLD_GREEN}●{Colors.RESET}",
         "en": f"{Colors.BOLD_GREEN}●{Colors.RESET}",
-    },
-    "preset_status_invalid": {
-        "zh": "状态无效",
-        "en": "invalid state",
     },
     "preset_prompt_save_name": {
         "zh": "▸ 新预设名称 (Esc 取消): ",

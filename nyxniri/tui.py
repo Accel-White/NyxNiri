@@ -741,13 +741,11 @@ class PresetSwitcher:
         on_action: Optional[Callable[[str, str, str], Optional[str]]] = None,
         title_key: str = "preset_switcher_title",
         hint_key: str = "preset_switcher_hint",
-        active_for: Optional[Callable[[str], Optional[str]]] = None,
     ):
         self.apps = apps
         self.presets_for = presets_for
         self.info_for = info_for
         self.on_action = on_action
-        self.active_for = active_for
         self.title_key = title_key
         self.hint_key = hint_key
 
@@ -782,13 +780,11 @@ class PresetSwitcher:
             items: List[Dict[str, Any]] = []
             for a in self.apps:
                 p_list = presets_for_app(a)
-                if self.active_for is not None:
-                    act_name = self.active_for(a)
-                else:
-                    act_name = next(
-                        (p_n for p_n, _, is_act in p_list if is_act),
-                        "default",
-                    )
+                act_name = "default"
+                for p_n, _, is_act in p_list:
+                    if is_act:
+                        act_name = p_n
+                        break
                 is_exp = a in expanded
                 items.append({
                     "type": "app",
@@ -845,8 +841,7 @@ class PresetSwitcher:
                         else:
                             prefix = f"    {Colors.DARK_GRAY}{arrow}{Colors.RESET} "
                             app_display = f"{Colors.WHITE}{pad_display(item['app'], 28)}{Colors.RESET}"
-                        active_label = item["active"] or msg("preset_status_invalid")
-                        status_str = f"{Colors.DARK_GRAY}{active_label}{count_tag}{Colors.RESET}"
+                        status_str = f"{Colors.DARK_GRAY}{item['active']}{count_tag}{Colors.RESET}"
                         line = f"{prefix}{app_display}  {status_str}"
                     else:
                         active_badge = f"  {msg('preset_status_active')}" if item["is_active"] else ""
@@ -876,7 +871,7 @@ class PresetSwitcher:
                 if curr_item and self.info_for:
                     cur_app = curr_item["app"]
                     cur_preset = curr_item["name"] if curr_item["type"] == "preset" else curr_item["active"]
-                    info = self.info_for(cur_app, cur_preset) if cur_preset is not None else None
+                    info = self.info_for(cur_app, cur_preset)
                     if info:
                         write_cleared(f"  {Colors.DARK_GRAY}{msg('preset_info_source')}:{Colors.RESET} {info.path}\033[K\n\n")
                         cur_row += 2
@@ -949,9 +944,7 @@ class PresetSwitcher:
                             if hit_item["type"] == "app":
                                 a = hit_item["app"]
                                 if not self.on_action:
-                                    if hit_item["active"] is not None:
-                                        return (a, hit_item["active"])
-                                    continue
+                                    return (a, hit_item["active"])
                                 if a in expanded:
                                     expanded.remove(a)
                                 else:
@@ -1025,9 +1018,7 @@ class PresetSwitcher:
                     if curr_item["type"] == "app":
                         a = curr_item["app"]
                         if not self.on_action:
-                            if curr_item["active"] is not None:
-                                return (a, curr_item["active"])
-                            continue
+                            return (a, curr_item["active"])
                         if a in expanded:
                             expanded.remove(a)
                             flat_items = build_flat_list()
@@ -1088,11 +1079,7 @@ class PresetSwitcher:
                                 del right_cache[cur_app]
                             flat_items = build_flat_list()
                     else:
-                        toast_msg = (
-                            msg("preset_edit_official_denied", curr_item["active"])
-                            if curr_item["active"] is not None
-                            else msg("preset_warn_invalid_active", curr_item["app"])
-                        )
+                        toast_msg = msg("preset_edit_official_denied", curr_item["active"])
                 elif key in ("d", "D"):
                     if not curr_item:
                         continue
@@ -1118,11 +1105,7 @@ class PresetSwitcher:
                         else:
                             toast_msg = msg("delete_cancelled")
                     else:
-                        toast_msg = (
-                            msg("preset_delete_official_denied", curr_item["active"])
-                            if curr_item["active"] is not None
-                            else msg("preset_warn_invalid_active", curr_item["app"])
-                        )
+                        toast_msg = msg("preset_delete_official_denied", curr_item["active"])
                 elif key in ("0", "q", "Q", "ESC", "EXIT"):
                     return None
 

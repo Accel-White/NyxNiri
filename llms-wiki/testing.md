@@ -24,8 +24,6 @@ mock 打得太高会绕过命令构造逻辑。反例：测 `safe_git_pull` 时 
 | 功能 | 测试形状 | 文件 |
 |---|---|---|
 | 预设 src 四分支 | 参数列表形状契约：(active, dest_exists, repo_preset, user_preset) → 断言选中 src 路径 | `test_preset.py` |
-| 预设路径边界 | 非法叶名称 active 异常槽位 根目录与预设符号链接 → 所有写入和外部进程启动前失败 | `test_preset.py` |
-| 绑定身份 | 根目录切换 active 快照 manifest sidecar 保存回滚 → 消费同一 inode 或安全停止 | `test_preset_identity.py` |
 | active 写时序 | mock `atomic_replace_item` 失败 → active **没被写**（deploy-then-write） | `test_preset.py` |
 | manifest 解析 | schema 校验：全默认、各字段覆盖、坏 toml 报错、文件型 sidecar、toml-only 可选 app | `test_manifest.py` |
 | __custom__ 保留 | dest 有 custom → src 切换后 custom 仍在 dest | `test_preset.py` |
@@ -35,8 +33,6 @@ mock 打得太高会绕过命令构造逻辑。反例：测 `safe_git_pull` 时 
 | doctor preset drift | active 指向已删预设 → 警告 | `test_doctor.py` |
 | 双栏菜单 | ←/→ 跳栏不丢光标、↑/↓ 循环、Enter 调 apply、apply 走窄 deploy 不调 fisher | `test_preset.py` |
 | atomic replace | 文件/目录回滚、断链 symlink、no-clobber 壁纸 | `test_deploy.py` |
-| 绑定原子发布 | 暂存项交换 同名目标抢占 exchange 无空窗 preserve 父目录符号链接 → 外部哨兵不变 | `test_atomic_bound_security.py` |
-| 部署后处理 | 模板 chmod 硬件 active 重试 仓库与 config 根切换 post-install 脚本 → 始终使用绑定句柄 | `test_bound_postprocess.py` |
 | i18n 完整性 | ast 扫所有 `msg()`/`prompt_confirm()` 调用 vs TRANSLATIONS——无孤儿、无缺失 | `test_i18n.py` |
 
 ## 必跑命令

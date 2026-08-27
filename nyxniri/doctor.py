@@ -260,20 +260,17 @@ def _check_preset_drift(env) -> None:
     without running update — the dest is frozen, but doctor surfaces it. §11
     """
     from nyxniri.deploy import discover_config_items
-    from nyxniri.deploy.preset import (
-        ActivePresetStatus,
-        _find_preset_src,
-        read_active_preset_state,
-    )
+    from nyxniri.deploy import InvalidActivePresetError, read_active_preset
+    from nyxniri.deploy.preset import _find_preset_src
     for app in discover_config_items():
-        state = read_active_preset_state(app)
-        if state.status is ActivePresetStatus.INVALID or state.selected is None:
+        try:
+            active = read_active_preset(app)
+        except InvalidActivePresetError:
             print(msg("doctor_warn", text(
                 f"{app}: 活动预设状态无效，当前 ~/.config/{app} 已冻结，未重新部署",
                 f"{app}: active preset state is invalid; ~/.config/{app} is frozen, not redeployed",
             )))
             continue
-        active = state.selected
         if active == "default":
             continue
         if _find_preset_src(app, active) is None:

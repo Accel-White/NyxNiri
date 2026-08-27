@@ -4,8 +4,6 @@ Safety: all tests run inside TempEnv. CLI main() calls acquire_lock, init_logger
 ensure_nyxniri_symlink — these are patched to avoid touching real system state.
 """
 
-import contextlib
-import io
 import unittest
 from unittest.mock import patch, MagicMock
 from pathlib import Path
@@ -46,88 +44,6 @@ class TestGreeterExitCode(unittest.TestCase):
                             with self.assertRaises(SystemExit) as ctx:
                                 main()
                             self.assertEqual(ctx.exception.code, 0)
-
-
-class TestPresetExitCode(unittest.TestCase):
-    """Invalid preset identifiers must return a failing CLI status."""
-
-    def setUp(self):
-        self._ctx = TempEnv()
-        self._ctx.__enter__()
-
-    def tearDown(self):
-        self._ctx.__exit__()
-
-    def test_invalid_app_list_returns_exit_1(self):
-        from nyxniri.cli import _cmd_preset
-
-        self.assertEqual(_cmd_preset(["../../outside", "list"]), 1)
-
-    def test_invalid_active_list_returns_1_without_marking_default(self):
-        from nyxniri.cli import _cmd_preset
-        from nyxniri.i18n import msg
-
-        active = self._ctx.env.presets_dir / "kitty.active"
-        active.parent.mkdir(parents=True, exist_ok=True)
-        active.write_bytes(b"\xff\xfe")
-        output = io.StringIO()
-
-        with contextlib.redirect_stdout(output):
-            result = _cmd_preset(["kitty", "list"])
-
-        self.assertEqual(result, 1)
-        self.assertIn(msg("preset_warn_invalid_active", "kitty"), output.getvalue())
-        self.assertNotIn("* [1] default", output.getvalue())
-
-    def test_nonregular_active_list_reports_invalid_state(self):
-        from nyxniri.cli import _cmd_preset
-        from nyxniri.i18n import msg
-
-        active = self._ctx.env.presets_dir / "kitty.active"
-        active.parent.mkdir(parents=True, exist_ok=True)
-        active.mkdir()
-        output = io.StringIO()
-
-        with contextlib.redirect_stdout(output):
-            result = _cmd_preset(["kitty", "list"])
-
-        self.assertEqual(result, 1)
-        self.assertIn(msg("preset_warn_invalid_active", "kitty"), output.getvalue())
-        self.assertNotIn(msg("preset_invalid_app"), output.getvalue())
-
-    def test_missing_active_list_returns_0(self):
-        from nyxniri.cli import _cmd_preset
-
-        with contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(_cmd_preset(["kitty", "list"]), 0)
-
-    def test_switcher_loop_wires_invalid_active_state(self):
-        from nyxniri.cli import preset_switcher_loop
-
-        active = self._ctx.env.presets_dir / "kitty.active"
-        active.parent.mkdir(parents=True, exist_ok=True)
-        active.write_bytes(b"\xff\xfe")
-
-        with patch("sys.stdin.isatty", return_value=True), \
-             patch("nyxniri.cli.discover_config_items", return_value=["kitty"]), \
-             patch("nyxniri.cli.PresetSwitcher") as switcher:
-            preset_switcher_loop()
-
-        switcher.assert_called_once()
-        active_for = switcher.call_args.kwargs["active_for"]
-        self.assertIsNone(active_for("kitty"))
-
-    def test_switcher_edit_failure_has_no_success_toast(self):
-        from nyxniri.cli import preset_switcher_loop
-
-        with patch("sys.stdin.isatty", return_value=True), \
-             patch("nyxniri.cli.discover_config_items", return_value=["kitty"]), \
-             patch("nyxniri.cli.edit_preset", return_value=False) as edit, \
-             patch("nyxniri.cli.PresetSwitcher") as switcher:
-            preset_switcher_loop()
-            on_action = switcher.call_args.kwargs["on_action"]
-            self.assertIsNone(on_action("edit", "kitty", "mine"))
-            edit.assert_called_once_with("kitty", "mine")
 
 
 class TestFcitxExitCode(unittest.TestCase):
