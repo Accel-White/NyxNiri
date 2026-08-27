@@ -28,6 +28,7 @@ t() {
     local zh="$1" en="$2"
     if $IS_ZH; then echo -e "$zh"; else echo -e "$en"; fi
 }
+_mc_auto=0
 _mc_dryrun=0
 
 _nyxniri_banner() {
@@ -96,18 +97,87 @@ EOF
    -c     Clean only the container directories
    -b     Clean only the few basic directories
    -a     Automatically start and affirm all Cleanings
+   -n     Preview planned cleanings without changing user data, packages, or services
 
 EOF
     fi
 }
 
+_mc_scopes=()
+
+_mc_add_scope() {
+    local _scope="$1" _existing
+    for _existing in "${_mc_scopes[@]}"; do
+        [[ "$_existing" == "$_scope" ]] && return 0
+    done
+    _mc_scopes+=("$_scope")
+}
+
+_mc_parse_args() {
+    local _arg _option _display=""
+    local -a _normalized=()
+
+    for _arg in "$@"; do
+        case "$_arg" in
+            --auto|--yes) _normalized+=("-a") ;;
+            --dry-run) _normalized+=("-n") ;;
+            --help) _normalized+=("-h") ;;
+            --version) _normalized+=("-v") ;;
+            --) _normalized+=("--") ;;
+            --*)
+                printf 'Error: Invalid option: %s\n' "$_arg" >&2
+                _mc_help
+                return 1 ;;
+            *) _normalized+=("$_arg") ;;
+        esac
+    done
+
+    set -- "${_normalized[@]}"
+    OPTIND=1
+    while getopts ":aynbcdjpvh" _option; do
+        case "$_option" in
+            a|y) _mc_auto=1 ;;
+            n) _mc_dryrun=1 ;;
+            b|c|d|j|p) _mc_add_scope "$_option" ;;
+            v) [[ -n "$_display" ]] || _display="version" ;;
+            h) [[ -n "$_display" ]] || _display="help" ;;
+            :|\?)
+                printf 'Error: Invalid option: %s\n' "${OPTARG:-}" >&2
+                _mc_help
+                return 1 ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+    if (($# > 0)); then
+        printf 'Error: Unexpected argument: %s\n' "$1" >&2
+        _mc_help
+        return 1
+    fi
+
+    case "$_display" in
+        help)
+            _mc_help
+            exit 0 ;;
+        version)
+            printf '\nmaclean %s\n\n' "$_mc_vers"
+            exit 0 ;;
+    esac
+
+    if [[ $_mc_auto -eq 1 ]] || (( ${#_mc_scopes[@]} == 0 )); then
+        _mc_scopes=(b c d p)
+    fi
+    if [[ $_mc_dryrun -eq 1 ]]; then
+        _mc_auto=1
+    fi
+}
+
+_mc_parse_args "$@" || exit 1
+
 ## Genesis and Judgement ##
 
-_mc_scr_path="${BASH_SOURCE[0]}"
 _xdg_base_config="${XDG_CONFIG_HOME:-$HOME/.config}"
 _mc_config_dir="$_xdg_base_config/maclean"
 _mc_config_file="$_mc_config_dir/maclean.conf"
-install -d -m0755 "$_mc_config_dir"
 
 _mc_deffcon() {
     install -m0644 /dev/null "$1"
@@ -233,15 +303,25 @@ _mc_loadcon() {
 }
 
 if [[ ! -f "$_mc_config_file" ]]; then
-    _mc_deffcon "$_mc_config_file"
+    if [[ $_mc_dryrun -eq 1 ]]; then
+        printf '[Dry-Run] Would create config: %s\n' "$_mc_config_file" >&2
+    else
+        install -d -m0755 "$_mc_config_dir"
+        _mc_deffcon "$_mc_config_file"
+    fi
 else
     if ! _mc_loadcon "$_mc_config_file" _mc_junk_dirs; then
-        printf 'Warning: config file is unclean or failed to parse; backing up and creating default\n' >&2
-        mv "$_mc_config_file" "${_mc_config_file}.bad.$(date +%s)" || mv "$_mc_config_file" "${_mc_config_file}.bad"
-        _mc_deffcon "$_mc_config_file"
-        if ! _mc_loadcon "$_mc_config_file" _mc_junk_dirs; then
-            printf 'Warning: default config parsed incorrectly; continuing with empty list\n' >&2
+        if [[ $_mc_dryrun -eq 1 ]]; then
+            printf 'Warning: config file is unclean; dry-run will not replace it\n' >&2
             _mc_junk_dirs=()
+        else
+            printf 'Warning: config file is unclean or failed to parse; backing up and creating default\n' >&2
+            mv "$_mc_config_file" "${_mc_config_file}.bad.$(date +%s)" || mv "$_mc_config_file" "${_mc_config_file}.bad"
+            _mc_deffcon "$_mc_config_file"
+            if ! _mc_loadcon "$_mc_config_file" _mc_junk_dirs; then
+                printf 'Warning: default config parsed incorrectly; continuing with empty list\n' >&2
+                _mc_junk_dirs=()
+            fi
         fi
     fi
 fi
@@ -300,10 +380,25 @@ fi
 
 ## Safer Tools ##
 
+_mc_run_mutating() {
+    if [[ $_mc_dryrun -eq 1 ]]; then
+        printf '[Dry-Run] Would execute:' >&2
+        printf ' %q' "$@" >&2
+        printf '\n' >&2
+        return 0
+    fi
+    "$@"
+}
+
 _mc_sudo_wrap() {
 
     if [[ $_mc_dryrun -eq 1 ]]; then
         case "$1" in
+            "-k"|"-p"|"-v")
+                return 0 ;;
+            "du"|"find")
+                "$@"
+                return $? ;;
             "rm"|"docker"|"flatpak"|"journalctl"|"pacman"|"pkcon"|"snap"|"pip"|"npm"|"yarn"|"bun"|"go"|"ccache"|"shelly")
                 printf "[Dry-Run] Would execute sudo: %s\n" "$*" >&2
                 return 0 ;;
@@ -443,10 +538,13 @@ _mc_rm_safer() {
 _mc_confirm() {
     local _msg="${1:-Continue?}"
     local _reply
+    if [[ $_mc_auto -eq 1 ]]; then
+        printf '\n%s [auto]\n' "$_msg"
+        return 0
+    fi
     [[ -r /dev/tty ]] || return 1
-    printf '\n%s (y/N)? ' "$_msg" >/dev/tty
-    [[ ${_mc_auto:-0} -eq 1 ]] && return 0
-    IFS= read -r _reply </dev/tty || return 1
+    { printf '\n%s (y/N)? ' "$_msg" >/dev/tty; } 2>/dev/null || return 1
+    { IFS= read -r _reply </dev/tty; } 2>/dev/null || return 1
     [[ "$_reply" == [yY]* ]] || return 1
 }
 
@@ -773,7 +871,7 @@ _mc_snapdata() {
             _mc_sudo_wrap -v || return 0
             if ! systemctl is-active --quiet snapd.service && ! systemctl is-active --quiet snapd.socket; then
                 if _mc_confirm "Start snapd.socket to list and remove SNAPs"; then
-                    systemctl start snapd.socket
+                    _mc_run_mutating systemctl start snapd.socket
                 else
                     printf "Skipped\n"
                 fi
@@ -822,7 +920,7 @@ _mc_flatdata() {
                 if _mc_confirm "Clean user flatpaks"; then
                     local _tmp _pid
                     _tmp=$(mktemp) || return 1
-                    { flatpak uninstall --unused --user ; flatpak repair --user ; } >"$_tmp" 2>&1 & _pid="$!"
+                    { _mc_run_mutating flatpak uninstall --unused --user ; _mc_run_mutating flatpak repair --user ; } >"$_tmp" 2>&1 & _pid="$!"
                     _mc_loading "Working.." "$_pid" || return 1
                     cat "$_tmp" ; rm -f "$_tmp"
                 else
@@ -833,7 +931,7 @@ _mc_flatdata() {
                 if _mc_confirm "Clean system flatpaks"; then
                     local _tmp _pid
                     _tmp=$(mktemp) || return 1
-                    { flatpak uninstall --unused ; _mc_sudo_wrap flatpak repair ; } >"$_tmp" 2>&1 & _pid="$!"
+                    { _mc_run_mutating flatpak uninstall --unused ; _mc_sudo_wrap flatpak repair ; } >"$_tmp" 2>&1 & _pid="$!"
                     _mc_loading "Working.." "$_pid" || return 1
                     cat "$_tmp" ; rm -f "$_tmp"
                 else
@@ -844,7 +942,7 @@ _mc_flatdata() {
                 if _mc_confirm "Clear flatpak application data"; then
                     local _tmp _pid
                     _tmp=$(mktemp) || return 1
-                    flatpak uninstall --delete-data >"$_tmp" 2>&1 & _pid="$!"
+                    _mc_run_mutating flatpak uninstall --delete-data >"$_tmp" 2>&1 & _pid="$!"
                     _mc_loading "Working.." "$_pid" || return 1
                     cat "$_tmp" ; rm -f "$_tmp"
                 else
@@ -899,7 +997,7 @@ _mc_docker() {
                 _mc_sudo_wrap -v || return 0
                 if ! systemctl is-active --quiet docker.service && ! systemctl is-active --quiet docker.socket; then
                     if _mc_confirm "Start docker.socket to list and remove docker images and data"; then
-                        systemctl start docker.socket
+                        _mc_run_mutating systemctl start docker.socket
                     else
                         printf "Skipped\n"
                     fi
@@ -945,12 +1043,12 @@ _mc_gocache() {
             _mc_calcsiz _mc_quicksums "$HOME/.cache/go-build" "$HOME/go/pkg"
             if [[ -d "$HOME/go/pkg" && -n "$(find "$HOME/go/pkg" -mindepth 1)" ]]; then
                 if _mc_confirm "Clean ALL module download cache as well"; then
-                    go clean -modcache
+                    _mc_run_mutating go clean -modcache
                 else
                     printf "Skipped\n"
                 fi
             fi
-            go clean -cache & _pid="$!"
+            _mc_run_mutating go clean -cache & _pid="$!"
             _mc_loading "Working.." "$_pid" || return 1
             _mc_calcsiz _mc_quicksums2 "$HOME/.cache/go-build" "$HOME/go/pkg"
             printf "Done\n"
@@ -998,7 +1096,7 @@ _mc_corepack() {
         if _mc_confirm "Clean corepack cache"; then
             local _mc_quicksums=0 _mc_quicksums2=0 _mc_diff=0 _pid
             _mc_calcsiz _mc_quicksums "$HOME/.cache/node/corepack"
-            corepack cache clean & _pid="$!"
+            _mc_run_mutating corepack cache clean & _pid="$!"
             _mc_loading "Working.." "$_pid" || return 1
             _mc_calcsiz _mc_quicksums2 "$HOME/.cache/node/corepack"
             printf "Done\n"
@@ -1029,12 +1127,12 @@ _mc_npmcache() {
             local _mc_quicksums=0 _mc_quicksums2=0 _mc_diff=0 _pid _tmp
             _mc_calcsiz _mc_quicksums "$HOME/.npm"
             if _mc_confirm "Clean ALL data from npm cache as well"; then
-                npm cache clean --force >/dev/null 2>&1
+                _mc_run_mutating npm cache clean --force >/dev/null 2>&1
             else
                 printf "Skipped\n"
             fi
             _tmp=$(mktemp) || return 1
-            npm cache verify >"$_tmp" 2>&1 & _pid="$!"
+            _mc_run_mutating npm cache verify >"$_tmp" 2>&1 & _pid="$!"
             _mc_loading "Working.." "$_pid" || { rm -f "$_tmp"; return 1; }
             cat "$_tmp"; rm -f "$_tmp"
             _mc_calcsiz _mc_quicksums2 "$HOME/.npm"
@@ -1065,7 +1163,7 @@ _mc_yarncache() {
         if _mc_confirm "Clean the yarn cache"; then
             local _mc_quicksums=0 _mc_quicksums2=0 _mc_diff=0 _pid
             _mc_calcsiz _mc_quicksums "$HOME/.cache/yarn" "$HOME/.local/share/yarn" "$HOME/.yarncache"
-            yarn cache clean --mirror & _pid="$!"
+            _mc_run_mutating yarn cache clean --mirror & _pid="$!"
             _mc_loading "Working.." "$_pid" || return 1
             _mc_calcsiz _mc_quicksums2 "$HOME/.cache/yarn" "$HOME/.local/share/yarn" "$HOME/.yarncache"
             printf "Done\n"
@@ -1095,7 +1193,7 @@ _mc_pnpmcache() {
         if _mc_confirm "Clean unreferenced packages from pnpm store"; then
             local _mc_quicksums=0 _mc_quicksums2=0 _mc_diff=0 _pid
             _mc_calcsiz _mc_quicksums "$(pnpm store path)" "$HOME/.cache/pnpm"
-            pnpm store prune & _pid="$!"
+            _mc_run_mutating pnpm store prune & _pid="$!"
             _mc_loading "Working.." "$_pid" || return 1
             _mc_calcsiz _mc_quicksums2 "$(pnpm store path)" "$HOME/.cache/pnpm"
             printf "Done\n"
@@ -1126,7 +1224,7 @@ _mc_rustcargo() {
             local _mc_quicksums=0 _mc_quicksums2=0 _mc_diff=0 _pid
             _mc_calcsiz _mc_quicksums "$HOME/.cargo"
             { if cargo help -Z gc >/dev/null 2>&1; then
-                cargo -Z gc clean gc >/dev/null 2>&1
+                _mc_run_mutating cargo -Z gc clean gc >/dev/null 2>&1
             else
                 _mc_rm_safer "$HOME/.cargo/registry/"{cache,src}
             fi ; } & _pid="$!"
@@ -1178,12 +1276,12 @@ _mc_rubygems() {
             local _mc_quicksums=0 _mc_quicksums2=0 _mc_diff=0 _pid _tmp
             _mc_calcsiz _mc_quicksums "$HOME/.local/share/gem"
             if _mc_confirm "Clean sources data from gem cache as well"; then
-                gem sources -c
+                _mc_run_mutating gem sources -c
             else
                 printf "Skipped\n"
             fi
             _tmp=$(mktemp) || return 1
-            gem cleanup >"$_tmp" 2>&1 & _pid="$!"
+            _mc_run_mutating gem cleanup >"$_tmp" 2>&1 & _pid="$!"
             _mc_loading "Working.." "$_pid" || { rm -f "$_tmp"; return 1; }
             cat "$_tmp"; rm -f "$_tmp"
             _mc_calcsiz _mc_quicksums2 "$HOME/.local/share/gem"
@@ -1214,7 +1312,7 @@ _mc_pipcache() {
         if _mc_confirm "Clean ALL items from the pip cache"; then
             local _mc_quicksums=0 _mc_quicksums2=0 _mc_diff=0 _pid
             _mc_calcsiz _mc_quicksums "$HOME/.cache/pip"
-            pip cache purge & _pid="$!"
+            _mc_run_mutating pip cache purge & _pid="$!"
             _mc_loading "Working.." "$_pid" || return 1
             _mc_calcsiz _mc_quicksums2 "$HOME/.cache/pip"
             printf "Done\n"
@@ -1325,11 +1423,11 @@ _mc_aurhelpers() {
         for _ahelper in "${_helpers[@]}"; do
             if command -v "$_ahelper" >/dev/null 2>&1; then
                 if [[ "$_ahelper" = "paru" ]]; then
-                    LC_ALL=C "$_ahelper" -Sccda <&3 >/dev/null 2>&1 || printf 'Warning: %s failed\n' "$_ahelper" >&2
+                    LC_ALL=C _mc_run_mutating "$_ahelper" -Sccda <&3 >/dev/null 2>&1 || printf 'Warning: %s failed\n' "$_ahelper" >&2
                 elif [[ "$_ahelper" = "pacaur" || "$_ahelper" = "pikaur" || "$_ahelper" = "trizen" || "$_ahelper" = "yay" ]]; then
-                    LC_ALL=C "$_ahelper" -Scca <&3 >/dev/null 2>&1 || printf 'Warning: %s failed\n' "$_ahelper" >&2
+                    LC_ALL=C _mc_run_mutating "$_ahelper" -Scca <&3 >/dev/null 2>&1 || printf 'Warning: %s failed\n' "$_ahelper" >&2
                 elif [[ "$_ahelper" = "pamac" ]]; then
-                    LC_ALL=C "$_ahelper" clean -b <&3 >/dev/null 2>&1 || printf 'Warning: %s failed\n' "$_ahelper" >&2
+                    LC_ALL=C _mc_run_mutating "$_ahelper" clean -b <&3 >/dev/null 2>&1 || printf 'Warning: %s failed\n' "$_ahelper" >&2
                 fi
             fi
         done & _pid="$!"
@@ -1370,7 +1468,7 @@ _mc_pacmancache() {
             local _mc_quicksums=0 _mc_quicksums2=0 _mc_diff=0 _pid
             _mc_calcsiz _mc_quicksums /var/cache/pacman/pkg
             _mc_sudo_wrap -v || return 0
-            paccache -rvk2 & _pid="$!"
+            _mc_run_mutating paccache -rvk2 & _pid="$!"
             _mc_loading "Working.." "$_pid" || return 1
             _mc_calcsiz _mc_quicksums2 /var/cache/pacman/pkg
             printf "Done\n"
@@ -1542,45 +1640,21 @@ _mc_pacmanfuncts() {
     fi
 }
 
-## Supported Longs ##
-
-case "${1:-}" in
-    --help) set -- -h ;;
-    --version) set -- -v ;;
-esac
-
-## Default All ##
-
-
-# Translate long options to short options
-_args=()
-for arg in "$@"; do
-    case "$arg" in
-        -y|--auto|--yes) _args+=("-a") ;;
-        -n|--dry-run) _mc_dryrun=1; _args+=("-a") ;;
-        --help) _args+=("-h") ;;
-        *) _args+=("$arg") ;;
-    esac
-done
-set -- "${_args[@]}"
-
-if [[ "$#" == 0 ]]; then
-    set -- -bcdp
+if [[ $_mc_dryrun -eq 1 ]]; then
+    printf '\nDry-run: no user data, packages, services, or caches will be changed.\n\n'
+elif [[ $_mc_auto -eq 1 ]]; then
+    _mc_sudo_wrap -k
+    printf "\nPerforming all cleanings automatically.\n"
+    printf "\nThis is the final warning.\n\n"
+    _mc_sudo_wrap -p "To continue enter the password for %p (ctrl+c to cancel): " true || exit 1
+    exec 4< <(timeout 600 yes)
+    exec 0<&4
+    trap '{ [[ -e /proc/$$/fd/4 ]] && exec 4<&-; }' RETURN EXIT
+    printf "\n"
 fi
-while getopts ":abcdjpvh" option; do
-    case "$option" in
-        a) # automatic mode
-            _mc_sudo_wrap -k
-            printf "\nPerforming all cleanings automatically.\n"
-            printf "\nThis is the final warning.\n\n"
-            if _mc_sudo_wrap -p "To continue enter the password for %p (ctrl+c to cancel): " true; then
-                exec 4< <(timeout 600 yes)
-                trap '{ [[ -e /proc/$$/fd/4 ]] && exec 4<&-; }' RETURN EXIT
-                printf "\n"
-                _mc_auto=1 exec -- "$_mc_scr_path" -bcdp <&4
-                exec 4<&-
-            fi
-            exit ;;
+
+for _mc_scope in "${_mc_scopes[@]}"; do
+    case "$_mc_scope" in
         b) # clean basics
             _mc_junker
             _mc_homecache
@@ -1602,27 +1676,8 @@ while getopts ":abcdjpvh" option; do
             _mc_pamacdata
             _mc_pacmanfuncts
             ;;
-        v) # display version
-            printf '\nmaclean %s\n\n' "$_mc_vers"
-            exit ;;
-        h) # display Help
-            _mc_help
-            exit ;;
-        *) # invalid option
-            printf "Error: Invalid option: %s\n" "$1"
-            _mc_help
-            exit 1 ;;
     esac
 done
-
-## Improper Argument
-
-shift $((OPTIND - 1))
-if (($# > 0)); then
-    printf "Error: Unexpected argument: %s\n" "$1"
-    _mc_help
-    exit 1
-fi
 
 ## Show Total ##
 
@@ -1630,7 +1685,9 @@ _mc_calcttl
 
 ## Exit Script ##
 
-printf "\nPress any key to exit. "
-read -r -t60 -s -n1
-printf "\n\n"
+if [[ -t 0 ]]; then
+    printf "\nPress any key to exit. "
+    read -r -t60 -s -n1 || true
+    printf "\n\n"
+fi
 exit 0
