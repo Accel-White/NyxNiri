@@ -8,9 +8,22 @@
 `~/.config/NyxNiri/presets/<app>.active`——一行，内容是预设名或 `default`。不占配置槽
 （这是扔掉 include 间接层、扔掉 `__preset__` 保留名的关键简化：一个概念减两份复杂度）。
 
-- `read_active_preset(app)` → 内容或 `"default"`（文件不存在 / 读失败 / 空白都回 default）。
-- `write_active_preset(app, name)` → **原子写**（temp + `os.replace`）。半写空文件会被
-  `read` 当 default 静默切回——原子写堵死这条故障路径。
+- `read_active_preset_state(app)` 区分 missing valid invalid,只有文件不存在才回 default
+- 空白 乱码 非普通文件 符号链接和非法名称都属于 invalid,部署与诊断会告警并冻结
+- `read_active_preset(app)` 保留字符串接口,invalid 时抛出通用异常且不保留原始内容
+- `write_active_preset(app, name)` 在已绑定目录中独占创建随机临时文件,写入并同步后原子替换
+- 读取会记录槽位 inode 元数据和内容摘要,全部署在复制和后处理前后复核,变化时最多重试三次
+
+## 路径边界
+
+- `app` 必须是 `configs/` 下可部署的直接子项
+- 预设名必须是单个路径组件,允许 Unicode 内部空格 点 连字号 和下划线
+- 空名 `.` `..` 绝对路径 路径分隔符 控制字符和首尾空白都会被拒绝
+- XDG config 和仓库 configs 是解析后的信任锚,单次操作只绑定一次 config 根句柄
+- 官方预设 用户预设 活动状态和部署目标从已绑定根逐级 no-follow 打开并保持到消费结束
+- 复制 删除 活动状态替换和预设部署都通过已绑定目录完成,不会在校验后重走原始根路径
+- 全部署在同一仓库 app 句柄下读取 manifest 和预设源,再在同一已部署句柄下做 chmod 模板与硬件处理
+- active 中的非法名称会警告并冻结现有配置,不会回退 default 覆盖用户状态
 
 ## src 四分支（`resolve_preset_src(app, active, dest)`）
 

@@ -529,9 +529,19 @@ def preset_switcher_loop() -> None:
         print(msg("interactive_terminal_required"), file=sys.stderr)
         return
 
-    from nyxniri.deploy.preset import get_preset_info
+    from nyxniri.deploy.preset import (
+        ActivePresetStatus,
+        get_preset_info,
+        read_active_preset_state,
+    )
 
     apps = discover_config_items()
+
+    def active_for(app: str) -> Optional[str]:
+        state = read_active_preset_state(app)
+        if state.status is ActivePresetStatus.INVALID:
+            return None
+        return state.selected
 
     def on_action(action: str, app: str, name: str) -> Optional[str]:
         if action == "apply":
@@ -544,8 +554,8 @@ def preset_switcher_loop() -> None:
             ok = delete_preset(app, name)
             return msg("preset_toast_deleted", app, name) if ok else None
         elif action == "edit":
-            edit_preset(app, name)
-            return msg("preset_edit_opened", app, name)
+            ok = edit_preset(app, name)
+            return msg("preset_edit_opened", app, name) if ok else None
         return None
 
     PresetSwitcher(
@@ -553,6 +563,7 @@ def preset_switcher_loop() -> None:
         presets_for=collect_presets,
         info_for=get_preset_info,
         on_action=on_action,
+        active_for=active_for,
     ).run()
 
 def main_menu_loop() -> None:
@@ -726,8 +737,7 @@ def _cmd_preset(sub_args: List[str]) -> int:
     if action == "list":
         if len(sub_args) > 2:
             exit_usage(f"{CLI_CMD} preset {app} list")
-        list_presets(app)
-        return 0
+        return 0 if list_presets(app) else 1
     if action in ("apply", "save", "edit", "delete"):
         if not name or len(sub_args) > 3:
             exit_usage(f"{CLI_CMD} preset {app} {action} <name>")

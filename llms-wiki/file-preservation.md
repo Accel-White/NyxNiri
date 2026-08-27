@@ -10,10 +10,10 @@
 不管切到 transparent 还是 default，dest 里的 `__custom__` 都原样保留。
 
 两步走（`atomic.py`）：
-1. **Custom 文件**：`os.walk(dest)`，prune `__custom__` 目录不递归进文件搜索，逐个 `copy2`
-   或保符号链接，打印 `log_keep_custom_file`。
-2. **Custom 目录**：再 `os.walk`，遇 `__custom__` 目录 `rmtree` 目标 + `copytree` 整树，
-   打印 `log_keep_custom_dir`。
+1. **Custom 文件**：`os.walk(dest)`，prune `__custom__` 目录不递归进文件搜索，逐组件 no-follow
+   绑定源和暂存目标，普通文件经 FD 复制，符号链接只复制链接本身，打印 `log_keep_custom_file`
+2. **Custom 目录**：再 `os.walk`，遇 `__custom__` 目录后停止向下枚举，逐组件绑定父目录并把整树
+   复制进已绑定暂存目录，打印 `log_keep_custom_dir`
 
 test_mode 下跳过 `scratchpad-items__custom__.toml` 和 `orbit-items__custom__.toml`
 （test_deploy 的 idempotent 场景）。
@@ -29,6 +29,18 @@ test_mode 下跳过 `scratchpad-items__custom__.toml` 和 `orbit-items__custom__
 
 > **竞态消除**：旧实现先 rename 整目录、再事后拷回 monitor.kdl，Niri 的 inotify 会在恢复前
 > 读到仓库默认的空 monitor.kdl 导致闪屏。现在注入在 rename 前完成，inotify 看到的就是最终态。
+
+## 发布边界
+
+预设切换和全部署共享绑定发布路径
+
+- 部署源 旧目标和随机暂存项在复制期间都保持打开的 FD
+- 目标已存在时用 `RENAME_EXCHANGE` 一步交换，新旧名称之间没有空窗
+- 目标不存在时用 `RENAME_NOREPLACE`，暂存期间新出现的同名项不会被覆盖
+- 交换后的旧目标只按已绑定 inode 清理，名称或类型变化就保留并告警
+- manifest preserve 和 Dunder 相对路径逐组件 no-follow，不能经暂存树内符号链接写到外部
+
+备份回滚等非预设调用仍走兼容的旧路径分支，不改变它们原有行为
 
 ## 为什么不合并
 

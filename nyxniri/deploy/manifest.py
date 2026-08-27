@@ -29,6 +29,8 @@ Two INDEPENDENT axes (§2 design, decoupled on purpose):
 This module is pure stdlib (``tomllib``, 3.11+). No hardcoded project app names.
 """
 
+import os
+import stat
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -77,6 +79,31 @@ def _is_deployable(app_src: Path) -> bool:
     return False
 
 
+def _build_manifest(
+    name: str,
+    data: dict,
+    *,
+    is_deployable: bool,
+    is_optional: bool,
+) -> ModuleManifest:
+    packages = data.get("packages", {}) or {}
+    pkg_repo = packages.get("repo")
+    if pkg_repo is None:
+        pkg_repo = [name]
+
+    return ModuleManifest(
+        name=name,
+        packages_repo=list(pkg_repo),
+        packages_aur=list(packages.get("aur", [])),
+        preserve=list(packages.get("preserve", [])),
+        chmod=list(packages.get("chmod", [])),
+        label=packages.get("label", name),
+        detect=packages.get("detect", name),
+        is_deployable=is_deployable,
+        is_optional=is_optional,
+    )
+
+
 def load_manifest(app_src: Path, is_optional: bool = False) -> ModuleManifest:
     """Load a manifest for an app source (dir or file); defaults derived from name.
 
@@ -93,20 +120,61 @@ def load_manifest(app_src: Path, is_optional: bool = False) -> ModuleManifest:
         with open(mpath, "rb") as f:
             data = tomllib.load(f)
 
-    packages = data.get("packages", {}) or {}
-    pkg_repo = packages.get("repo")
-    if pkg_repo is None:
-        pkg_repo = [name]
-
-    return ModuleManifest(
-        name=name,
-        packages_repo=list(pkg_repo),
-        packages_aur=list(packages.get("aur", [])),
-        preserve=list(packages.get("preserve", [])),
-        chmod=list(packages.get("chmod", [])),
-        label=packages.get("label", name),
-        detect=packages.get("detect", name),
+    return _build_manifest(
+        name,
+        data,
         is_deployable=_is_deployable(app_src),
+        is_optional=is_optional,
+    )
+
+
+def load_manifest_at(
+    app_name: str,
+    app_fd: int,
+    app_info: os.stat_result,
+    configs_fd: int,
+    is_optional: bool = False,
+) -> ModuleManifest:
+    """Load one manifest through the same bound repo inode as deployment."""
+    if stat.S_ISDIR(app_info.st_mode):
+        manifest_name = _MANIFEST_NAME
+        deployable = any(
+            name not in ("__pycache__", _MANIFEST_NAME)
+            for name in os.listdir(app_fd)
+        )
+        parent_fd = app_fd
+    elif stat.S_ISREG(app_info.st_mode):
+        manifest_name = app_name + _MANIFEST_NAME
+        deployable = True
+        parent_fd = configs_fd
+    else:
+        raise OSError("unsafe repo app type")
+
+    data = {}
+    fd = None
+    try:
+        try:
+            fd = os.open(
+                manifest_name,
+                os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC,
+                dir_fd=parent_fd,
+            )
+        except FileNotFoundError:
+            pass
+        if fd is not None:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                raise OSError("unsafe manifest type")
+            with os.fdopen(fd, "rb", closefd=True) as manifest_file:
+                fd = None
+                data = tomllib.load(manifest_file)
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+    return _build_manifest(
+        app_name,
+        data,
+        is_deployable=deployable,
         is_optional=is_optional,
     )
 

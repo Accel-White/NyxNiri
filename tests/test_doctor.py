@@ -2,6 +2,7 @@
 
 import contextlib
 import io
+import shutil
 import unittest
 
 from tests.utils import TempEnv
@@ -38,6 +39,45 @@ class TestPresetDrift(unittest.TestCase):
         out = self._run_drift()
         self.assertIn("kitty", out)
         self.assertIn("ghost", out)
+
+    def test_invalid_active_warns_without_echoing_untrusted_value(self):
+        active = self._ctx.env.presets_dir / "kitty.active"
+        active.parent.mkdir(parents=True, exist_ok=True)
+        for raw in (b"../../outside\n", b"   \n", b"\xff\xfe"):
+            with self.subTest(raw=raw):
+                active.write_bytes(raw)
+                out = self._run_drift()
+                self.assertIn("kitty", out)
+                self.assertNotIn("../../outside", out)
+
+    def test_active_symlink_warns(self):
+        from nyxniri.i18n import text
+
+        active = self._ctx.env.presets_dir / "kitty.active"
+        active.parent.mkdir(parents=True, exist_ok=True)
+        outside = self._ctx.home / "outside-active"
+        outside.write_text("transparent")
+        active.symlink_to(outside)
+
+        out = self._run_drift()
+
+        self.assertIn("kitty", out)
+        self.assertIn(text("活动预设状态无效", "active preset state is invalid"), out)
+
+    def test_nyx_root_symlink_warns_without_reading_outside(self):
+        from nyxniri.i18n import text
+
+        self._ctx.env.nyx_dir.mkdir(parents=True)
+        shutil.rmtree(self._ctx.env.nyx_dir)
+        outside = self._ctx.home / "outside-nyx"
+        (outside / "presets").mkdir(parents=True)
+        (outside / "presets" / "kitty.active").write_text("transparent")
+        self._ctx.env.nyx_dir.symlink_to(outside, target_is_directory=True)
+
+        out = self._run_drift()
+
+        self.assertIn("kitty", out)
+        self.assertIn(text("活动预设状态无效", "active preset state is invalid"), out)
 
 
 if __name__ == "__main__":

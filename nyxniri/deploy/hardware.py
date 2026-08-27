@@ -9,10 +9,12 @@ stays here until hardware variants exceed ~3 (then overlay presets; §11).
 import os
 import re
 import subprocess
+from pathlib import Path
 from typing import Optional
 
 from nyxniri.constants import MAIN_WM
 from nyxniri.core import get_env, log_msg
+from nyxniri.deploy.templates import _rewrite_regular_leaf
 from nyxniri.i18n import msg
 
 _IS_NVIDIA: Optional[bool] = None
@@ -30,20 +32,19 @@ def _detect_nvidia() -> bool:
     return _IS_NVIDIA
 
 
-def _phase_hardware_patches() -> None:
+def _phase_hardware_patches(*, app_root: Optional[Path] = None) -> None:
     env = get_env()
-    niri_conf = env.config_dir / MAIN_WM / "config.kdl"
-    if not niri_conf.is_file():
-        return
+    niri_root = app_root or env.config_dir / MAIN_WM
 
-    if _detect_nvidia():
-        print(msg("log_nvidia_gpu_detected"))
-        log_msg("INFO", "NVIDIA GPU detected. Enabling NVIDIA envs in config.kdl")
-        content = niri_conf.read_text(encoding="utf-8")
-        content = re.sub(r'^(\s*)//\s*(GBM_BACKEND\s+"nvidia-drm")', r'\1\2', content, flags=re.MULTILINE)
-        content = re.sub(r'^(\s*)//\s*(__GLX_VENDOR_LIBRARY_NAME\s+"nvidia")', r'\1\2', content, flags=re.MULTILINE)
-        content = re.sub(r'^(\s*)//\s*(LIBVA_DRIVER_NAME\s+"nvidia")', r'\1\2', content, flags=re.MULTILINE)
-        niri_conf.write_text(content, encoding="utf-8")
-    else:
+    def patch_niri(content: str) -> str:
+        if _detect_nvidia():
+            print(msg("log_nvidia_gpu_detected"))
+            log_msg("INFO", "NVIDIA GPU detected. Enabling NVIDIA envs in config.kdl")
+            content = re.sub(r'^(\s*)//\s*(GBM_BACKEND\s+"nvidia-drm")', r'\1\2', content, flags=re.MULTILINE)
+            content = re.sub(r'^(\s*)//\s*(__GLX_VENDOR_LIBRARY_NAME\s+"nvidia")', r'\1\2', content, flags=re.MULTILINE)
+            return re.sub(r'^(\s*)//\s*(LIBVA_DRIVER_NAME\s+"nvidia")', r'\1\2', content, flags=re.MULTILINE)
         print(msg("log_nvidia_gpu_not_detected"))
         log_msg("INFO", "Non-NVIDIA GPU detected. NVIDIA envs kept disabled.")
+        return content
+
+    _rewrite_regular_leaf(niri_root, "config.kdl", patch_niri)
