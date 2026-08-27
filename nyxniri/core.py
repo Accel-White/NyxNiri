@@ -165,6 +165,19 @@ def get_version(target_dir: Path) -> str:
                 return _VERSION_CACHE
         except Exception:
             pass
+    if (target_dir / ".git").is_dir():
+        try:
+            res = subprocess.run(
+                ["git", "rev-parse", "--short", "HEAD"],
+                cwd=target_dir, capture_output=True, text=True, check=False,
+                env={**os.environ, "LC_ALL": "C"}
+            )
+            v = res.stdout.strip()
+            if v:
+                _VERSION_CACHE = v
+                return _VERSION_CACHE
+        except Exception:
+            pass
     _VERSION_CACHE = "v3.0.0"
     return _VERSION_CACHE
 
