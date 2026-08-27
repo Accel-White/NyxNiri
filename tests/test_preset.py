@@ -347,7 +347,7 @@ class TestPresetSwitchPreservesManifestFiles(unittest.TestCase):
 
 
 class TestPresetSwitcher(unittest.TestCase):
-    """§14 U1: dual-pane focus behavior via a mocked key stream."""
+    """Preset Switcher interactive tests via a mocked key stream."""
 
     def _run_keys(self, switcher, keys):
         with patch("sys.stdin.isatty", return_value=True), \
@@ -357,14 +357,14 @@ class TestPresetSwitcher(unittest.TestCase):
 
     def test_enter_returns_app_and_preset(self):
         sw = PresetSwitcher(["kitty"], lambda a: [("default", True), ("transparent", False)])
-        # RIGHT → right pane; DOWN → transparent; ENTER
+        # RIGHT → expand kitty & land on default; DOWN → transparent; ENTER
         self.assertEqual(self._run_keys(sw, ["RIGHT", "DOWN", "ENTER"]), ("kitty", "transparent"))
 
     def test_pane_switch_keeps_app_cursor(self):
         apps = ["fastfetch", "kitty"]
         presets_kitty = [("default", True), ("transparent", False)]
         sw = PresetSwitcher(apps, lambda a: presets_kitty if a == "kitty" else [("default", True)])
-        # DOWN→app kitty; RIGHT→right; LEFT→back to left (app still kitty); RIGHT; DOWN; ENTER
+        # DOWN→app kitty; RIGHT→expand; LEFT→back to app kitty; RIGHT→focus presets; DOWN; ENTER
         self.assertEqual(
             self._run_keys(sw, ["DOWN", "RIGHT", "LEFT", "RIGHT", "DOWN", "ENTER"]),
             ("kitty", "transparent"),
@@ -372,14 +372,14 @@ class TestPresetSwitcher(unittest.TestCase):
 
     def test_up_down_cycles_in_pane(self):
         sw = PresetSwitcher(["kitty"], lambda a: [("default", True), ("transparent", False), ("compact", False)])
-        # RIGHT; UP (wrap to last = compact); ENTER
-        self.assertEqual(self._run_keys(sw, ["RIGHT", "UP", "ENTER"]), ("kitty", "compact"))
+        # RIGHT; DOWN; DOWN; ENTER
+        self.assertEqual(self._run_keys(sw, ["RIGHT", "DOWN", "DOWN", "ENTER"]), ("kitty", "compact"))
 
     def test_app_switch_lands_cursor_on_active_preset(self):
         apps = ["fastfetch", "kitty"]
         presets_kitty = [("default", False), ("transparent", True)]  # transparent is active
         sw = PresetSwitcher(apps, lambda a: presets_kitty if a == "kitty" else [("default", True)])
-        # DOWN→kitty (right pane auto-lands on 'transparent' active); ENTER applies it directly
+        # DOWN→kitty; RIGHT→expand kitty; ENTER applies active transparent directly
         self.assertEqual(self._run_keys(sw, ["DOWN", "RIGHT", "ENTER"]), ("kitty", "transparent"))
 
     def test_cancel_returns_none(self):
@@ -393,18 +393,11 @@ class TestPresetSwitcher(unittest.TestCase):
 
 
 class TestPresetSwitcherMouse(unittest.TestCase):
-    """Mouse interaction: left-click browses, right-click applies, wheel scrolls.
-
-    Row geometry is fixed by the full-size logo (11 newlines) + title + blank +
-    1 header row = first data row at terminal row 15. Tests pin the terminal
-    size so the layout is deterministic.
-    """
+    """Mouse interaction: click selects/expands, wheel scrolls."""
 
     def _run_keys(self, switcher, keys):
         import os
         import nyxniri.tui as tui
-        # os.terminal_size is a tuple subclass with .columns/.lines — supports both
-        # the `cols, lines = get_terminal_size(...)` unpacking and attribute access.
         fake_size = os.terminal_size((80, 24))
         with patch("sys.stdin.isatty", return_value=True), \
              patch("nyxniri.tui.read_key", side_effect=keys), \
@@ -420,57 +413,23 @@ class TestPresetSwitcherMouse(unittest.TestCase):
         from nyxniri.tui import MouseEvent
         return MouseEvent(kind=kind, col=col, row=row)
 
-    def test_right_click_applies_preset_immediately(self):
-        # kitty is the focused app (row 1 of data = terminal row 15). Click its
-        # 'default' preset in the right pane -> apply and return, no Enter needed.
+    def test_click_app_applies_active_preset_in_standalone_mode(self):
         sw = PresetSwitcher(["kitty"], lambda a: [("default", True), ("transparent", False)])
-        # RIGHT to enter right pane is NOT required for click-to-apply: a click
-        # in the right column applies directly.
-        self.assertEqual(self._run_keys(sw, [self._click(40, 15)]), ("kitty", "default"))
+        # Click kitty at row 15 -> returns ("kitty", "default")
+        self.assertEqual(self._run_keys(sw, [self._click(10, 14)]), ("kitty", "default"))
 
-    def test_right_click_second_preset_applies_it(self):
-        sw = PresetSwitcher(["kitty"], lambda a: [("default", True), ("transparent", False)])
-        # transparent is data row 1 = terminal row 16; right column is col 40.
-        self.assertEqual(self._run_keys(sw, [self._click(40, 16)]), ("kitty", "transparent"))
-
-    def test_left_click_browses_app_without_applying(self):
-        # Two apps: fastfetch (row 15), kitty (row 16). Click kitty in the left
-        # column -> browse (cursor moves to kitty) but does NOT apply; a follow-up
-        # Enter applies kitty's active preset, proving the click only browsed.
-        sw = PresetSwitcher(
-            ["fastfetch", "kitty"],
-            lambda a: [("default", True), ("transparent", False)] if a == "kitty" else [("default", True)],
-        )
-        self.assertEqual(
-            self._run_keys(sw, [self._click(3, 16), "ENTER"]),
-            ("kitty", "default"),
-        )
-
-    def test_left_click_does_not_steal_apply_from_right_column(self):
-        # Clicking the left column must never apply. With focus on fastfetch,
-        # a left click on fastfetch's row then Enter applies fastfetch/default
-        # (not kitty) — proves left click only moved cursor within left pane.
+    def test_wheel_down_cycles_app(self):
         sw = PresetSwitcher(
             ["fastfetch", "kitty"],
             lambda a: [("default", True)] if a == "fastfetch" else [("transparent", True)],
         )
-        self.assertEqual(
-            self._run_keys(sw, [self._click(3, 15), "ENTER"]),
-            ("fastfetch", "default"),
-        )
-
-    def test_wheel_down_on_left_cycles_app(self):
-        sw = PresetSwitcher(
-            ["fastfetch", "kitty"],
-            lambda a: [("default", True)] if a == "fastfetch" else [("transparent", True)],
-        )
-        # wheel-down in left pane -> fastfetch to kitty; Enter applies kitty/transparent.
+        # wheel-down -> fastfetch to kitty; Enter applies kitty/transparent.
         self.assertEqual(
             self._run_keys(sw, [self._wheel("WHEEL_DOWN"), "ENTER"]),
             ("kitty", "transparent"),
         )
 
-    def test_wheel_up_on_left_cycles_backwards(self):
+    def test_wheel_up_cycles_backwards(self):
         sw = PresetSwitcher(
             ["fastfetch", "kitty"],
             lambda a: [("default", True)] if a == "fastfetch" else [("transparent", True)],
@@ -481,20 +440,9 @@ class TestPresetSwitcherMouse(unittest.TestCase):
             ("fastfetch", "default"),
         )
 
-    def test_wheel_on_right_moves_preset_cursor(self):
-        sw = PresetSwitcher(["kitty"], lambda a: [("default", True), ("transparent", False)])
-        # RIGHT to right pane, WHEEL_DOWN to transparent, Enter applies it.
-        self.assertEqual(
-            self._run_keys(sw, ["RIGHT", self._wheel("WHEEL_DOWN", col=40), "ENTER"]),
-            ("kitty", "transparent"),
-        )
-
     def test_click_on_header_row_is_ignored(self):
-        # Row 13 = the blank line between title and header (no data). A click
-        # there must not apply; follow-up Enter applies the focused default,
-        # proving the click was ignored.
         sw = PresetSwitcher(["kitty"], lambda a: [("default", True)])
-        self.assertEqual(self._run_keys(sw, [self._click(40, 13), "ENTER"]), ("kitty", "default"))
+        self.assertEqual(self._run_keys(sw, [self._click(40, 12), "ENTER"]), ("kitty", "default"))
 
 
 class TestEditPreset(unittest.TestCase):
@@ -533,6 +481,156 @@ class TestEditPreset(unittest.TestCase):
              patch.object(preset.subprocess, "run") as mock_run:
             self.assertTrue(preset.edit_preset("kitty", "mine"))
         mock_run.assert_called_once_with(["myed", str(target)], check=False)
+
+
+class TestPresetStudioInspection(unittest.TestCase):
+    """Tests for preset metadata inspection (get_preset_info)."""
+
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+        self.env = self._ctx.env
+
+    def tearDown(self):
+        self._ctx.__exit__()
+
+    def test_default_preset_info(self):
+        info = preset.get_preset_info("kitty", "default")
+        self.assertEqual(info.app, "kitty")
+        self.assertEqual(info.name, "default")
+        self.assertEqual(info.source, "official")
+        self.assertFalse(info.is_editable)
+        self.assertFalse(info.is_deletable)
+        self.assertEqual(info.path, "configs/kitty")
+
+    def test_official_preset_info(self):
+        info = preset.get_preset_info("kitty", "transparent")
+        self.assertEqual(info.app, "kitty")
+        self.assertEqual(info.name, "transparent")
+        self.assertEqual(info.source, "official")
+        self.assertFalse(info.is_editable)
+        self.assertFalse(info.is_deletable)
+        self.assertEqual(info.path, "configs/kitty/presets/transparent")
+
+    def test_user_preset_info(self):
+        user_dir = self.env.presets_dir / "kitty" / "my-nord"
+        user_dir.mkdir(parents=True)
+        (user_dir / "kitty.conf").write_text("# my theme")
+
+        info = preset.get_preset_info("kitty", "my-nord")
+        self.assertEqual(info.app, "kitty")
+        self.assertEqual(info.name, "my-nord")
+        self.assertEqual(info.source, "user")
+        self.assertTrue(info.is_editable)
+        self.assertTrue(info.is_deletable)
+        self.assertIn("kitty.conf", info.files)
+
+
+class TestPresetStudioActions(unittest.TestCase):
+    """Tests for Preset Studio interactive actions via on_action callback."""
+
+    def _run_keys(self, switcher, keys):
+        fake_size = os.terminal_size((80, 24))
+        with patch("sys.stdin.isatty", return_value=True), \
+             patch("nyxniri.tui.read_key", side_effect=keys), \
+             patch("shutil.get_terminal_size", return_value=fake_size), \
+             patch("sys.stdout", new_callable=StringIO):
+            return switcher.run()
+
+    def test_apply_action_triggered(self):
+        actions = []
+        def on_action(action, app, name):
+            actions.append((action, app, name))
+            return f"Applied {name}"
+
+        sw = PresetSwitcher(
+            apps=["kitty"],
+            presets_for=lambda a: [("default", "official", True), ("transparent", "official", False)],
+            on_action=on_action,
+        )
+        # RIGHT -> move to presets, DOWN -> transparent, ENTER -> apply, q -> quit
+        self._run_keys(sw, ["RIGHT", "DOWN", "ENTER", "q"])
+        self.assertEqual(actions, [("apply", "kitty", "transparent")])
+
+    def test_save_action_triggered(self):
+        actions = []
+        def on_action(action, app, name):
+            actions.append((action, app, name))
+            return f"Saved {name}"
+
+        sw = PresetSwitcher(
+            apps=["kitty"],
+            presets_for=lambda a: [("default", "official", True)],
+            on_action=on_action,
+        )
+        # 's' triggers save prompt -> type 'm', 'i', 'n', 'e', ENTER -> q to quit
+        self._run_keys(sw, ["s", "m", "i", "n", "e", "ENTER", "q"])
+        self.assertEqual(actions, [("save", "kitty", "mine")])
+
+    def test_delete_action_with_confirmation(self):
+        actions = []
+        def on_action(action, app, name):
+            actions.append((action, app, name))
+            return f"Deleted {name}"
+
+        info_map = {
+            ("kitty", "my-nord"): preset.PresetInfo(
+                app="kitty", name="my-nord", source="user", is_active=False,
+                path="~/.config/NyxNiri/presets/kitty/my-nord", files=[], preserve=[],
+                is_editable=True, is_deletable=True
+            )
+        }
+
+        sw = PresetSwitcher(
+            apps=["kitty"],
+            presets_for=lambda a: [("my-nord", "user", False)],
+            info_for=lambda a, n: info_map.get((a, n)),
+            on_action=on_action,
+        )
+        # RIGHT -> presets, 'd' -> delete, 'y' -> confirm, 'q' -> quit
+        self._run_keys(sw, ["RIGHT", "d", "y", "q"])
+        self.assertEqual(actions, [("delete", "kitty", "my-nord")])
+
+    def test_delete_action_cancelled(self):
+        actions = []
+        def on_action(action, app, name):
+            actions.append((action, app, name))
+            return f"Deleted {name}"
+
+        info_map = {
+            ("kitty", "my-nord"): preset.PresetInfo(
+                app="kitty", name="my-nord", source="user", is_active=False,
+                path="~/.config/NyxNiri/presets/kitty/my-nord", files=[], preserve=[],
+                is_editable=True, is_deletable=True
+            )
+        }
+
+        sw = PresetSwitcher(
+            apps=["kitty"],
+            presets_for=lambda a: [("my-nord", "user", False)],
+            info_for=lambda a, n: info_map.get((a, n)),
+            on_action=on_action,
+        )
+        # RIGHT -> presets, 'd' -> delete, 'n' -> cancel, 'q' -> quit
+        self._run_keys(sw, ["RIGHT", "d", "n", "q"])
+        self.assertEqual(actions, [])
+
+    def test_tab_toggles_details(self):
+        info_map = {
+            ("kitty", "default"): preset.PresetInfo(
+                app="kitty", name="default", source="official", is_active=True,
+                path="configs/kitty", files=["kitty.conf"], preserve=["monitor.kdl"],
+                is_editable=False, is_deletable=False
+            )
+        }
+        sw = PresetSwitcher(
+            apps=["kitty"],
+            presets_for=lambda a: [("default", "official", True)],
+            info_for=lambda a, n: info_map.get((a, n)),
+        )
+        # TAB expands, TAB collapses, q quits cleanly
+        result = self._run_keys(sw, ["TAB", "TAB", "q"])
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":

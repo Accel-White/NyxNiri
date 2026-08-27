@@ -16,7 +16,7 @@ from nyxniri.core import (
     register_temp_path,
 )
 from nyxniri.i18n import msg
-from nyxniri.tui import CheckboxEntry, CheckboxList, drain_stdin, prompt_confirm, truncate_display
+from nyxniri.tui import CheckboxEntry, CheckboxList, Menu, MenuItem, drain_stdin, prompt_confirm, truncate_display
 
 
 _MANAGED_SNAPSHOT_RE = re.compile(
@@ -183,17 +183,16 @@ def rollback_configs(target_arg: str = "") -> bool:
         if not sys.stdin.isatty():
             print(msg("rollback_invalid_num"))
             return False
-        try:
-            sys.stdout.write(msg("select_rollback_target"))
-            sys.stdout.flush()
-            drain_stdin()
-            val = sys.stdin.readline().strip()
-            if not val.isdigit() or not (1 <= int(val) <= len(backups)):
-                print(msg("rollback_invalid_num"))
-                return False
-            chosen_backup = backups[int(val) - 1]
-        except Exception:
+        items = [
+            MenuItem(label=_snapshot_label(idx, b))
+            for idx, b in enumerate(backups, start=1)
+        ]
+        items.append(MenuItem(label=msg("menu_opt0"), style="subtle"))
+        choice = Menu("rollback_select_title", items, hint_key="rollback_select_hint", compact=True).run()
+        if choice == len(items) - 1:
+            print(msg("delete_cancelled"))
             return False
+        chosen_backup = backups[choice]
 
     print(msg("rolling_back", chosen_backup.name))
 

@@ -397,7 +397,7 @@ def snapshot_menu_loop() -> None:
             MenuItem(label=msg("snapshot_sub_rollback")),
             MenuItem(label=msg("snapshot_sub_back"), style="subtle"),
         ]
-        menu = Menu("snapshot_menu_title", items, hint_key="submenu_hint")
+        menu = Menu("snapshot_menu_title", items, hint_key="submenu_hint", compact=True)
         choice = menu.run()
         if choice == 0:
             sys.stdout.write(msg("snapshot_note_prompt"))
@@ -427,7 +427,7 @@ def greeter_menu_loop() -> None:
             MenuItem(label=msg("greeter_sub_uninstall"), style="warn"),
             MenuItem(label=msg("greeter_sub_back"), style="subtle"),
         ]
-        menu = Menu("greeter_menu_title", items, hint_key="submenu_hint")
+        menu = Menu("greeter_menu_title", items, hint_key="submenu_hint", compact=True)
         choice = menu.run()
         if choice == 0: greeter_install(); press_any_key()
         elif choice == 1: greeter_status(); press_any_key()
@@ -443,7 +443,7 @@ def fcitx_menu_loop() -> None:
             MenuItem(label=msg("fcitx_sub_uninstall"), style="warn"),
             MenuItem(label=msg("fcitx_sub_back"), style="subtle"),
         ]
-        menu = Menu("fcitx_menu_title", items, hint_key="submenu_hint")
+        menu = Menu("fcitx_menu_title", items, hint_key="submenu_hint", compact=True)
         choice = menu.run()
         if choice == 0: fcitx_install(); press_any_key()
         elif choice == 1: fcitx_status(); press_any_key()
@@ -459,7 +459,7 @@ def gtk_menu_loop() -> None:
             MenuItem(label=msg("gtk_sub_uninstall"), style="warn"),
             MenuItem(label=msg("gtk_sub_back"), style="subtle"),
         ]
-        menu = Menu("gtk_menu_title", items, hint_key="submenu_hint")
+        menu = Menu("gtk_menu_title", items, hint_key="submenu_hint", compact=True)
         choice = menu.run()
         if choice == 0: gtktheme_install(); press_any_key()
         elif choice == 1: gtktheme_status(); press_any_key()
@@ -475,7 +475,7 @@ def fisher_menu_loop() -> None:
             MenuItem(label=msg("fisher_sub_uninstall"), style="warn"),
             MenuItem(label=msg("fisher_sub_back"), style="subtle"),
         ]
-        menu = Menu("fisher_menu_title", items, hint_key="submenu_hint")
+        menu = Menu("fisher_menu_title", items, hint_key="submenu_hint", compact=True)
         choice = menu.run()
         if choice == 0: fisher_install(); press_any_key()
         elif choice == 1: fisher_status(); press_any_key()
@@ -494,7 +494,7 @@ def deps_menu_loop() -> None:
             MenuItem(label=msg("deps_sub_apps")),
             MenuItem(label=msg("deps_sub_back"), style="subtle"),
         ]
-        menu = Menu("deps_menu_title", items, hint_key="submenu_hint")
+        menu = Menu("deps_menu_title", items, hint_key="submenu_hint", compact=True)
         choice = menu.run()
         if choice == 0: run_dep_menu_loop(); press_any_key()
         elif choice == 1: run_optional_apps_menu_loop(); press_any_key()
@@ -515,7 +515,7 @@ def extensions_menu_loop() -> None:
             MenuItem(label=label_fisher),
             MenuItem(label=msg("ext_back"), style="subtle"),
         ]
-        menu = Menu("ext_menu_title", items, hint_key="submenu_hint")
+        menu = Menu("ext_menu_title", items, hint_key="submenu_hint", compact=True)
         choice = menu.run()
         if choice == 0: greeter_menu_loop()
         elif choice == 1: fcitx_menu_loop()
@@ -524,30 +524,36 @@ def extensions_menu_loop() -> None:
         elif choice == 4: break
 
 def preset_switcher_loop() -> None:
-    """Interactive dual-pane preset switcher (§9). Left = apps, right = presets.
-
-    Stays open after an apply: the switcher re-enters with refreshed active
-    state so the user sees the ``>`` marker move and can keep switching. Cancel
-    (q/ESC) returns to the main menu.
-    """
+    """Interactive Preset Studio (§9). Left = apps, right = presets + in-place actions."""
     if not sys.stdin.isatty():
         print(msg("interactive_terminal_required"), file=sys.stderr)
         return
 
+    from nyxniri.deploy.preset import get_preset_info
+
     apps = discover_config_items()
 
-    def presets_for(app: str):
-        return [(name, is_active) for name, _, is_active in collect_presets(app)]
+    def on_action(action: str, app: str, name: str) -> Optional[str]:
+        if action == "apply":
+            ok = apply_preset(app, name)
+            return msg("preset_toast_applied", app, name) if ok else msg("preset_apply_failed", app, name)
+        elif action == "save":
+            ok = save_preset(app, name)
+            return msg("preset_toast_saved", app, name) if ok else None
+        elif action == "delete":
+            ok = delete_preset(app, name)
+            return msg("preset_toast_deleted", app, name) if ok else None
+        elif action == "edit":
+            edit_preset(app, name)
+            return msg("preset_edit_opened", app, name)
+        return None
 
-    while True:
-        chosen = PresetSwitcher(apps, presets_for).run()
-        if not chosen:
-            return  # ESC/q → back to main menu
-        app, name = chosen
-        apply_preset(app, name)
-        press_any_key()
-        # loop: a fresh PresetSwitcher reads live active state via collect_presets,
-        # so the cursor lands on the newly-active preset and `>` reflects it.
+    PresetSwitcher(
+        apps=apps,
+        presets_for=collect_presets,
+        info_for=get_preset_info,
+        on_action=on_action,
+    ).run()
 
 def main_menu_loop() -> None:
     """Main NyxNiri control panel interactive loop."""

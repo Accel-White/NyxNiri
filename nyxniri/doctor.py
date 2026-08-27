@@ -274,40 +274,84 @@ def _check_preset_drift(env) -> None:
             )))
 
 
-# Ordered registry of all health checks.
-# Adding a check = write a function + append it here.
-DOCTOR_CHECKS = [
-    _check_compositor,
-    _check_wayland_session,
-    _check_noctalia,
-    _check_wallpapers,
-    _check_core_deps,
-    _check_scripts,
-    _check_eyecare,
-    _check_scratchpad,
-    _check_orbit,
-    _check_shell,
-    _check_fisher,
-    _check_audio,
-    _check_brightness,
-    _check_portal_active,
-    _check_portal_gtk,
-    _check_portal_config,
-    _check_disk_space,
-    _check_fcitx_skin,
-    _check_gtk_theme,
-    _check_vm,
-    _check_greeter,
-    _check_path_occlusion,
-    _check_preset_drift,
+# Ordered sections of health checks.
+# Adding a check = write a function + append to the appropriate section list.
+DOCTOR_SECTIONS = [
+    ("doctor_sec_desktop", [
+        _check_compositor,
+        _check_wayland_session,
+        _check_noctalia,
+        _check_wallpapers,
+    ]),
+    ("doctor_sec_core", [
+        _check_core_deps,
+        _check_scripts,
+        _check_shell,
+        _check_orbit,
+        _check_eyecare,
+        _check_scratchpad,
+    ]),
+    ("doctor_sec_hardware", [
+        _check_audio,
+        _check_brightness,
+        _check_vm,
+        _check_disk_space,
+    ]),
+    ("doctor_sec_services", [
+        _check_portal_active,
+        _check_portal_gtk,
+        _check_portal_config,
+    ]),
+    ("doctor_sec_extensions", [
+        _check_fisher,
+        _check_fcitx_skin,
+        _check_gtk_theme,
+        _check_greeter,
+        _check_path_occlusion,
+        _check_preset_drift,
+    ]),
 ]
+
+DOCTOR_CHECKS = [chk for _, checks in DOCTOR_SECTIONS for chk in checks]
+
+
+class _OutputTally:
+    """Lightweight stdout proxy to count diagnostics results without altering check signatures."""
+    def __init__(self, target):
+        self.target = target
+        self.ok = 0
+        self.warn = 0
+        self.err = 0
+
+    def write(self, s: str):
+        if "[✓]" in s:
+            self.ok += s.count("[✓]")
+        if "[!]" in s:
+            self.warn += s.count("[!]")
+        if "[✗]" in s:
+            self.err += s.count("[✗]")
+        return self.target.write(s)
+
+    def flush(self):
+        return self.target.flush()
+
 
 def run_doctor() -> bool:
     """Execute comprehensive system health diagnosis."""
     print(msg("running_doctor"))
     env = get_env()
-    for check in DOCTOR_CHECKS:
-        check(env)
+    tally = _OutputTally(sys.stdout)
+    orig_stdout = sys.stdout
+    sys.stdout = tally
+    try:
+        for sec_key, checks in DOCTOR_SECTIONS:
+            sys.stdout.write(f"{msg(sec_key)}\n")
+            for check in checks:
+                check(env)
+    finally:
+        sys.stdout = orig_stdout
+
+    print(f"\n{msg('doctor_summary_tally', tally.ok, tally.warn, tally.err)}")
     print(msg("all_done"))
     print(msg("reboot_hint"))
     log_msg("INFO", "System Doctor executed")

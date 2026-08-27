@@ -135,6 +135,88 @@ def _find_preset_src(app: str, name: str) -> Optional[Path]:
     return None
 
 
+@dataclass
+class PresetInfo:
+    """Metadata inspection for an app preset."""
+    app: str
+    name: str
+    source: str          # 'official' | 'user'
+    is_active: bool
+    path: str
+    files: List[str]
+    preserve: List[str]
+    is_editable: bool
+    is_deletable: bool
+
+
+def get_preset_info(app: str, name: str) -> PresetInfo:
+    """Inspect detailed metadata and key files for an app preset."""
+    from nyxniri.deploy.manifest import load_manifest_for
+
+    env = get_env()
+    active = read_active_preset(app)
+    is_active = (active == name)
+
+    if name == "default":
+        src = env.configs_src / app
+        source = "official"
+        is_editable = False
+        is_deletable = False
+        rel_path = f"configs/{app}"
+    else:
+        official = env.configs_src / app / "presets" / name
+        user = env.presets_dir / app / name
+        if official.is_dir():
+            src = official
+            source = "official"
+            is_editable = False
+            is_deletable = False
+            rel_path = f"configs/{app}/presets/{name}"
+        elif user.is_dir():
+            src = user
+            source = "user"
+            is_editable = True
+            is_deletable = True
+            rel_path = f"~/.config/NyxNiri/presets/{app}/{name}"
+        else:
+            src = None
+            source = "official"
+            is_editable = False
+            is_deletable = False
+            rel_path = f"configs/{app}/presets/{name} (not found)"
+
+    files: List[str] = []
+    if src and src.is_dir():
+        for p in sorted(src.rglob("*")):
+            if p.is_file() and not p.name.startswith(".") and "__custom__" not in p.name:
+                if name == "default" and "presets" in p.parts:
+                    continue
+                try:
+                    rel = str(p.relative_to(src))
+                    files.append(rel)
+                except ValueError:
+                    pass
+
+    preserve: List[str] = []
+    try:
+        manifest = load_manifest_for(app)
+        preserve = manifest.preserve or []
+    except Exception:
+        pass
+
+    return PresetInfo(
+        app=app,
+        name=name,
+        source=source,
+        is_active=is_active,
+        path=rel_path,
+        files=files,
+        preserve=preserve,
+        is_editable=is_editable,
+        is_deletable=is_deletable,
+    )
+
+
 def collect_presets(app: str) -> List[Tuple[str, str, bool]]:
     """Return (name, source, is_active) for every preset of an app.
 

@@ -13,7 +13,7 @@ import tty
 import unicodedata
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from nyxniri.constants import Colors
 from nyxniri.core import Environment, get_env
@@ -513,10 +513,11 @@ class MenuItem:
 
 
 class Menu:
-    def __init__(self, title_key: str, items: List[MenuItem], hint_key: str = "menu_hint"):
+    def __init__(self, title_key: str, items: List[MenuItem], hint_key: str = "menu_hint", compact: bool = False):
         self.title_key = title_key
         self.items = items
         self.hint_key = hint_key
+        self.compact = compact
 
     def run(self, initial_focus: int = 0) -> int:
         """Run interactive menu loop and return the selected item index."""
@@ -527,15 +528,19 @@ class Menu:
         max_idx = len(self.items) - 1
         env = get_env()
 
-        with interactive_screen():
+        with interactive_screen(mouse=True):
             while True:
                 cols, terminal_lines = shutil.get_terminal_size((80, 24))
                 sys.stdout.write("\033[?25l\033[H")
-                show_logo(env)
-                title = msg(self.title_key).strip("\n")
-                write_cleared(f"{title}\n\n")
+                if self.compact:
+                    show_header(msg(self.title_key).strip("\n"), env)
+                else:
+                    show_logo(env)
+                    title = msg(self.title_key).strip("\n")
+                    write_cleared(f"{title}\n\n")
 
-                visible_count = max(3, terminal_lines - RESERVED_ROWS)
+                reserved = 6 if self.compact else RESERVED_ROWS
+                visible_count = max(3, terminal_lines - reserved)
                 start = max(0, min(focus - visible_count // 2, len(self.items) - visible_count))
                 end = min(len(self.items), start + visible_count)
                 if start > 0:
@@ -557,10 +562,25 @@ class Menu:
                 sys.stdout.flush()
 
                 key = read_key()
+                if isinstance(key, MouseEvent):
+                    if key.kind == "WHEEL_UP":
+                        focus = max_idx if focus <= 0 else focus - 1
+                    elif key.kind == "WHEEL_DOWN":
+                        focus = 0 if focus >= max_idx else focus + 1
+                    continue
+
                 if key in ("UP", "k", "K", "LEFT", "h", "H"):
                     focus = max_idx if focus <= 0 else focus - 1
                 elif key in ("DOWN", "j", "J", "RIGHT", "l", "L"):
                     focus = 0 if focus >= max_idx else focus + 1
+                elif key in ("PAGEUP",):
+                    focus = max(0, focus - visible_count)
+                elif key in ("PAGEDOWN",):
+                    focus = min(max_idx, focus + visible_count)
+                elif key in ("HOME", "g"):
+                    focus = 0
+                elif key in ("END", "G"):
+                    focus = max_idx
                 elif key in ("ENTER", "SPACE"):
                     return focus
                 elif key.isdigit() and 1 <= int(key) <= len(self.items):
@@ -580,10 +600,11 @@ class CheckboxEntry:
 
 
 class CheckboxList:
-    def __init__(self, title_key: str, entries: List[CheckboxEntry], hint_key: str = "selective_hint"):
+    def __init__(self, title_key: str, entries: List[CheckboxEntry], hint_key: str = "selective_hint", compact: bool = False):
         self.title_key = title_key
         self.entries = entries
         self.hint_key = hint_key
+        self.compact = compact
 
     def run(self, accept_defaults: bool = False) -> Optional[List[str]]:
         """Run checkbox selection loop. Returns list of selected keys, or None if cancelled."""
@@ -598,16 +619,20 @@ class CheckboxList:
         focus_pos = 0
         env = get_env()
 
-        with interactive_screen():
+        with interactive_screen(mouse=True):
             while True:
                 cols, terminal_lines = shutil.get_terminal_size((80, 24))
                 sys.stdout.write("\033[?25l\033[H")
-                show_logo(env)
-                title = msg(self.title_key).strip("\n")
-                write_cleared(f"{title}\n\n")
+                if self.compact:
+                    show_header(msg(self.title_key).strip("\n"), env)
+                else:
+                    show_logo(env)
+                    title = msg(self.title_key).strip("\n")
+                    write_cleared(f"{title}\n\n")
 
                 focus = selectable[focus_pos]
-                visible_count = max(4, terminal_lines - RESERVED_ROWS)
+                reserved = 6 if self.compact else RESERVED_ROWS
+                visible_count = max(4, terminal_lines - reserved)
                 start = max(
                     0,
                     min(focus - visible_count // 2, len(self.entries) - visible_count),
@@ -636,10 +661,25 @@ class CheckboxList:
                 sys.stdout.flush()
 
                 key = read_key()
+                if isinstance(key, MouseEvent):
+                    if key.kind == "WHEEL_UP":
+                        focus_pos = (focus_pos - 1) % len(selectable)
+                    elif key.kind == "WHEEL_DOWN":
+                        focus_pos = (focus_pos + 1) % len(selectable)
+                    continue
+
                 if key in ("UP", "k", "K", "LEFT", "h", "H"):
                     focus_pos = (focus_pos - 1) % len(selectable)
                 elif key in ("DOWN", "j", "J", "RIGHT", "l", "L"):
                     focus_pos = (focus_pos + 1) % len(selectable)
+                elif key in ("PAGEUP",):
+                    focus_pos = max(0, focus_pos - visible_count)
+                elif key in ("PAGEDOWN",):
+                    focus_pos = min(len(selectable) - 1, focus_pos + visible_count)
+                elif key in ("HOME", "g"):
+                    focus_pos = 0
+                elif key in ("END", "G"):
+                    focus_pos = len(selectable) - 1
                 elif key == "SPACE":
                     self.entries[focus].checked = not self.entries[focus].checked
                 elif key in ("a", "A"):
@@ -662,213 +702,433 @@ class CheckboxList:
                     return [e.key for e in self.entries if not e.is_separator and e.checked]
 
 # --- Component: Dual-Pane Preset Switcher (§9) ---
+def show_header(title: str, env: Optional[Environment] = None) -> int:
+    """Render a clean, modern subpage header with subtle brand tagline."""
+    if env is None:
+        env = get_env()
+    header_text = (
+        f"\n  {Colors.BOLD_PURPLE}NYX NIRI{Colors.RESET}  "
+        f"{Colors.BOLD_WHITE}{env.version}{Colors.RESET}  "
+        f"{Colors.DARK_GRAY}·{Colors.RESET}  "
+        f"{Colors.BOLD_WHITE}{title}{Colors.RESET}\n\n"
+    )
+    write_cleared(header_text)
+    return 3
+
+# --- Component: Dual-Pane Preset Switcher (§9) ---
 class PresetSwitcher:
-    """Two-column preset switcher: left = apps, right = presets of the focused app.
+    """Accordion Tree Preset Studio: flat list with expandable/collapsible app branches.
 
-    The ranger/mc model: one cursor that lives in one pane at a time. ←/→ move
-    the cursor between panes; ↑/↓ move within the active pane. Enter applies the
-    (focused app, focused preset) pair; q/ESC cancels. The active preset is
-    marked ``>`` (green); when that row is also focused the cyan ``❯`` takes its
-    place. The focused app's preset list re-renders on switch, landing its cursor
-    on the active preset.
+    - All apps displayed in a single unified list, collapsed by default (`▸`).
+    - Pressing Enter / Space / → (or mouse click) on an App expands its presets (`▾`).
+    - Presets indented underneath with single `❯` cursor navigation.
+    - Active preset marked with pure minimal green dot `●`.
+    - Zero vertical box-drawing lines, zero cross-character misalignments.
 
-    Decoupled from deploy/preset: the caller supplies the app list and a
-    callback returning ``[(preset_name, is_active)]`` for an app. ``run()``
-    returns the chosen ``(app, preset)`` pair, or None on cancel.
-
-    Glyph vocabulary (single-glyph state machine, unified across panes):
-      ``❯`` cyan  — live cursor row (whole screen has exactly one)
-      ``>``  green — in-place selection: left = app whose presets are shown,
-                     right = the currently active preset
-      `` ``  none  — otherwise
-    Pane identity is shown by a leading bar: ``▌`` cyan on the active pane,
-    ``│`` dark-gray on the inactive one — so the cursor's home pane is readable
-    at a glance without scanning for ``❯``.
-
-    Mouse: SGR tracking is enabled for the loop. Clicking a left-pane row
-    browses that app (cursor lands on its active preset); clicking a right-pane
-    row applies that preset immediately and returns. Wheel scrolls the active
-    pane.
+    Actions:
+      [Enter] Expand App / Apply Preset
+      [s]     Save current config to a user preset (in-place prompt)
+      [e]     Open user preset in $EDITOR
+      [d]     Delete user preset (in-place confirmation)
+      [q/Esc] Exit
     """
 
     def __init__(
         self,
         apps: List[str],
-        presets_for: Callable[[str], List[Tuple[str, bool]]],
+        presets_for: Callable[[str], List[Any]],
+        info_for: Optional[Callable[[str, str], Any]] = None,
+        on_action: Optional[Callable[[str, str, str], Optional[str]]] = None,
         title_key: str = "preset_switcher_title",
         hint_key: str = "preset_switcher_hint",
     ):
         self.apps = apps
         self.presets_for = presets_for
+        self.info_for = info_for
+        self.on_action = on_action
         self.title_key = title_key
         self.hint_key = hint_key
+
+    def _normalize_presets(self, raw_list: List[Any]) -> List[Tuple[str, str, bool]]:
+        """Normalize (name, is_active) or (name, source, is_active) entries."""
+        norm: List[Tuple[str, str, bool]] = []
+        for item in raw_list:
+            if len(item) == 2:
+                name, is_active = item
+                source = "official" if name == "default" else "user"
+                norm.append((name, source, is_active))
+            elif len(item) >= 3:
+                name, source, is_active = item[0], item[1], item[2]
+                norm.append((name, source, is_active))
+        return norm
 
     def run(self) -> Optional[Tuple[str, str]]:
         if not self.apps or not sys.stdin.isatty():
             return None
         env = get_env()
-        left = 0
-        pane = "left"
-        right_cache: dict = {}
-        right_idx = 0
+        expanded: Set[str] = set()
+        right_cache: Dict[str, List[Tuple[str, str, bool]]] = {}
+        focus = 0
+        toast_msg: Optional[str] = None
 
-        def right_items(app: str) -> List[Tuple[str, bool]]:
+        def presets_for_app(app: str) -> List[Tuple[str, str, bool]]:
             if app not in right_cache:
-                right_cache[app] = list(self.presets_for(app))
+                right_cache[app] = self._normalize_presets(self.presets_for(app))
             return right_cache[app]
 
-        def land_on_active(app: str) -> int:
-            for i, (_, is_active) in enumerate(right_items(app)):
-                if is_active:
-                    return i
-            return 0
+        def build_flat_list() -> List[Dict[str, Any]]:
+            items: List[Dict[str, Any]] = []
+            for a in self.apps:
+                p_list = presets_for_app(a)
+                act_name = "default"
+                for p_n, _, is_act in p_list:
+                    if is_act:
+                        act_name = p_n
+                        break
+                is_exp = a in expanded
+                items.append({
+                    "type": "app",
+                    "app": a,
+                    "active": act_name,
+                    "count": len(p_list),
+                    "is_expanded": is_exp,
+                })
+                if is_exp:
+                    for p_n, src, is_act in p_list:
+                        items.append({
+                            "type": "preset",
+                            "app": a,
+                            "name": p_n,
+                            "source": src,
+                            "is_active": is_act,
+                        })
+            return items
 
-        right_idx = land_on_active(self.apps[left])
+        flat_items = build_flat_list()
+
+        expand_details = False
         with interactive_screen(clear_first=False, mouse=True):
             while True:
+                cols, terminal_lines = shutil.get_terminal_size((80, 24))
                 sys.stdout.write("\033[?25l\033[H")
                 logo_rows = show_logo(env)
                 title = msg(self.title_key).strip("\n")
-                write_cleared(f"{title}\n\n")
+                write_cleared(f"  {Colors.BOLD_WHITE}{title}{Colors.RESET}\n\n")
 
-                app = self.apps[left]
-                presets = right_items(app)
-                cols, terminal_lines = shutil.get_terminal_size((80, 24))
-                left_w = min(24, max(8, cols // 3))
-                gap = 3
-                right_w = max(8, cols - left_w - gap - 4)
-                # column geometry (1-based, for mouse hit-testing):
-                #   col 1            = left pane bar
-                #   col 3..2+left_w  = left content
-                #   col 3+left_w..   = gap (3 wide)
-                #   col 3+left_w+gap = right pane bar
-                #   col 5+left_w+gap = right content
-                left_col_end = 2 + left_w
-                gap_mid = 2 + left_w + gap // 2 + 1
-                right_bar_col = 3 + left_w + gap
+                if not flat_items:
+                    flat_items = build_flat_list()
+                focus = max(0, min(focus, len(flat_items) - 1))
 
-                bar_on = f"{Colors.BOLD_CYAN}▌{Colors.RESET}"
-                bar_off = f"{Colors.DARK_GRAY}│{Colors.RESET}"
+                visible = max(3, terminal_lines - (24 if expand_details else 18))
+                start = max(0, min(focus - visible // 2, len(flat_items) - visible))
+                end = min(len(flat_items), start + visible)
 
-                hdr_l = msg("preset_switcher_col_app")
-                hdr_r = msg("preset_switcher_col_preset", app)
-                rule_w = min(right_w, left_w)  # both columns share this content width → symmetric
-                write_cleared(
-                    f"{bar_on if pane == 'left' else bar_off} {Colors.BOLD_WHITE}{pad_display(hdr_l, left_w)}{Colors.RESET}"
-                    f"{' ' * gap}{bar_on if pane == 'right' else bar_off} {Colors.BOLD_WHITE}{pad_display(truncate_display(hdr_r, rule_w), rule_w)}{Colors.RESET}\n"
-                )
-
-                rows = max(len(self.apps), len(presets))
-                visible = max(4, terminal_lines - 15)  # logo+title+1-line col header+hint
-                active_cursor = left if pane == "left" else right_idx
-                start = max(0, min(active_cursor - visible // 2, rows - visible))
-                end = min(rows, start + visible)
-                # hit_map: absolute terminal row (1-based) -> list index i.
-                # show_logo returns its newline count; the cursor then sits one
-                # row below, and title(1) + blank(1) + header(1) = 3 rows
-                # precede the first data row (no rule line — the bar stays
-                # vertically continuous header→data).
                 hit_map: List[Tuple[int, int]] = []
-                cur_row = logo_rows + 1 + 3
+                hit_actions: Dict[int, str] = {}
+                cur_row = logo_rows + 3
                 if start > 0:
-                    write_cleared(f"{Colors.DARK_GRAY} ...{Colors.RESET}\n")
+                    write_cleared(f"    {Colors.DARK_GRAY}...{Colors.RESET}\n")
                     cur_row += 1
+
                 for i in range(start, end):
-                    # left cell — single-glyph state machine, mirrors the right pane
-                    if i < len(self.apps):
-                        a = self.apps[i]
-                        if pane == "left" and i == left:
-                            lglyph = f"{Colors.BOLD_CYAN}❯{Colors.RESET}"
-                            lcol = Colors.BOLD_WHITE
-                        elif pane == "right" and i == left:
-                            lglyph = f"{Colors.BOLD_GREEN}>{Colors.RESET}"
-                            lcol = ""
+                    item = flat_items[i]
+                    if item["type"] == "app":
+                        arrow = "▾" if item["is_expanded"] else "▸"
+                        count_tag = f" ({item['count']})" if item["count"] > 1 else ""
+                        if i == focus:
+                            prefix = f"  {Colors.BOLD_CYAN}❯ {arrow}{Colors.RESET} "
+                            app_display = f"{Colors.BOLD_WHITE}{pad_display(item['app'], 28)}{Colors.RESET}"
                         else:
-                            lglyph = " "
-                            lcol = ""
-                        lcell = f"{lglyph} {lcol}{truncate_display(a, left_w - 2)}{Colors.RESET}"
+                            prefix = f"    {Colors.DARK_GRAY}{arrow}{Colors.RESET} "
+                            app_display = f"{Colors.WHITE}{pad_display(item['app'], 28)}{Colors.RESET}"
+                        status_str = f"{Colors.DARK_GRAY}{item['active']}{count_tag}{Colors.RESET}"
+                        line = f"{prefix}{app_display}  {status_str}"
                     else:
-                        lcell = ""
-                    # right cell — one leading glyph: ❯ focused / > active / space neither
-                    if i < len(presets):
-                        pname, is_active = presets[i]
-                        if pane == "right" and i == right_idx:
-                            glyph = f"{Colors.BOLD_CYAN}❯{Colors.RESET}"
-                            rcol = Colors.BOLD_WHITE
-                        elif is_active:
-                            glyph = f"{Colors.BOLD_GREEN}>{Colors.RESET}"
-                            rcol = ""
+                        active_badge = f"  {msg('preset_status_active')}" if item["is_active"] else ""
+                        if i == focus:
+                            prefix = f"      {Colors.BOLD_CYAN}❯{Colors.RESET}   "
+                            name_display = f"{Colors.BOLD_WHITE}{pad_display(item['name'], 24)}{Colors.RESET}"
                         else:
-                            glyph = " "
-                            rcol = ""
-                        rcell = f"{glyph} {rcol}{truncate_display(pname, right_w - 2)}{Colors.RESET}"
-                    else:
-                        rcell = ""
-                    write_cleared(
-                        f"{bar_on if pane == 'left' else bar_off} {pad_display(lcell, left_w)}"
-                        f"{' ' * gap}{bar_on if pane == 'right' else bar_off} {rcell}\033[K\n"
-                    )
+                            prefix = "          "
+                            name_display = f"{Colors.WHITE}{pad_display(item['name'], 24)}{Colors.RESET}"
+                        line = f"{prefix}{name_display}{active_badge}"
+
+                    write_cleared(f"{line}\033[K\n")
                     hit_map.append((cur_row, i))
                     cur_row += 1
-                if end < rows:
-                    write_cleared(f"{Colors.DARK_GRAY} ...{Colors.RESET}\n")
 
-                hint = responsive_hint(self.hint_key).strip("\n")
-                write_cleared(f"\n{hint}\n")
+                if end < len(flat_items):
+                    write_cleared(f"    {Colors.DARK_GRAY}...{Colors.RESET}\n")
+                    cur_row += 1
+
+                # Divider with vertical breathing room
+                divider_w = min(56, max(20, cols - 4))
+                write_cleared(f"\n  {Colors.DARK_GRAY}{'─' * divider_w}{Colors.RESET}\n\n")
+                cur_row += 3
+
+                # Inspector section (Details)
+                curr_item = flat_items[focus] if flat_items else None
+                if curr_item and self.info_for:
+                    cur_app = curr_item["app"]
+                    cur_preset = curr_item["name"] if curr_item["type"] == "preset" else curr_item["active"]
+                    info = self.info_for(cur_app, cur_preset)
+                    if info:
+                        write_cleared(f"  {Colors.DARK_GRAY}{msg('preset_info_source')}:{Colors.RESET} {info.path}\033[K\n\n")
+                        cur_row += 2
+
+                        # Included Files (independent line, collapsible)
+                        f_cnt = len(info.files)
+                        f_arrow = "▾" if expand_details else "▸"
+                        write_cleared(f"  {Colors.WHITE}{f_arrow} {msg('preset_info_files')} ({f_cnt}){Colors.RESET}\033[K\n")
+                        hit_actions[cur_row] = "toggle_details"
+                        cur_row += 1
+
+                        if expand_details:
+                            if info.files:
+                                for f_name in info.files:
+                                    write_cleared(f"      {Colors.DARK_GRAY}·{Colors.RESET} {Colors.WHITE}{f_name}{Colors.RESET}\033[K\n")
+                                    cur_row += 1
+                            else:
+                                write_cleared(f"      {Colors.DARK_GRAY}· {msg('preset_info_none')}{Colors.RESET}\033[K\n")
+                                cur_row += 1
+                            write_cleared("\n")
+                            cur_row += 1
+
+                        # Preserved Files (independent line, collapsible)
+                        p_cnt = len(info.preserve)
+                        p_arrow = "▾" if expand_details else "▸"
+                        write_cleared(f"  {Colors.WHITE}{p_arrow} {msg('preset_info_preserve')} ({p_cnt}){Colors.RESET}\033[K\n")
+                        hit_actions[cur_row] = "toggle_details"
+                        cur_row += 1
+
+                        if expand_details:
+                            if info.preserve:
+                                for p_name in info.preserve:
+                                    write_cleared(f"      {Colors.DARK_GRAY}·{Colors.RESET} {Colors.YELLOW}{p_name}{Colors.RESET}\033[K\n")
+                                    cur_row += 1
+                            else:
+                                write_cleared(f"      {Colors.DARK_GRAY}· {msg('preset_info_none')}{Colors.RESET}\033[K\n")
+                                cur_row += 1
+                    else:
+                        write_cleared("\n\n\n")
+                else:
+                    write_cleared("\n\n\n")
+
+                # Action Bar / Toast feedback
+                if toast_msg:
+                    write_cleared(f"\n  {toast_msg}\033[K\n")
+                else:
+                    hint = responsive_hint(self.hint_key).strip("\n")
+                    write_cleared(f"\n{hint}\033[K\n")
+
                 sys.stdout.write("\033[J")
                 sys.stdout.flush()
 
                 key = read_key()
 
-                # --- mouse dispatch ---
+                # Mouse handling
                 if isinstance(key, MouseEvent):
                     if key.kind in ("WHEEL_UP", "WHEEL_DOWN"):
                         delta = -1 if key.kind == "WHEEL_UP" else 1
-                        if pane == "left":
-                            left = (left + delta) % len(self.apps)
-                            right_idx = land_on_active(self.apps[left])
-                        elif presets:
-                            right_idx = (right_idx + delta) % len(presets)
+                        focus = (focus + delta) % len(flat_items)
+                        toast_msg = None
                     elif key.kind == "PRESS":
-                        # find the clicked data row
+                        if key.row in hit_actions:
+                            if hit_actions[key.row] == "toggle_details":
+                                expand_details = not expand_details
+                                continue
                         hit_i = next((i for (r, i) in hit_map if r == key.row), None)
-                        if hit_i is not None and start <= hit_i < end:
-                            if key.col <= gap_mid:
-                                # left pane: browse app (no apply)
-                                if hit_i < len(self.apps):
-                                    left = hit_i
-                                    pane = "left"
-                                    right_idx = land_on_active(self.apps[left])
-                            else:
-                                # right pane: apply preset immediately
-                                if hit_i < len(presets):
-                                    return (self.apps[left], presets[hit_i][0])
-                    # MOUSE_RELEASE and out-of-bounds clicks: ignore, redraw
+                        if hit_i is not None and 0 <= hit_i < len(flat_items):
+                            focus = hit_i
+                            hit_item = flat_items[hit_i]
+                            if hit_item["type"] == "app":
+                                a = hit_item["app"]
+                                if not self.on_action:
+                                    return (a, hit_item["active"])
+                                if a in expanded:
+                                    expanded.remove(a)
+                                else:
+                                    expanded.add(a)
+                                flat_items = build_flat_list()
+                            elif hit_item["type"] == "preset":
+                                a = hit_item["app"]
+                                p_n = hit_item["name"]
+                                if self.on_action:
+                                    toast_msg = self.on_action("apply", a, p_n)
+                                    if a in right_cache:
+                                        del right_cache[a]
+                                    flat_items = build_flat_list()
+                                else:
+                                    return (a, p_n)
                     continue
 
-                # --- keyboard dispatch ---
-                if key in ("LEFT", "h", "H"):
-                    pane = "left"
-                elif key in ("RIGHT", "l", "L"):
-                    if presets:
-                        pane = "right"
+                # Keyboard handling
+                if key in ("TAB", "\t", "i", "I"):
+                    expand_details = not expand_details
+                    toast_msg = None
                 elif key in ("UP", "k", "K"):
-                    if pane == "left":
-                        left = (left - 1) % len(self.apps)
-                        right_idx = land_on_active(self.apps[left])
-                    elif presets:
-                        right_idx = (right_idx - 1) % len(presets)
+                    focus = (focus - 1) % len(flat_items)
+                    toast_msg = None
                 elif key in ("DOWN", "j", "J"):
-                    if pane == "left":
-                        left = (left + 1) % len(self.apps)
-                        right_idx = land_on_active(self.apps[left])
-                    elif presets:
-                        right_idx = (right_idx + 1) % len(presets)
+                    focus = (focus + 1) % len(flat_items)
+                    toast_msg = None
+                elif key in ("PAGEUP",):
+                    focus = max(0, focus - visible)
+                    toast_msg = None
+                elif key in ("PAGEDOWN",):
+                    focus = min(len(flat_items) - 1, focus + visible)
+                    toast_msg = None
+                elif key in ("HOME", "g"):
+                    focus = 0
+                    toast_msg = None
+                elif key in ("END", "G"):
+                    focus = len(flat_items) - 1
+                    toast_msg = None
+                elif key in ("RIGHT", "l", "L"):
+                    toast_msg = None
+                    if curr_item and curr_item["type"] == "app":
+                        a = curr_item["app"]
+                        if a not in expanded:
+                            expanded.add(a)
+                            flat_items = build_flat_list()
+                        target_focus = None
+                        for i_f, it in enumerate(flat_items):
+                            if it["type"] == "preset" and it["app"] == a:
+                                if target_focus is None:
+                                    target_focus = i_f
+                                if it["is_active"]:
+                                    target_focus = i_f
+                                    break
+                        if target_focus is not None:
+                            focus = target_focus
+                elif key in ("LEFT", "h", "H"):
+                    toast_msg = None
+                    if curr_item:
+                        if curr_item["type"] == "preset":
+                            for i_f, it in enumerate(flat_items):
+                                if it["type"] == "app" and it["app"] == curr_item["app"]:
+                                    focus = i_f
+                                    break
+                        elif curr_item["type"] == "app" and curr_item["app"] in expanded:
+                            expanded.remove(curr_item["app"])
+                            flat_items = build_flat_list()
                 elif key in ("ENTER", "SPACE"):
-                    if presets:
-                        return (self.apps[left], presets[right_idx][0])
+                    if not curr_item:
+                        continue
+                    if curr_item["type"] == "app":
+                        a = curr_item["app"]
+                        if not self.on_action:
+                            return (a, curr_item["active"])
+                        if a in expanded:
+                            expanded.remove(a)
+                            flat_items = build_flat_list()
+                        else:
+                            expanded.add(a)
+                            flat_items = build_flat_list()
+                            target_focus = None
+                            for i_f, it in enumerate(flat_items):
+                                if it["type"] == "preset" and it["app"] == a:
+                                    if target_focus is None:
+                                        target_focus = i_f
+                                    if it["is_active"]:
+                                        target_focus = i_f
+                                        break
+                            if target_focus is not None:
+                                focus = target_focus
+                    elif curr_item["type"] == "preset":
+                        a = curr_item["app"]
+                        p_n = curr_item["name"]
+                        if self.on_action:
+                            toast_msg = self.on_action("apply", a, p_n)
+                            if a in right_cache:
+                                del right_cache[a]
+                            flat_items = build_flat_list()
+                        else:
+                            return (a, p_n)
+                elif key in ("s", "S"):
+                    if not curr_item:
+                        continue
+                    cur_app = curr_item["app"]
+                    prompt = f"  {Colors.BOLD_CYAN}{msg('preset_prompt_save_name')}{Colors.RESET}"
+                    save_name = self._read_line_raw(prompt)
+                    if save_name:
+                        if self.on_action:
+                            toast_msg = self.on_action("save", cur_app, save_name)
+                            if cur_app in right_cache:
+                                del right_cache[cur_app]
+                            expanded.add(cur_app)
+                            flat_items = build_flat_list()
+                            for i_f, it in enumerate(flat_items):
+                                if it["type"] == "preset" and it["app"] == cur_app and it["name"] == save_name:
+                                    focus = i_f
+                                    break
+                elif key in ("e", "E"):
+                    if not curr_item:
+                        continue
+                    if curr_item["type"] == "preset":
+                        cur_app = curr_item["app"]
+                        cur_preset = curr_item["name"]
+                        if self.info_for:
+                            info = self.info_for(cur_app, cur_preset)
+                            if info and not info.is_editable:
+                                toast_msg = msg("preset_edit_official_denied", cur_preset)
+                                continue
+                        if self.on_action:
+                            toast_msg = self.on_action("edit", cur_app, cur_preset)
+                            if cur_app in right_cache:
+                                del right_cache[cur_app]
+                            flat_items = build_flat_list()
+                    else:
+                        toast_msg = msg("preset_edit_official_denied", curr_item["active"])
+                elif key in ("d", "D"):
+                    if not curr_item:
+                        continue
+                    if curr_item["type"] == "preset":
+                        cur_app = curr_item["app"]
+                        cur_preset = curr_item["name"]
+                        if self.info_for:
+                            info = self.info_for(cur_app, cur_preset)
+                            if info and not info.is_deletable:
+                                toast_msg = msg("preset_delete_official_denied", cur_preset)
+                                continue
+                        prompt = f"  {Colors.BOLD_YELLOW}{msg('preset_prompt_delete_confirm', cur_preset)}{Colors.RESET}"
+                        sys.stdout.write(f"\r\033[K{prompt}")
+                        sys.stdout.flush()
+                        confirm_key = read_key()
+                        if confirm_key in ("y", "Y"):
+                            if self.on_action:
+                                toast_msg = self.on_action("delete", cur_app, cur_preset)
+                                if cur_app in right_cache:
+                                    del right_cache[cur_app]
+                                flat_items = build_flat_list()
+                                focus = min(focus, max(0, len(flat_items) - 1))
+                        else:
+                            toast_msg = msg("delete_cancelled")
+                    else:
+                        toast_msg = msg("preset_delete_official_denied", curr_item["active"])
                 elif key in ("0", "q", "Q", "ESC", "EXIT"):
                     return None
+
+    def _read_line_raw(self, prompt_str: str) -> Optional[str]:
+        """Read a line of text in raw mode with backspace support."""
+        sys.stdout.write(f"\r\033[K{prompt_str}")
+        sys.stdout.flush()
+        chars: List[str] = []
+        while True:
+            k = read_key()
+            if k in ("ENTER", "\n", "\r"):
+                return "".join(chars).strip()
+            elif k in ("ESC", "EXIT"):
+                return None
+            elif k in ("BACKSPACE", "\x7f", "\x08"):
+                if chars:
+                    chars.pop()
+                    sys.stdout.write("\b \b")
+                    sys.stdout.flush()
+            elif len(k) == 1 and k.isprintable():
+                chars.append(k)
+                sys.stdout.write(k)
+                sys.stdout.flush()
 
 # --- Component: Language Selection ---
 def select_language() -> str:

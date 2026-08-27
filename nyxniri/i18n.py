@@ -677,6 +677,14 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "zh": "▸ 请选择要恢复的快照序号 (Ctrl+C 取消): ",
         "en": "▸ Select snapshot to restore (Ctrl+C to cancel): ",
     },
+    "rollback_select_title": {
+        "zh": f"\n  {Colors.BOLD_CYAN}── 选择要恢复的快照 ──{Colors.RESET}\n",
+        "en": f"\n  {Colors.BOLD_CYAN}── Select Snapshot to Restore ──{Colors.RESET}\n",
+    },
+    "rollback_select_hint": {
+        "zh": f"  {Colors.DARK_GRAY}[↑/↓/j/k] 移动  [Enter] 确认回滚  [Esc/q] 取消{Colors.RESET}",
+        "en": f"  {Colors.DARK_GRAY}[↑/↓/j/k] Move  [Enter] Confirm Rollback  [Esc/q] Cancel{Colors.RESET}",
+    },
     "delete_snapshot_title": {
         "zh": f"\n  {Colors.BOLD_CYAN}── 选择要删除的快照 ──{Colors.RESET}\n",
         "en": f"\n  {Colors.BOLD_CYAN}── Select Snapshots to Delete ──{Colors.RESET}\n",
@@ -1060,6 +1068,30 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
     "running_doctor": {
         "zh": f"\n{Colors.BOLD_PURPLE}:: 正在诊断系统…{Colors.RESET}",
         "en": f"\n{Colors.BOLD_PURPLE}:: Running diagnostics…{Colors.RESET}",
+    },
+    "doctor_sec_desktop": {
+        "zh": f"\n{Colors.BOLD_BLUE}:: [1/5] 桌面与合成器{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_BLUE}:: [1/5] Desktop & Compositor{Colors.RESET}",
+    },
+    "doctor_sec_core": {
+        "zh": f"\n{Colors.BOLD_BLUE}:: [2/5] 核心依赖与脚本{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_BLUE}:: [2/5] Core Tools & Scripts{Colors.RESET}",
+    },
+    "doctor_sec_hardware": {
+        "zh": f"\n{Colors.BOLD_BLUE}:: [3/5] 音频、显示与外设{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_BLUE}:: [3/5] Audio, Displays & Hardware{Colors.RESET}",
+    },
+    "doctor_sec_services": {
+        "zh": f"\n{Colors.BOLD_BLUE}:: [4/5] 门户与系统服务{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_BLUE}:: [4/5] Portals & System Services{Colors.RESET}",
+    },
+    "doctor_sec_extensions": {
+        "zh": f"\n{Colors.BOLD_BLUE}:: [5/5] 扩展与环境健康{Colors.RESET}",
+        "en": f"\n{Colors.BOLD_BLUE}:: [5/5] Extensions & Health{Colors.RESET}",
+    },
+    "doctor_summary_tally": {
+        "zh": f"  {Colors.BOLD_GREEN}[✓] {{0}} 项正常{Colors.RESET}  {Colors.BOLD_YELLOW}[!] {{1}} 项提示{Colors.RESET}  {Colors.BOLD_RED}[✗] {{2}} 项异常{Colors.RESET}",
+        "en": f"  {Colors.BOLD_GREEN}[✓] {{0}} passed{Colors.RESET}  {Colors.BOLD_YELLOW}[!] {{1}} warnings{Colors.RESET}  {Colors.BOLD_RED}[✗] {{2}} errors{Colors.RESET}",
     },
     "doctor_ok": {
         "zh": f"{Colors.BOLD_GREEN}[✓]{Colors.RESET} {{0}}",
@@ -1558,16 +1590,56 @@ Commands:
         "en": f"{Colors.BOLD_YELLOW}[!] {{0}}: active preset '{{1}}' is no longer in the repo; ~/.config/{{0}} is frozen, not redeployed{Colors.RESET}\n    {Colors.BOLD_CYAN}Run `{Colors.RESET}nyxniri preset {{0}} list{Colors.BOLD_CYAN}` to pick a new preset{Colors.RESET}",
     },
     "preset_switcher_title": {
-        "zh": f"\n  {Colors.BOLD_CYAN}── 预设切换 ──{Colors.RESET}\n",
-        "en": f"\n  {Colors.BOLD_CYAN}── Preset Switcher ──{Colors.RESET}\n",
+        "zh": "预设管理",
+        "en": "Preset Management",
     },
     "preset_switcher_hint": {
-        "zh": f"  {Colors.DARK_GRAY}←/→ 跳栏  ↑/↓ 栏内移动  Enter 应用  q 退{Colors.RESET}",
-        "en": f"  {Colors.DARK_GRAY}←/→ switch pane  ↑/↓ move  Enter apply  q back{Colors.RESET}",
+        "zh": f"  {Colors.DARK_GRAY}[Enter] 展开/应用   [Tab] 详情   [s] 保存当前   [e] 编辑   [d] 删除   [q] 返回{Colors.RESET}",
+        "en": f"  {Colors.DARK_GRAY}[Enter] Expand/Apply   [Tab] Details   [s] Save   [e] Edit   [d] Delete   [q] Back{Colors.RESET}",
     },
     "preset_switcher_hint_short": {
-        "zh": f"  {Colors.DARK_GRAY}←/→ 栏  ↑/↓ 移  Enter 应用  q 退{Colors.RESET}",
-        "en": f"  {Colors.DARK_GRAY}←/→ pane  ↑/↓ move  Enter apply  q{Colors.RESET}",
+        "zh": f"  {Colors.DARK_GRAY}[Enter] 选  [Tab] 详  [s] 存  [e] 改  [d] 删  [q] 退{Colors.RESET}",
+        "en": f"  {Colors.DARK_GRAY}[Enter] Select  [Tab] Info  [s] Save  [e] Edit  [d] Del  [q] Back{Colors.RESET}",
+    },
+    "preset_status_active": {
+        "zh": f"{Colors.BOLD_GREEN}●{Colors.RESET}",
+        "en": f"{Colors.BOLD_GREEN}●{Colors.RESET}",
+    },
+    "preset_prompt_save_name": {
+        "zh": "▸ 新预设名称 (Esc 取消): ",
+        "en": "▸ New preset name (Esc to cancel): ",
+    },
+    "preset_prompt_delete_confirm": {
+        "zh": "▸ 确认删除用户预设 '{0}'？[y/N]: ",
+        "en": "▸ Delete user preset '{0}'? [y/N]: ",
+    },
+    "preset_toast_applied": {
+        "zh": f"{Colors.BOLD_GREEN}[✓] 已应用 {{0}} 预设: {{1}}{Colors.RESET}",
+        "en": f"{Colors.BOLD_GREEN}[✓] Applied {{0}} preset: {{1}}{Colors.RESET}",
+    },
+    "preset_toast_saved": {
+        "zh": f"{Colors.BOLD_GREEN}[✓] 已保存 {{0}} 用户预设: {{1}}{Colors.RESET}",
+        "en": f"{Colors.BOLD_GREEN}[✓] Saved {{0}} user preset: {{1}}{Colors.RESET}",
+    },
+    "preset_toast_deleted": {
+        "zh": f"{Colors.BOLD_GREEN}[✓] 已删除 {{0}} 用户预设: {{1}}{Colors.RESET}",
+        "en": f"{Colors.BOLD_GREEN}[✓] Deleted {{0}} user preset: {{1}}{Colors.RESET}",
+    },
+    "preset_info_source": {
+        "zh": "源",
+        "en": "Source",
+    },
+    "preset_info_files": {
+        "zh": "包含文件",
+        "en": "Included Files",
+    },
+    "preset_info_preserve": {
+        "zh": "保留文件",
+        "en": "Preserved Files",
+    },
+    "preset_info_none": {
+        "zh": "(无)",
+        "en": "(none)",
     },
     "preset_switcher_col_app": {
         "zh": "应用",
