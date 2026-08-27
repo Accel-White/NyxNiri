@@ -25,7 +25,7 @@ nyxniri/
 │   ├── hardware.py                     _phase_hardware_patches（NVIDIA env，独立硬件自适应层）
 │   ├── preset.py                       预设切换（active 状态、src 四分支、apply 窄路径）
 │   └── deploy.py                       编排器：discover_config_items、_phase_atomic_deployment、
-│                                       _phase_post_install_services、fisher_uninstall、
+│                                       _phase_post_install_services、
 │                                       render_completion_screen、deploy_selected_configs、test_deploy
 │
 ├── state/                              状态子包
@@ -52,10 +52,10 @@ nyxniri/
 
 - `nyxniri.deploy/__init__`：`atomic_replace_item`、`discover_config_items`、`deploy_selected_configs`、
   `deploy_wallpapers`、`wallpapers_pack_present`、`render_completion_screen`、`test_deploy`、
-  `fisher_uninstall`、preset 全套（`apply_preset`/`list_presets`/…）、manifest 全套
+  preset 全套（`apply_preset`/`list_presets`/…）、manifest 全套
   （`load_manifest`/`discover_deployable_apps`/`discover_optional_apps`）…
 - `nyxniri.state/__init__`：`backup_configs`、`rollback_configs`、`list_backups`、`delete_backup`、
-  `get_all_backups`、`uninstall_nyxniri`（path 原语 `copy_path`/`remove_path` 在 core.py，按需直连）
+  `get_all_backups`、`get_backup_base_dir`、`uninstall_nyxniri`（path 原语 `copy_path`/`remove_path` 在 core.py，按需直连）
 - `nyxniri.modules/__init__`：fcitx/fisher/greeter/gtktheme 四件套动词（`fcitx_install`/`fisher_uninstall`/…）
 
 ## Import 约定（两套路径，按场景选）
@@ -70,7 +70,8 @@ from nyxniri.state import backup_configs, uninstall_nyxniri
 读的源模块；re-export 在 `__init__` import 时已绑定旧引用，patch 源不影响 re-export 绑定。
 ```python
 # 引擎内懒加载（state/uninstall.py 内）
-from nyxniri.deploy.deploy import discover_config_items, fisher_uninstall
+from nyxniri.deploy.deploy import discover_config_items
+from nyxniri.modules.fisher import fisher_uninstall
 from nyxniri.deploy.atomic import atomic_replace_item
 # 测试打补丁
 patch("nyxniri.deploy.atomic.atomic_replace_item", return_value=False)
