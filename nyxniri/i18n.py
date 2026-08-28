@@ -697,6 +697,14 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "zh": f"{Colors.BOLD_RED}[✗] 无效序号，已取消回滚{Colors.RESET}",
         "en": f"{Colors.BOLD_RED}[✗] Invalid selection{Colors.RESET}",
     },
+    "rollback_source_missing": {
+        "zh": f"{Colors.BOLD_RED}[✗] 所选快照已不存在，已取消回滚: {{0}}{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[✗] Selected snapshot is no longer available; rollback cancelled: {{0}}{Colors.RESET}",
+    },
+    "rollback_no_items": {
+        "zh": f"{Colors.BOLD_RED}[✗] 所选快照没有可恢复的配置，已取消回滚{Colors.RESET}",
+        "en": f"{Colors.BOLD_RED}[✗] Selected snapshot contains no restorable configuration; rollback cancelled{Colors.RESET}",
+    },
     "rolling_back": {
         "zh": f"\n{Colors.BOLD_BLUE}:: 正在从快照 [{{0}}] 恢复配置…{Colors.RESET}",
         "en": f"\n{Colors.BOLD_BLUE}:: Restoring from snapshot [{{0}}]…{Colors.RESET}",
@@ -1134,6 +1142,14 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
     "err_root_denied": {
         "zh": f"\n{Colors.BOLD_RED}[✗] 请以普通用户身份运行 NyxNiri，不要使用 root。{Colors.RESET}",
         "en": f"\n{Colors.BOLD_RED}[✗] Run NyxNiri as a normal user, not root.{Colors.RESET}",
+    },
+    "err_engine_incomplete": {
+        "zh": f"{Colors.BOLD_RED}[✗] 引擎文件不完整或更新中途被打断。{Colors.RESET}\n    重新运行 install.sh 即可恢复；若仍失败，请重新克隆仓库。",
+        "en": f"{Colors.BOLD_RED}[✗] Engine files are incomplete or an update was interrupted.{Colors.RESET}\n    Rerun install.sh to recover; if it still fails, re-clone the repository.",
+    },
+    "check_probe_timeout": {
+        "zh": "检测项超时，已跳过",
+        "en": "Check timed out, skipped",
     },
     "err_unknown_command": {
         "zh": f"{Colors.BOLD_RED}[✗] 未知命令: {{0}}{Colors.RESET}",

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from nyxniri.constants import Colors, MAIN_WM, REPO_URL, THEME_ENGINE
-from nyxniri.core import get_env, log_msg
+from nyxniri.core import get_env, log_msg, timed_run
 from nyxniri.i18n import msg
 from nyxniri.tui import read_key, responsive_hint, show_logo, raw_input_mode, _drain_pending
 
@@ -138,14 +138,14 @@ def _phase_post_install_services() -> None:
     sync_script = config_dir / THEME_ENGINE / "theme-sync.sh"
     if sync_script.is_file():
         sync_script.chmod(0o755)
-        subprocess.run(["bash", str(sync_script)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=30)
+        timed_run(["bash", str(sync_script)], 30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
         print(msg("log_gtk_theme_init"))
 
     if shutil.which(THEME_ENGINE):
         from nyxniri.modules.gtktheme import gtktheme_trigger_render
         gtktheme_trigger_render()
         print(msg("log_enable_mpvpaper"))
-        subprocess.run([THEME_ENGINE, "msg", "plugins", "enable", f"{THEME_ENGINE}/mpvpaper"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False, timeout=15)
+        timed_run([THEME_ENGINE, "msg", "plugins", "enable", f"{THEME_ENGINE}/mpvpaper"], 15, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
 
     if shutil.which("fish"):
         from nyxniri.modules.fisher import fisher_install
@@ -259,7 +259,7 @@ def render_completion_screen(
                 elif focus == 1:
                     star_url = REPO_URL.removesuffix(".git")
                     if shutil.which("xdg-open"):
-                        subprocess.run(["xdg-open", star_url], check=False, timeout=5)
+                        timed_run(["xdg-open", star_url], 5, check=False)
                     print(msg("msg_star_opened", star_url))
                     time.sleep(1.2)
                 elif focus == 2:
