@@ -13,7 +13,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from nyxniri.core import get_env, log_msg, register_temp_path
+from nyxniri.core import get_env, log_msg, register_temp_path, timed_run
 from nyxniri.i18n import msg, text
 from nyxniri.network import fetch_raw_with_fallback
 
@@ -38,10 +38,16 @@ def fisher_install() -> bool:
         return False
     print(msg("log_check_fisher"))
     log_msg("INFO", "Checking Fisher plugin manager installation")
-    fish_check = subprocess.run(
+    fish_check = timed_run(
         ["fish", "-c", "functions -q fisher; echo $status"],
-        capture_output=True, text=True, check=False, timeout=10,
+        10, capture_output=True, text=True, check=False,
     )
+    if fish_check is None:
+        # Probe stalled — treat like unreachable network instead of crashing
+        # the install flow after configs are already deployed.
+        print(msg("log_fisher_install_skipped"))
+        log_msg("WARN", "Fisher probe timed out; skipping fisher step")
+        return False
     if fish_check.returncode == 0 and fish_check.stdout.strip() == "0":
         fish_plugins = get_env().config_dir / "fish" / "fish_plugins"
         need_update = True
@@ -63,7 +69,7 @@ def fisher_install() -> bool:
                     pass
         if need_update:
             log_msg("INFO", "Fisher installed, running update")
-            subprocess.run(["fish", "-c", "fisher update"], check=False, timeout=60)
+            timed_run(["fish", "-c", "fisher update"], 60, check=False)
         else:
             log_msg("INFO", "Fisher installed, fish_plugins unchanged")
         return True
@@ -81,7 +87,10 @@ def fisher_install() -> bool:
             f"if test -f ~/.config/fish/fish_plugins && functions -q fisher; "
             f"echo '{msg_install}'; fisher update || echo '{msg_skip}'; end"
         )
-        subprocess.run(["fish", "-c", fish_code], check=False, timeout=60)
+        res = timed_run(["fish", "-c", fish_code], 60, check=False)
+        if res is None:
+            print(msg("log_fisher_install_skipped"))
+            return False
         return True
     print(msg("log_fisher_install_skipped"))
     log_msg("WARN", "Fisher auto-install skipped (network unreachable)")
@@ -101,14 +110,14 @@ def fisher_uninstall() -> bool:
     conf_d = fish_dir / "conf.d"
 
     if shutil.which("fish"):
-        check = subprocess.run(
+        check = timed_run(
             ["fish", "-c", "functions -q fisher; echo $status"],
-            capture_output=True, text=True, check=False, timeout=10,
+            10, capture_output=True, text=True, check=False,
         )
-        if check.returncode == 0 and check.stdout.strip() == "0":
-            subprocess.run(
-                ["fish", "-c", "fisher remove --all"],
-                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30,
+        if check is not None and check.returncode == 0 and check.stdout.strip() == "0":
+            timed_run(
+                ["fish", "-c", "fisher remove --all"], 30,
+                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
             log_msg("INFO", "fisher remove --all ran")
         # fisher not installed → no managed plugins to remove; just drop the loader.

@@ -18,7 +18,7 @@ from nyxniri.constants import (
     GIT_MIRROR_REGISTRY,
     RAW_MIRROR_TEMPLATES,
 )
-from nyxniri.core import get_env, log_msg, register_temp_path
+from nyxniri.core import get_env, log_msg, register_temp_path, timed_run
 from nyxniri.i18n import msg
 from nyxniri.tui import prompt_confirm
 
@@ -309,8 +309,9 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
         if not prompt_confirm("dirty_tree_confirm", "n"):
             print(msg("update_cancelled_dirty"))
             return None
-        subprocess.run(["git", "reset", "--hard", "HEAD"], cwd=target_dir, check=False, env=env, timeout=15)
-        subprocess.run(["git", "clean", "-fd"], cwd=target_dir, check=False, env=env, timeout=15)
+        # Best-effort cleanup: a stalled reset must not crash the update flow.
+        timed_run(["git", "reset", "--hard", "HEAD"], 15, cwd=target_dir, check=False, env=env)
+        timed_run(["git", "clean", "-fd"], 15, cwd=target_dir, check=False, env=env)
 
     # Fetch & pull
     sys.stdout.write(msg("checking_updates") + "\n")
@@ -334,16 +335,15 @@ def safe_git_pull(target_dir: Path) -> Optional[bool]:
         env=env,
     )
     if res_fetch.returncode == 0:
-        res_reset = subprocess.run(
-            ["git", "reset", "--hard", "origin/main"],
+        res_reset = timed_run(
+            ["git", "reset", "--hard", "origin/main"], 15,
             cwd=target_dir,
             capture_output=True,
             text=True,
             check=False,
             env=env,
-            timeout=15,
         )
-        return res_reset.returncode == 0
+        return res_reset is not None and res_reset.returncode == 0
     log_msg("ERROR", f"Failed to update repository: {target_dir}")
     return False
 
