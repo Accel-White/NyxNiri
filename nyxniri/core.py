@@ -287,6 +287,20 @@ def log_msg(level: str, message: str) -> None:
     except Exception:
         pass
 
+def timed_run(cmd: list, timeout: float, **kw) -> Optional[subprocess.CompletedProcess]:
+    """subprocess.run that degrades a timeout to None instead of raising.
+
+    Every external command with a timeout must go through here: a stalled
+    network call or unresponsive daemon is polish failing, not a reason to
+    crash the whole flow mid-deploy (v3.0.3 shipped timeouts but only
+    network.py caught the exception — everything else turned hang into crash).
+    """
+    try:
+        return subprocess.run(cmd, timeout=timeout, **kw)
+    except subprocess.TimeoutExpired:
+        log_msg("WARN", f"Command timed out after {timeout}s: {cmd[0]}")
+        return None
+
 # --- CLI Binary Symlink ---
 def ensure_nyxniri_symlink() -> None:
     """Ensure ~/.local/bin/nyxniri points to install.sh.

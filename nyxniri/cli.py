@@ -10,6 +10,8 @@ from nyxniri.constants import (
     CLI_CMD,
     FCITX_THEME,
     GREETER_PKG,
+    PENDING_UPGRADE_ENV,
+    PENDING_UPGRADE_MENU_ENV,
     PROJECT_NAME,
     THEME_ENGINE,
 )
@@ -590,13 +592,14 @@ def main_menu_loop() -> None:
         elif choice == 4:
             update_result = safe_git_pull(env.repo_dir)
             if update_result is True:
-                offer_overwrite_upgrade()
-                check_new_deps_post_update()
                 print(msg("updating_done"))
                 press_any_key()
-                # Re-exec to load new code
+                # Re-exec first: the deploy offer must run on the freshly
+                # pulled code, not on modules loaded before the pull.
                 try:
-                    os.execv(sys.executable, [sys.executable, "-m", "nyxniri"])
+                    os.execve(sys.executable, [sys.executable, "-m", CLI_CMD],
+                              {**os.environ, PENDING_UPGRADE_ENV: "",
+                               PENDING_UPGRADE_MENU_ENV: "1"})
                 except Exception as e:
                     log_msg("ERROR", f"Re-exec failed: {e}")
                     print(msg("update_restart_needed"), file=sys.stderr)
@@ -800,10 +803,15 @@ def _cmd_update(sub_args: List[str]) -> int:
     else:
         update_result = safe_git_pull(env.repo_dir)
     if update_result is True:
-        deploy_ok = offer_overwrite_upgrade(flag)
-        check_new_deps_post_update()
-        print(msg("updating_done"))
-        return 0 if deploy_ok else 1
+        # Hand the deploy over to a fresh process so it runs on the updated
+        # engine code instead of the modules loaded before the pull.
+        try:
+            os.execve(sys.executable, [sys.executable, "-m", CLI_CMD],
+                      {**os.environ, PENDING_UPGRADE_ENV: flag})
+        except Exception as e:
+            log_msg("ERROR", f"Re-exec failed: {e}")
+            print(msg("update_restart_needed"), file=sys.stderr)
+            return 1
     if update_result is False:
         print(msg("updating_failed"), file=sys.stderr)
         return 1
@@ -863,6 +871,12 @@ def main() -> None:
     get_env()
     ensure_nyxniri_symlink()
 
+    # Post-update handoff: a previous run pulled new code and re-execed into
+    # us, so the deploy offer runs on the updated engine instead of the stale
+    # modules the old process had loaded before the pull.
+    pending_flag = os.environ.pop(PENDING_UPGRADE_ENV, None)
+    pending_from_menu = os.environ.pop(PENDING_UPGRADE_MENU_ENV, None)
+
     args = sys.argv[1:]
     if args:
         cmd = args[0].lower()
@@ -876,6 +890,16 @@ def main() -> None:
         print(msg("err_unknown_command", args[0]), file=sys.stderr)
         print_help(file=sys.stderr)
         sys.exit(2)
+
+    if pending_flag is not None:
+        deploy_ok = offer_overwrite_upgrade(pending_flag)
+        check_new_deps_post_update()
+        print(msg("updating_done"))
+        if not sys.stdin.isatty():
+            sys.exit(0 if deploy_ok else 1)
+        press_any_key()
+        if not pending_from_menu:
+            sys.exit(0 if deploy_ok else 1)
 
     # Interactive flow
     if not sys.stdin.isatty():
