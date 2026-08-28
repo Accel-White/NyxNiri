@@ -18,7 +18,7 @@ from nyxniri.constants import (
     PROJECT_NAME,
     THEME_ENGINE,
 )
-from nyxniri.core import get_env, get_pics_dir, log_msg
+from nyxniri.core import get_env, get_pics_dir, log_msg, timed_run
 from nyxniri.i18n import msg, text
 
 
@@ -347,7 +347,11 @@ def run_doctor() -> bool:
         for sec_key, checks in DOCTOR_SECTIONS:
             sys.stdout.write(f"{msg(sec_key)}\n")
             for check in checks:
-                check(env)
+                try:
+                    check(env)
+                except subprocess.TimeoutExpired:
+                    # One stalled probe must not kill the whole diagnosis.
+                    print(msg("doctor_warn", msg("check_probe_timeout")))
     finally:
         sys.stdout = orig_stdout
 

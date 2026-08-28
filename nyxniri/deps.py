@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from nyxniri.constants import AUR_DEPS, CORE_DEPS
+from nyxniri.core import timed_run
 from nyxniri.i18n import msg
 from nyxniri.deploy.manifest import discover_manifest_apps, discover_optional_apps
 from nyxniri.tui import CheckboxEntry, CheckboxList, pad_display, prompt_confirm
@@ -24,8 +25,10 @@ def _get_pacman_installed() -> set:
         _PACMAN_INSTALLED_CACHE = set()
         return _PACMAN_INSTALLED_CACHE
     env = {**os.environ, "LC_ALL": "C"}
-    res = subprocess.run(["pacman", "-Qq"], capture_output=True, text=True, check=False, env=env, timeout=30)
-    _PACMAN_INSTALLED_CACHE = set(res.stdout.split()) if res.returncode == 0 else set()
+    # Timeout degrades to an empty set: which()/font probes still run, worst
+    # case is re-suggesting a package — never a crash in the deps check.
+    res = timed_run(["pacman", "-Qq"], 30, capture_output=True, text=True, check=False, env=env)
+    _PACMAN_INSTALLED_CACHE = set(res.stdout.split()) if res is not None and res.returncode == 0 else set()
     return _PACMAN_INSTALLED_CACHE
 
 def _get_fc_list() -> str:
@@ -36,8 +39,8 @@ def _get_fc_list() -> str:
         _FC_LIST_CACHE = ""
         return _FC_LIST_CACHE
     env = {**os.environ, "LC_ALL": "C"}
-    res = subprocess.run(["fc-list", ":", "family"], capture_output=True, text=True, check=False, env=env, timeout=15)
-    _FC_LIST_CACHE = res.stdout.lower() if res.returncode == 0 else ""
+    res = timed_run(["fc-list", ":", "family"], 15, capture_output=True, text=True, check=False, env=env)
+    _FC_LIST_CACHE = res.stdout.lower() if res is not None and res.returncode == 0 else ""
     return _FC_LIST_CACHE
 
 def is_dep_installed(cmd: str) -> bool:
@@ -46,11 +49,11 @@ def is_dep_installed(cmd: str) -> bool:
     if cmd == "inotify-tools":
         return shutil.which("inotifywait") is not None
     elif cmd == "python-gobject":
-        res = subprocess.run([sys.executable, "-c", "import gi"], capture_output=True, check=False, timeout=10)
-        return res.returncode == 0
+        res = timed_run([sys.executable, "-c", "import gi"], 10, capture_output=True, check=False)
+        return res is not None and res.returncode == 0
     elif cmd == "gtk-layer-shell":
-        res = subprocess.run([sys.executable, "-c", "import gi; gi.require_version('GtkLayerShell', '0.1')"], capture_output=True, check=False, timeout=10)
-        return res.returncode == 0
+        res = timed_run([sys.executable, "-c", "import gi; gi.require_version('GtkLayerShell', '0.1')"], 10, capture_output=True, check=False)
+        return res is not None and res.returncode == 0
     elif cmd == "ttf-jetbrains-mono":
         return "jetbrains mono" in _get_fc_list()
     elif cmd == "ttf-jetbrains-mono-nerd":
