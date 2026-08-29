@@ -994,8 +994,12 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": f"{Colors.BOLD_GREEN}[✓] fcitx5 switched to theme: nyxmellow ({{0}}){Colors.RESET}",
     },
     "fcitx_restarted": {
-        "zh": f"{Colors.BOLD_GREEN}[✓] fcitx5 已启动并加载新皮肤{Colors.RESET}",
-        "en": f"{Colors.BOLD_GREEN}[✓] fcitx5 started with the new skin{Colors.RESET}",
+        "zh": f"{Colors.BOLD_GREEN}[✓] fcitx5 已加载新皮肤{Colors.RESET}",
+        "en": f"{Colors.BOLD_GREEN}[✓] fcitx5 loaded the new skin{Colors.RESET}",
+    },
+    "fcitx_start_requested": {
+        "zh": f"{Colors.BOLD_GREEN}[✓] 已请求启动 fcitx5，NyxMellow 将在启动后生效{Colors.RESET}",
+        "en": f"{Colors.BOLD_GREEN}[✓] Requested fcitx5 startup; NyxMellow will apply after launch{Colors.RESET}",
     },
     "fcitx_status_title": {
         "zh": f"\n{Colors.BOLD_CYAN}:: NyxMellow fcitx5 皮肤状态{Colors.RESET}",
