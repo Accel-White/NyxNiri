@@ -5,19 +5,18 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from nyxniri.constants import AUR_DEPS, CORE_DEPS
-from nyxniri.core import log_msg, register_temp_path
+from nyxniri.core import timed_run
 from nyxniri.i18n import msg
 from nyxniri.deploy.manifest import discover_manifest_apps, discover_optional_apps
-from nyxniri.network import git_clone_timeout
 from nyxniri.tui import CheckboxEntry, CheckboxList, pad_display, prompt_confirm
 
 _PACMAN_INSTALLED_CACHE: Optional[set] = None
 _FC_LIST_CACHE: Optional[str] = None
+_GI_CACHE: Optional[dict] = None
 
 def _get_pacman_installed() -> set:
     global _PACMAN_INSTALLED_CACHE
@@ -27,8 +26,10 @@ def _get_pacman_installed() -> set:
         _PACMAN_INSTALLED_CACHE = set()
         return _PACMAN_INSTALLED_CACHE
     env = {**os.environ, "LC_ALL": "C"}
-    res = subprocess.run(["pacman", "-Qq"], capture_output=True, text=True, check=False, env=env, timeout=30)
-    _PACMAN_INSTALLED_CACHE = set(res.stdout.split()) if res.returncode == 0 else set()
+    # Timeout degrades to an empty set: which()/font probes still run, worst
+    # case is re-suggesting a package — never a crash in the deps check.
+    res = timed_run(["pacman", "-Qq"], 30, capture_output=True, text=True, check=False, env=env)
+    _PACMAN_INSTALLED_CACHE = set(res.stdout.split()) if res is not None and res.returncode == 0 else set()
     return _PACMAN_INSTALLED_CACHE
 
 def _get_fc_list() -> str:
@@ -39,9 +40,20 @@ def _get_fc_list() -> str:
         _FC_LIST_CACHE = ""
         return _FC_LIST_CACHE
     env = {**os.environ, "LC_ALL": "C"}
-    res = subprocess.run(["fc-list", ":", "family"], capture_output=True, text=True, check=False, env=env, timeout=15)
-    _FC_LIST_CACHE = res.stdout.lower() if res.returncode == 0 else ""
+    res = timed_run(["fc-list", ":", "family"], 15, capture_output=True, text=True, check=False, env=env)
+    _FC_LIST_CACHE = res.stdout.lower() if res is not None and res.returncode == 0 else ""
     return _FC_LIST_CACHE
+
+def _check_gi(version: str) -> bool:
+    global _GI_CACHE
+    if _GI_CACHE is None:
+        _GI_CACHE = {}
+    if version in _GI_CACHE:
+        return _GI_CACHE[version]
+    code = "import gi" if version == "gi" else f"import gi; gi.require_version('{version}', '0.1')"
+    res = timed_run([sys.executable, "-c", code], 10, capture_output=True, check=False)
+    _GI_CACHE[version] = res is not None and res.returncode == 0
+    return _GI_CACHE[version]
 
 def is_dep_installed(cmd: str) -> bool:
     if cmd in _get_pacman_installed():
@@ -49,11 +61,9 @@ def is_dep_installed(cmd: str) -> bool:
     if cmd == "inotify-tools":
         return shutil.which("inotifywait") is not None
     elif cmd == "python-gobject":
-        res = subprocess.run([sys.executable, "-c", "import gi"], capture_output=True, check=False, timeout=10)
-        return res.returncode == 0
+        return _check_gi("gi")
     elif cmd == "gtk-layer-shell":
-        res = subprocess.run([sys.executable, "-c", "import gi; gi.require_version('GtkLayerShell', '0.1')"], capture_output=True, check=False, timeout=10)
-        return res.returncode == 0
+        return _check_gi("GtkLayerShell")
     elif cmd == "ttf-jetbrains-mono":
         return "jetbrains mono" in _get_fc_list()
     elif cmd == "ttf-jetbrains-mono-nerd":
@@ -75,16 +85,22 @@ def get_missing_deps() -> List[str]:
     _MISSING_DEPS_CACHE = [dep for dep, installed in status_map.items() if not installed]
     return _MISSING_DEPS_CACHE
 
+_AUR_HELPER_CACHE: Optional[str] = None
+
 def aur_helper_usable() -> Optional[str]:
-    """Return name of a functioning AUR helper (paru or yay) after verifying binary execution."""
+    global _AUR_HELPER_CACHE
+    if _AUR_HELPER_CACHE is not None:
+        return _AUR_HELPER_CACHE if _AUR_HELPER_CACHE else None
     for helper in ("paru", "yay"):
         if shutil.which(helper):
             try:
-                res = subprocess.run([helper, "--version"], capture_output=True, check=False)
+                res = subprocess.run([helper, "--version"], capture_output=True, check=False, timeout=10)
                 if res.returncode == 0:
+                    _AUR_HELPER_CACHE = helper
                     return helper
             except Exception:
                 pass
+    _AUR_HELPER_CACHE = ""
     return None
 
 def get_preferred_pkg_manager() -> List[str]:
@@ -95,7 +111,7 @@ def get_preferred_pkg_manager() -> List[str]:
     return ["sudo", "pacman"]
 
 def ensure_aur_helper() -> Optional[str]:
-    """Bootstrap an AUR helper (paru) if none is available, compiling from source if needed."""
+    """Bootstrap an AUR helper from official repositories only."""
     helper = aur_helper_usable()
     if helper:
         return helper
@@ -122,33 +138,16 @@ def ensure_aur_helper() -> Optional[str]:
     if res_si.returncode == 0:
         print(msg("aur_bootstrap_repo"))
         subprocess.run(["sudo", "pacman", "-S", "--needed", "--noconfirm", "paru"], check=False)
+        # The first probe of this call may have cached "unusable"; the fresh
+        # install must be re-detected, not read from the stale cache.
+        global _AUR_HELPER_CACHE
+        _AUR_HELPER_CACHE = None
         helper = aur_helper_usable()
         if helper:
             print(msg("aur_bootstrap_ok"))
             return helper
-        # Repo paru installed but not usable — remove before source build to avoid conflicts
+        # Repo paru installed but not usable — remove the failed install.
         subprocess.run(["sudo", "pacman", "-Rdd", "--noconfirm", "paru"], check=False)
-
-    # 2. Source build from AUR
-    res_base = subprocess.run(["sudo", "pacman", "-S", "--needed", "--noconfirm", "base-devel", "git"], check=False)
-    if res_base.returncode != 0:
-        print(msg("aur_bootstrap_failed"))
-        return None
-    print(msg("aur_bootstrap_source"))
-
-    build_dir = Path(tempfile.mkdtemp())
-    register_temp_path(build_dir)
-    clone_ok = git_clone_timeout(
-        "https://aur.archlinux.org/paru.git",
-        build_dir / "paru",
-        cancellable=sys.stdin.isatty(),
-    )
-    if clone_ok:
-        makepkg_res = subprocess.run(["makepkg", "-si", "--noconfirm"], cwd=build_dir / "paru", check=False)
-        helper = aur_helper_usable()
-        if makepkg_res.returncode == 0 and helper:
-            print(msg("aur_bootstrap_ok"))
-            return helper
 
     print(msg("aur_bootstrap_failed"))
     return None
@@ -246,6 +245,7 @@ def install_selected_deps(selected_deps: List[str]) -> bool:
 
     _MISSING_DEPS_CACHE = None
     _PACMAN_INSTALLED_CACHE = None
+    _AUR_HELPER_CACHE = None
     return True
 
 def run_dep_menu_loop() -> None:

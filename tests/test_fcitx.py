@@ -86,12 +86,12 @@ class TestFcitxStartup(unittest.TestCase):
         from nyxniri.modules.fcitx import fcitx_restart
 
         with patch("nyxniri.modules.fcitx.fcitx5_installed", return_value=True), \
-             patch("nyxniri.modules.fcitx.subprocess.run", return_value=SimpleNamespace(returncode=1)) as run, \
+             patch("nyxniri.modules.fcitx.timed_run", return_value=SimpleNamespace(returncode=1)) as run, \
              patch("nyxniri.modules.fcitx.subprocess.Popen") as popen:
             fcitx_restart()
 
         run.assert_called_once_with(
-            ["pgrep", "-x", "fcitx5"], capture_output=True, check=False, timeout=5,
+            ["pgrep", "-x", "fcitx5"], 5, capture_output=True, check=False,
         )
         popen.assert_called_once_with(
             ["fcitx5", "-d"], stdout=-3, stderr=-3,
