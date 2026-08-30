@@ -1,5 +1,7 @@
 """Behavior contracts for fcitx: partial template registration detection (OR logic)."""
 
+import os
+import subprocess
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -65,6 +67,37 @@ class TestFcitxTemplateDetection(unittest.TestCase):
             with patch("pathlib.Path.is_file", return_value=False):
                 self.assertFalse(fcitx_templates_registered())
 
+    def test_registration_replaces_legacy_restart_hook(self):
+        """Re-registering NyxMellow replaces the old process-killing hook."""
+        from nyxniri.modules.fcitx import FCITX_THEME, fcitx_register_templates
+
+        config_path = self._ctx.env.config_dir / "noctalia" / "noctalia-config.toml"
+        config_path.parent.mkdir(parents=True)
+        config_path.write_text(
+            f"""[theme.templates.user.unrelated]
+post_hook = "true"
+
+    [theme.templates.user.{FCITX_THEME}_theme]
+index = 0
+
+    [theme.templates.user.{FCITX_THEME}_panel]
+index = 1
+
+    [theme.templates.user.{FCITX_THEME}_highlight]
+index = 2
+post_hook = "pkill -x fcitx5; sleep 1; fcitx5 -d &"
+""",
+            encoding="utf-8",
+        )
+
+        self.assertTrue(fcitx_register_templates())
+        updated = config_path.read_text(encoding="utf-8")
+        self.assertIn("ReloadAddonConfig s classicui", updated)
+        self.assertNotIn("pkill -x fcitx5", updated)
+        self.assertEqual(updated.count(f"[theme.templates.user.{FCITX_THEME}_theme]"), 1)
+        self.assertEqual(updated.count(f"[theme.templates.user.{FCITX_THEME}_panel]"), 1)
+        self.assertEqual(updated.count(f"[theme.templates.user.{FCITX_THEME}_highlight]"), 1)
+
 
 class TestFcitxStartup(unittest.TestCase):
     def setUp(self):
@@ -82,20 +115,185 @@ class TestFcitxStartup(unittest.TestCase):
             config,
         )
 
-    def test_restart_starts_daemon_when_not_already_running(self):
+    def test_restart_starts_daemon_when_current_user_dbus_reload_fails(self):
         from nyxniri.modules.fcitx import fcitx_restart
+        from nyxniri.i18n import msg
 
         with patch("nyxniri.modules.fcitx.fcitx5_installed", return_value=True), \
              patch("nyxniri.modules.fcitx.timed_run", return_value=SimpleNamespace(returncode=1)) as run, \
-             patch("nyxniri.modules.fcitx.subprocess.Popen") as popen:
+             patch("nyxniri.modules.fcitx.subprocess.Popen") as popen, \
+             patch("nyxniri.modules.fcitx.print") as output:
             fcitx_restart()
 
         run.assert_called_once_with(
-            ["pgrep", "-x", "fcitx5"], 5, capture_output=True, check=False,
+            [
+                "busctl", "--user", "--auto-start=no", "call",
+                "org.fcitx.Fcitx5", "/controller",
+                "org.fcitx.Fcitx.Controller1", "ReloadAddonConfig",
+                "s", "classicui",
+            ],
+            5,
+            stdout=-3,
+            stderr=-3,
+            check=False,
         )
         popen.assert_called_once_with(
             ["fcitx5", "-d"], stdout=-3, stderr=-3,
         )
+        output.assert_called_once_with(msg("fcitx_start_requested"))
+
+    def test_restart_reloads_classicui_without_restarting_daemon(self):
+        from nyxniri.modules.fcitx import fcitx_restart
+
+        with patch("nyxniri.modules.fcitx.fcitx5_installed", return_value=True), \
+             patch("nyxniri.modules.fcitx.timed_run", return_value=SimpleNamespace(returncode=0)) as run, \
+             patch("nyxniri.modules.fcitx.subprocess.Popen") as popen:
+            fcitx_restart()
+
+        self.assertEqual(
+            run.call_args.args[0],
+            [
+                "busctl", "--user", "--auto-start=no", "call",
+                "org.fcitx.Fcitx5", "/controller",
+                "org.fcitx.Fcitx.Controller1", "ReloadAddonConfig",
+                "s", "classicui",
+            ],
+        )
+        popen.assert_not_called()
+
+    def test_restart_starts_daemon_when_busctl_is_unavailable(self):
+        from nyxniri.modules.fcitx import fcitx_restart
+
+        with patch("nyxniri.modules.fcitx.fcitx5_installed", return_value=True), \
+             patch("nyxniri.modules.fcitx.timed_run", side_effect=FileNotFoundError) as run, \
+             patch("nyxniri.modules.fcitx.subprocess.Popen") as popen:
+            fcitx_restart()
+
+        self.assertEqual(
+            run.call_args.args[0],
+            [
+                "busctl", "--user", "--auto-start=no", "call",
+                "org.fcitx.Fcitx5", "/controller",
+                "org.fcitx.Fcitx.Controller1", "ReloadAddonConfig",
+                "s", "classicui",
+            ],
+        )
+        popen.assert_called_once_with(
+            ["fcitx5", "-d"], stdout=-3, stderr=-3,
+        )
+
+    def test_theme_post_hook_reloads_classicui_without_killing_fcitx(self):
+        from nyxniri.modules.fcitx import FCITX_CLASSICUI_RELOAD_HOOK
+
+        config = (self.env.configs_src / "noctalia" / "noctalia-config.toml").read_text(encoding="utf-8")
+        self.assertIn("ReloadAddonConfig s classicui", config)
+        self.assertIn("--auto-start=no", config)
+        self.assertNotIn("pkill -x fcitx5", config)
+        self.assertNotIn("pgrep -x fcitx5", config)
+        self.assertIn(FCITX_CLASSICUI_RELOAD_HOOK, config)
+
+    def _run_template_hook(self, commands):
+        from nyxniri.modules.fcitx import FCITX_CLASSICUI_RELOAD_HOOK
+
+        bin_dir = self.env.home / "hook-bin"
+        bin_dir.mkdir()
+        log_file = self.env.home / "hook.log"
+        for name, exit_code in commands.items():
+            command = bin_dir / name
+            command.write_text(
+                f"#!/bin/sh\nprintf '%s %s\\n' \"$0\" \"$*\" >> \"$FCITX_HOOK_LOG\"\nexit {exit_code}\n",
+                encoding="utf-8",
+            )
+            command.chmod(0o700)
+
+        env = os.environ | {
+            "PATH": str(bin_dir),
+            "FCITX_HOOK_LOG": str(log_file),
+        }
+        result = subprocess.run(
+            ["/usr/bin/sh", "-c", FCITX_CLASSICUI_RELOAD_HOOK],
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        lines = log_file.read_text(encoding="utf-8").splitlines() if log_file.exists() else []
+        return result, lines
+
+    def test_template_hook_prefers_busctl_without_auto_start(self):
+        result, lines = self._run_template_hook({"busctl": 0, "fcitx5-remote": 0})
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(lines, [
+            f"{self.env.home}/hook-bin/busctl --user --auto-start=no call org.fcitx.Fcitx5 /controller org.fcitx.Fcitx.Controller1 ReloadAddonConfig s classicui",
+        ])
+
+    def test_template_hook_uses_running_daemon_fallback_without_busctl(self):
+        result, lines = self._run_template_hook({"fcitx5-remote": 0})
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(lines, [f"{self.env.home}/hook-bin/fcitx5-remote --check -r"])
+
+    def test_template_hook_falls_back_when_busctl_call_fails(self):
+        result, lines = self._run_template_hook({"busctl": 1, "fcitx5-remote": 0})
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(lines, [
+            f"{self.env.home}/hook-bin/busctl --user --auto-start=no call org.fcitx.Fcitx5 /controller org.fcitx.Fcitx.Controller1 ReloadAddonConfig s classicui",
+            f"{self.env.home}/hook-bin/fcitx5-remote --check -r",
+        ])
+
+    def test_template_hook_keeps_busctl_failure_nonfatal_when_fallback_fails(self):
+        result, lines = self._run_template_hook({"busctl": 1, "fcitx5-remote": 1})
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(lines, [
+            f"{self.env.home}/hook-bin/busctl --user --auto-start=no call org.fcitx.Fcitx5 /controller org.fcitx.Fcitx.Controller1 ReloadAddonConfig s classicui",
+            f"{self.env.home}/hook-bin/fcitx5-remote --check -r",
+        ])
+
+    def test_template_hook_does_not_start_stopped_daemon_without_busctl(self):
+        result, lines = self._run_template_hook({"fcitx5-remote": 1})
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(lines, [f"{self.env.home}/hook-bin/fcitx5-remote --check -r"])
+
+
+class TestFcitxClassicUIConfig(unittest.TestCase):
+    def setUp(self):
+        self._ctx = TempEnv()
+        self._ctx.__enter__()
+        self.classicui = self._ctx.env.config_dir / "fcitx5" / "conf" / "classicui.conf"
+
+    def tearDown(self):
+        self._ctx.__exit__()
+
+    def test_theme_settings_use_fcitx_flat_addon_config_format(self):
+        from nyxniri.modules.fcitx import fcitx_set_theme_conf
+
+        fcitx_set_theme_conf()
+
+        self.assertEqual(
+            self.classicui.read_text(encoding="utf-8"),
+            "Theme=nyxmellow\nDarkTheme=nyxmellow\n",
+        )
+
+    def test_theme_settings_migrate_invalid_legacy_section_header(self):
+        from nyxniri.modules.fcitx import fcitx_set_theme_conf
+
+        self.classicui.parent.mkdir(parents=True)
+        self.classicui.write_text(
+            "[ClassicUI]\nTheme=default\nDarkTheme=default-dark\nFont=Sans 10\n",
+            encoding="utf-8",
+        )
+
+        fcitx_set_theme_conf()
+
+        content = self.classicui.read_text(encoding="utf-8")
+        self.assertNotIn("[ClassicUI]", content)
+        self.assertIn("Theme=nyxmellow\n", content)
+        self.assertIn("DarkTheme=nyxmellow\n", content)
+        self.assertIn("Font=Sans 10\n", content)
 
 
 if __name__ == "__main__":
