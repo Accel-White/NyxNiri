@@ -4,12 +4,18 @@ import os
 import re
 import shutil
 import subprocess
-import time
 from pathlib import Path
 
 from nyxniri.constants import Colors, FCITX_THEME, PROJECT_NAME, THEME_ENGINE
 from nyxniri.core import get_env, log_msg, timed_run
 from nyxniri.i18n import msg, text
+
+
+FCITX_CLASSICUI_RELOAD_HOOK = (
+    "busctl --user call org.fcitx.Fcitx5 /controller "
+    "org.fcitx.Fcitx.Controller1 ReloadAddonConfig s classicui "
+    ">/dev/null 2>&1 || true"
+)
 
 
 def _fcitx_paths():
@@ -111,12 +117,36 @@ def _update_ini_file(file_path: Path, section: str, key: str, val: str) -> None:
             content += f"\n[{section}]\n{key}={val}\n"
     file_path.write_text(content, encoding="utf-8")
 
+
+def _update_flat_config(file_path: Path, key: str, val: str) -> None:
+    """Update a top-level Fcitx addon option, removing NyxNiri's old header."""
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    content = ""
+    if file_path.is_file():
+        content = file_path.read_text(encoding="utf-8", errors="replace")
+
+    # classicui.conf is a flat addon config. Previous NyxNiri releases wrote
+    # this invalid section header, which makes Fcitx ignore Theme settings.
+    content = re.sub(r"^\[ClassicUI\]\s*\n?", "", content, flags=re.MULTILINE)
+    if re.search(rf"^{re.escape(key)}=", content, re.MULTILINE):
+        content = re.sub(
+            rf"^{re.escape(key)}=.*",
+            f"{key}={val}",
+            content,
+            flags=re.MULTILINE,
+        )
+    else:
+        if content and not content.endswith("\n"):
+            content += "\n"
+        content += f"{key}={val}\n"
+    file_path.write_text(content, encoding="utf-8")
+
 def fcitx_set_theme_conf() -> None:
     """Update Theme & DarkTheme in classicui.conf."""
     _, _, _, classicui, _, _, _, _ = _fcitx_paths()
     fcitx_backup_theme_settings()
-    _update_ini_file(classicui, "ClassicUI", "Theme", FCITX_THEME)
-    _update_ini_file(classicui, "ClassicUI", "DarkTheme", FCITX_THEME)
+    _update_flat_config(classicui, "Theme", FCITX_THEME)
+    _update_flat_config(classicui, "DarkTheme", FCITX_THEME)
     print(msg("fcitx_theme_set", str(classicui)))
 
 def fcitx_configure_quickphrase() -> None:
@@ -162,14 +192,25 @@ def fcitx_backup_quickphrase() -> None:
     )
 
 def fcitx_restart() -> None:
-    """Start fcitx5, replacing the running daemon when necessary."""
+    """Reload ClassicUI for this user, or request a daemon start if unavailable."""
     if fcitx5_installed():
-        res = timed_run(["pgrep", "-x", "fcitx5"], 5, capture_output=True, check=False)
-        if res is not None and res.returncode == 0:
-            timed_run(["pkill", "-x", "fcitx5"], 5, check=False)
-            time.sleep(1)
-        subprocess.Popen(["fcitx5", "-d"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        print(msg("fcitx_restarted"))
+        res = timed_run(
+            [
+                "busctl", "--user", "call",
+                "org.fcitx.Fcitx5", "/controller",
+                "org.fcitx.Fcitx.Controller1", "ReloadAddonConfig",
+                "s", "classicui",
+            ],
+            5,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        if res is None or res.returncode != 0:
+            subprocess.Popen(["fcitx5", "-d"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(msg("fcitx_start_requested"))
+        else:
+            print(msg("fcitx_restarted"))
 
 def fcitx_configure_trigger_key() -> bool:
     """Auto-configure Ctrl+Space as fcitx5 trigger key on first fcitx install.
@@ -269,8 +310,21 @@ def fcitx_register_templates() -> bool:
     expected_theme = f"[theme.templates.user.{FCITX_THEME}_theme]"
     expected_panel = f"[theme.templates.user.{FCITX_THEME}_panel]"
     expected_highlight = f"[theme.templates.user.{FCITX_THEME}_highlight]"
+    highlight_match = re.search(
+        rf"(?ms)^{re.escape(expected_highlight)}\s*$.*?(?=^\[|\Z)",
+        content,
+    )
+    highlight_has_reload_hook = (
+        highlight_match is not None
+        and FCITX_CLASSICUI_RELOAD_HOOK in highlight_match.group(0)
+    )
 
-    if expected_theme not in content or expected_panel not in content or expected_highlight not in content:
+    if (
+        expected_theme not in content
+        or expected_panel not in content
+        or expected_highlight not in content
+        or not highlight_has_reload_hook
+    ):
         lines = content.splitlines()
         clean_lines = []
         skip = False
@@ -301,7 +355,7 @@ output_path = "{home}/.local/share/fcitx5/themes/{FCITX_THEME}/panel.svg"
 index = 2
 input_path = "{home}/.local/share/fcitx5/themes/{FCITX_THEME}/templates/highlight.svg"
 output_path = "{home}/.local/share/fcitx5/themes/{FCITX_THEME}/highlight.svg"
-post_hook = "if pgrep -x fcitx5 >/dev/null 2>&1; then pkill -x fcitx5; sleep 1; fcitx5 -d >/dev/null 2>&1 & fi"
+post_hook = "{FCITX_CLASSICUI_RELOAD_HOOK}"
 """
         new_content = "\n".join(clean_lines).rstrip() + "\n" + template_block
         noctalia_conf.write_text(new_content, encoding="utf-8")
