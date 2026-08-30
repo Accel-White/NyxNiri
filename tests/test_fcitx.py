@@ -234,6 +234,24 @@ class TestFcitxStartup(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertEqual(lines, [f"{self.env.home}/hook-bin/fcitx5-remote --check -r"])
 
+    def test_template_hook_falls_back_when_busctl_call_fails(self):
+        result, lines = self._run_template_hook({"busctl": 1, "fcitx5-remote": 0})
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(lines, [
+            f"{self.env.home}/hook-bin/busctl --user --auto-start=no call org.fcitx.Fcitx5 /controller org.fcitx.Fcitx.Controller1 ReloadAddonConfig s classicui",
+            f"{self.env.home}/hook-bin/fcitx5-remote --check -r",
+        ])
+
+    def test_template_hook_keeps_busctl_failure_nonfatal_when_fallback_fails(self):
+        result, lines = self._run_template_hook({"busctl": 1, "fcitx5-remote": 1})
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(lines, [
+            f"{self.env.home}/hook-bin/busctl --user --auto-start=no call org.fcitx.Fcitx5 /controller org.fcitx.Fcitx.Controller1 ReloadAddonConfig s classicui",
+            f"{self.env.home}/hook-bin/fcitx5-remote --check -r",
+        ])
+
     def test_template_hook_does_not_start_stopped_daemon_without_busctl(self):
         result, lines = self._run_template_hook({"fcitx5-remote": 1})
 
