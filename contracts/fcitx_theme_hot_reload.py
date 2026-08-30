@@ -107,6 +107,7 @@ def main(argv: list[str]) -> int:
         if (
             "ReloadAddonConfig s classicui" not in registered
             or "--auto-start=no" not in registered
+            or "fcitx5-remote --check -r" not in registered
             or "pkill -x fcitx5" in registered
         ):
             fail("NyxMellow template hook does not use ClassicUI D-Bus reload")

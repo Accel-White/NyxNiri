@@ -12,9 +12,10 @@ from nyxniri.i18n import msg, text
 
 
 FCITX_CLASSICUI_RELOAD_HOOK = (
+    "if command -v busctl >/dev/null 2>&1; then "
     "busctl --user --auto-start=no call org.fcitx.Fcitx5 /controller "
-    "org.fcitx.Fcitx.Controller1 ReloadAddonConfig s classicui "
-    ">/dev/null 2>&1 || true"
+    "org.fcitx.Fcitx.Controller1 ReloadAddonConfig s classicui; "
+    "else fcitx5-remote --check -r; fi >/dev/null 2>&1 || true"
 )
 
 

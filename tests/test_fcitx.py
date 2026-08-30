@@ -1,5 +1,7 @@
 """Behavior contracts for fcitx: partial template registration detection (OR logic)."""
 
+import os
+import subprocess
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -181,11 +183,62 @@ class TestFcitxStartup(unittest.TestCase):
         )
 
     def test_theme_post_hook_reloads_classicui_without_killing_fcitx(self):
+        from nyxniri.modules.fcitx import FCITX_CLASSICUI_RELOAD_HOOK
+
         config = (self.env.configs_src / "noctalia" / "noctalia-config.toml").read_text(encoding="utf-8")
         self.assertIn("ReloadAddonConfig s classicui", config)
         self.assertIn("--auto-start=no", config)
         self.assertNotIn("pkill -x fcitx5", config)
         self.assertNotIn("pgrep -x fcitx5", config)
+        self.assertIn(FCITX_CLASSICUI_RELOAD_HOOK, config)
+
+    def _run_template_hook(self, commands):
+        from nyxniri.modules.fcitx import FCITX_CLASSICUI_RELOAD_HOOK
+
+        bin_dir = self.env.home / "hook-bin"
+        bin_dir.mkdir()
+        log_file = self.env.home / "hook.log"
+        for name, exit_code in commands.items():
+            command = bin_dir / name
+            command.write_text(
+                f"#!/bin/sh\nprintf '%s %s\\n' \"$0\" \"$*\" >> \"$FCITX_HOOK_LOG\"\nexit {exit_code}\n",
+                encoding="utf-8",
+            )
+            command.chmod(0o700)
+
+        env = os.environ | {
+            "PATH": str(bin_dir),
+            "FCITX_HOOK_LOG": str(log_file),
+        }
+        result = subprocess.run(
+            ["/usr/bin/sh", "-c", FCITX_CLASSICUI_RELOAD_HOOK],
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        lines = log_file.read_text(encoding="utf-8").splitlines() if log_file.exists() else []
+        return result, lines
+
+    def test_template_hook_prefers_busctl_without_auto_start(self):
+        result, lines = self._run_template_hook({"busctl": 0, "fcitx5-remote": 0})
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(lines, [
+            f"{self.env.home}/hook-bin/busctl --user --auto-start=no call org.fcitx.Fcitx5 /controller org.fcitx.Fcitx.Controller1 ReloadAddonConfig s classicui",
+        ])
+
+    def test_template_hook_uses_running_daemon_fallback_without_busctl(self):
+        result, lines = self._run_template_hook({"fcitx5-remote": 0})
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(lines, [f"{self.env.home}/hook-bin/fcitx5-remote --check -r"])
+
+    def test_template_hook_does_not_start_stopped_daemon_without_busctl(self):
+        result, lines = self._run_template_hook({"fcitx5-remote": 1})
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(lines, [f"{self.env.home}/hook-bin/fcitx5-remote --check -r"])
 
 
 class TestFcitxClassicUIConfig(unittest.TestCase):
