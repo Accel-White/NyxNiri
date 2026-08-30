@@ -75,13 +75,13 @@ class TestFcitxTemplateDetection(unittest.TestCase):
             f"""[theme.templates.user.unrelated]
 post_hook = "true"
 
-[theme.templates.user.{FCITX_THEME}_theme]
+    [theme.templates.user.{FCITX_THEME}_theme]
 index = 0
 
-[theme.templates.user.{FCITX_THEME}_panel]
+    [theme.templates.user.{FCITX_THEME}_panel]
 index = 1
 
-[theme.templates.user.{FCITX_THEME}_highlight]
+    [theme.templates.user.{FCITX_THEME}_highlight]
 index = 2
 post_hook = "pkill -x fcitx5; sleep 1; fcitx5 -d &"
 """,
@@ -92,6 +92,9 @@ post_hook = "pkill -x fcitx5; sleep 1; fcitx5 -d &"
         updated = config_path.read_text(encoding="utf-8")
         self.assertIn("ReloadAddonConfig s classicui", updated)
         self.assertNotIn("pkill -x fcitx5", updated)
+        self.assertEqual(updated.count(f"[theme.templates.user.{FCITX_THEME}_theme]"), 1)
+        self.assertEqual(updated.count(f"[theme.templates.user.{FCITX_THEME}_panel]"), 1)
+        self.assertEqual(updated.count(f"[theme.templates.user.{FCITX_THEME}_highlight]"), 1)
 
 
 class TestFcitxStartup(unittest.TestCase):
@@ -122,7 +125,7 @@ class TestFcitxStartup(unittest.TestCase):
 
         run.assert_called_once_with(
             [
-                "busctl", "--user", "call",
+                "busctl", "--user", "--auto-start=no", "call",
                 "org.fcitx.Fcitx5", "/controller",
                 "org.fcitx.Fcitx.Controller1", "ReloadAddonConfig",
                 "s", "classicui",
@@ -148,7 +151,7 @@ class TestFcitxStartup(unittest.TestCase):
         self.assertEqual(
             run.call_args.args[0],
             [
-                "busctl", "--user", "call",
+                "busctl", "--user", "--auto-start=no", "call",
                 "org.fcitx.Fcitx5", "/controller",
                 "org.fcitx.Fcitx.Controller1", "ReloadAddonConfig",
                 "s", "classicui",
@@ -156,9 +159,31 @@ class TestFcitxStartup(unittest.TestCase):
         )
         popen.assert_not_called()
 
+    def test_restart_starts_daemon_when_busctl_is_unavailable(self):
+        from nyxniri.modules.fcitx import fcitx_restart
+
+        with patch("nyxniri.modules.fcitx.fcitx5_installed", return_value=True), \
+             patch("nyxniri.modules.fcitx.timed_run", side_effect=FileNotFoundError) as run, \
+             patch("nyxniri.modules.fcitx.subprocess.Popen") as popen:
+            fcitx_restart()
+
+        self.assertEqual(
+            run.call_args.args[0],
+            [
+                "busctl", "--user", "--auto-start=no", "call",
+                "org.fcitx.Fcitx5", "/controller",
+                "org.fcitx.Fcitx.Controller1", "ReloadAddonConfig",
+                "s", "classicui",
+            ],
+        )
+        popen.assert_called_once_with(
+            ["fcitx5", "-d"], stdout=-3, stderr=-3,
+        )
+
     def test_theme_post_hook_reloads_classicui_without_killing_fcitx(self):
         config = (self.env.configs_src / "noctalia" / "noctalia-config.toml").read_text(encoding="utf-8")
         self.assertIn("ReloadAddonConfig s classicui", config)
+        self.assertIn("--auto-start=no", config)
         self.assertNotIn("pkill -x fcitx5", config)
         self.assertNotIn("pgrep -x fcitx5", config)
 

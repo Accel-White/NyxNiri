@@ -32,12 +32,17 @@ class TestFcitxThemeHotReloadContract(unittest.TestCase):
     def test_contract_rejects_pure_v304(self):
         repo = self._ctx.env.repo_dir
         contract = repo / "contracts" / "fcitx_theme_hot_reload.py"
-        archive = subprocess.run(
-            ["git", "archive", "5ea801dc17d687e89dd344294c6738a910a1f4e6"],
-            cwd=repo,
-            capture_output=True,
-            check=True,
-        )
+        try:
+            archive = subprocess.run(
+                ["git", "archive", "5ea801dc17d687e89dd344294c6738a910a1f4e6"],
+                cwd=repo,
+                capture_output=True,
+                check=False,
+            )
+        except OSError:
+            self.skipTest("git is unavailable in this source export")
+        if archive.returncode != 0:
+            self.skipTest("v3.0.4 source is unavailable in this checkout")
         with tempfile.TemporaryDirectory() as raw_checkout:
             with tarfile.open(fileobj=io.BytesIO(archive.stdout)) as contents:
                 contents.extractall(raw_checkout)

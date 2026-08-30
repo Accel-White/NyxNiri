@@ -12,7 +12,7 @@ from nyxniri.i18n import msg, text
 
 
 FCITX_CLASSICUI_RELOAD_HOOK = (
-    "busctl --user call org.fcitx.Fcitx5 /controller "
+    "busctl --user --auto-start=no call org.fcitx.Fcitx5 /controller "
     "org.fcitx.Fcitx.Controller1 ReloadAddonConfig s classicui "
     ">/dev/null 2>&1 || true"
 )
@@ -194,18 +194,21 @@ def fcitx_backup_quickphrase() -> None:
 def fcitx_restart() -> None:
     """Reload ClassicUI for this user, or request a daemon start if unavailable."""
     if fcitx5_installed():
-        res = timed_run(
-            [
-                "busctl", "--user", "call",
-                "org.fcitx.Fcitx5", "/controller",
-                "org.fcitx.Fcitx.Controller1", "ReloadAddonConfig",
-                "s", "classicui",
-            ],
-            5,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
+        try:
+            res = timed_run(
+                [
+                    "busctl", "--user", "--auto-start=no", "call",
+                    "org.fcitx.Fcitx5", "/controller",
+                    "org.fcitx.Fcitx.Controller1", "ReloadAddonConfig",
+                    "s", "classicui",
+                ],
+                5,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except OSError:
+            res = None
         if res is None or res.returncode != 0:
             subprocess.Popen(["fcitx5", "-d"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print(msg("fcitx_start_requested"))
@@ -311,7 +314,7 @@ def fcitx_register_templates() -> bool:
     expected_panel = f"[theme.templates.user.{FCITX_THEME}_panel]"
     expected_highlight = f"[theme.templates.user.{FCITX_THEME}_highlight]"
     highlight_match = re.search(
-        rf"(?ms)^{re.escape(expected_highlight)}\s*$.*?(?=^\[|\Z)",
+        rf"(?ms)^[ \t]*{re.escape(expected_highlight)}[ \t]*$.*?(?=^[ \t]*\[|\Z)",
         content,
     )
     highlight_has_reload_hook = (
@@ -330,10 +333,10 @@ def fcitx_register_templates() -> bool:
         skip = False
         prefix = f"[theme.templates.user.{FCITX_THEME}_"
         for line in lines:
-            if line.startswith(prefix):
+            if re.match(rf"^[ \t]*{re.escape(prefix)}", line):
                 skip = True
                 continue
-            if skip and line.startswith("["):
+            if skip and re.match(r"^[ \t]*\[", line):
                 skip = False
             if not skip:
                 clean_lines.append(line)

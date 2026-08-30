@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 DBUS_RELOAD_ARGS = [
-    "busctl", "--user", "call",
+    "busctl", "--user", "--auto-start=no", "call",
     "org.fcitx.Fcitx5", "/controller",
     "org.fcitx.Fcitx.Controller1", "ReloadAddonConfig",
     "s", "classicui",
@@ -104,7 +104,11 @@ def main(argv: list[str]) -> int:
         if not fcitx.fcitx_register_templates():
             fail("NyxMellow template registration failed")
         registered = noctalia.read_text(encoding="utf-8")
-        if "ReloadAddonConfig s classicui" not in registered or "pkill -x fcitx5" in registered:
+        if (
+            "ReloadAddonConfig s classicui" not in registered
+            or "--auto-start=no" not in registered
+            or "pkill -x fcitx5" in registered
+        ):
             fail("NyxMellow template hook does not use ClassicUI D-Bus reload")
 
     print(f"contract passed: {checkout}")
