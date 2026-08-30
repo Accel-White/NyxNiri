@@ -9,9 +9,7 @@ Run this file from any checkout against the checkout to verify:
 from __future__ import annotations
 
 import importlib
-import os
 import sys
-import tempfile
 from types import SimpleNamespace
 from pathlib import Path
 
@@ -40,15 +38,12 @@ def main(argv: list[str]) -> int:
     if not module_file.is_file() or not config_file.is_file():
         fail(f"not a NyxNiri checkout: {checkout}")
 
-    with tempfile.TemporaryDirectory() as home:
-        os.environ["HOME"] = home
-        os.environ["XDG_STATE_HOME"] = str(Path(home) / ".local" / "state")
-        sys.path.insert(0, str(checkout))
-        core = importlib.import_module("nyxniri.core")
-        core._ENV = None
+    sys.path.insert(0, str(checkout))
+    target_utils = importlib.import_module("tests.utils")
+    with target_utils.TempEnv() as temp_env:
         fcitx = importlib.import_module("nyxniri.modules.fcitx")
 
-        classicui = Path(home) / ".config" / "fcitx5" / "conf" / "classicui.conf"
+        classicui = temp_env.env.config_dir / "fcitx5" / "conf" / "classicui.conf"
         classicui.parent.mkdir(parents=True)
         classicui.write_text(
             "[ClassicUI]\nTheme=default\nDarkTheme=default-dark\nFont=Sans 10\n",
@@ -97,7 +92,7 @@ def main(argv: list[str]) -> int:
         if command_calls != [expected_call] or daemon_starts != [expected_start]:
             fail("failed reload did not request only the current user's Fcitx daemon")
 
-        noctalia = Path(home) / ".config" / "noctalia" / "noctalia-config.toml"
+        noctalia = temp_env.env.config_dir / "noctalia" / "noctalia-config.toml"
         noctalia.parent.mkdir(parents=True)
         noctalia.write_text(
             "[theme.templates.user.nyxmellow_theme]\nindex = 0\n\n"
