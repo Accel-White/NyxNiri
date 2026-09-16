@@ -19,6 +19,12 @@ layer-rule {
     }
 }
 
+// 屏幕共享隐私：本机仍显示通知，但 portal screencast 只看到遮挡内容
+layer-rule {
+    match namespace="^noctalia-notification$"
+    block-out-from "screencast"
+}
+
 // ==========================================
 // 特定应用规则
 // ==========================================
