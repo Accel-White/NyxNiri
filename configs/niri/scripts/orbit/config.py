@@ -77,7 +77,7 @@ DEFAULT_MENU_TREE = [
                 "name": "Clean Cache",
                 "desc": "Free Disk Space",
                 "icon": "󰃢",
-                "cmd": "~/.config/fish/clean-cache",
+                "cmd": "clean",
                 "shortcut": "3",
                 "color_key": "secondary",
             },
