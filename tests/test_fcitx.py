@@ -82,6 +82,14 @@ class TestFcitxTemplateDetection(unittest.TestCase):
         parsed = tomllib.loads(path.read_text(encoding="utf-8"))
         registered = parsed["theme"]["templates"]["user"]
         self.assertEqual(registered["personal"]["post_hook"], unrelated_hook)
+        base = self.env.home / ".local/share/fcitx5/themes" / FCITX_THEME
+        for index, (suffix, filename) in enumerate(
+            (("theme", "theme.conf"), ("panel", "panel.svg"), ("highlight", "highlight.svg"))
+        ):
+            template = registered[f"{FCITX_THEME}_{suffix}"]
+            self.assertEqual(template["index"], index)
+            self.assertEqual(template["input_path"], str(base / "templates" / filename))
+            self.assertEqual(template["output_path"], str(base / filename))
         self.assertEqual(
             registered[f"{FCITX_THEME}_highlight"]["post_hook"],
             FCITX_CLASSICUI_RELOAD_HOOK,
@@ -272,7 +280,7 @@ class TestFcitxConfiguration(unittest.TestCase):
         path.write_text(personal + owned, encoding="utf-8")
         self.assertTrue(fcitx_register_templates())
         self.assertIn(personal, path.read_text(encoding="utf-8"))
-        self.assertIn(owned, path.read_text(encoding="utf-8"))
+        self.assertIn("nyxmellow_theme]", path.read_text(encoding="utf-8"))
 
         with patch("nyxniri.modules.fcitx.fcitx_reload"):
             self.assertTrue(fcitx_uninstall())

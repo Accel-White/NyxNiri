@@ -94,6 +94,16 @@ class TestMpvpaperDetection(unittest.TestCase):
     def tearDown(self):
         self._ctx.__exit__()
 
+    def test_existing_binary_is_checked_after_other_dependency_install(self):
+        from nyxniri.deps import install_selected_deps
+
+        with patch("nyxniri.deps.pkg.install", return_value=True), \
+             patch("nyxniri.deps.shutil.which", return_value="/usr/bin/mpvpaper"), \
+             patch("nyxniri.deps.check_mpvpaper_leak") as check:
+            self.assertTrue(install_selected_deps(["fish"]))
+
+        check.assert_called_once_with()
+
     def test_uses_pacman_qi_not_binary_version(self):
         """check_mpvpaper_leak should use pacman -Qi, not mpvpaper --version."""
         from nyxniri.deps import check_mpvpaper_leak

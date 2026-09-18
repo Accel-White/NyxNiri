@@ -241,8 +241,8 @@ def fcitx_trigger_render() -> None:
         print(msg("fcitx_render_pending"))
 
 
-def _set_template_post_hook(content, name, hook):
-    """Set only the owned template hook, leaving unrelated user templates intact."""
+def _set_template_fields(content, name, fields):
+    """Restore an owned template table without touching unrelated templates."""
     lines = content.splitlines(keepends=True)
     header = f"[theme.templates.user.{name}]"
     start = next((index for index, line in enumerate(lines) if line.strip() == header), None)
@@ -252,12 +252,16 @@ def _set_template_post_hook(content, name, hook):
         (index for index in range(start + 1, len(lines)) if lines[index].lstrip().startswith("[")),
         len(lines),
     )
-    replacement = f'post_hook = "{hook}"\n'
+
+    found = set()
     for index in range(start + 1, end):
-        if lines[index].split("=", 1)[0].strip() == "post_hook":
-            lines[index] = replacement
-            return "".join(lines)
-    lines.insert(end, replacement)
+        key = lines[index].split("=", 1)[0].strip()
+        if key in fields:
+            lines[index] = f"{key} = {fields[key]}\n"
+            found.add(key)
+
+    missing = [f"{key} = {value}\n" for key, value in fields.items() if key not in found]
+    lines[end:end] = missing
     return "".join(lines)
 
 
@@ -275,14 +279,19 @@ def fcitx_register_templates() -> bool:
     registered = tomllib.loads(content).get("theme", {}).get("templates", {}).get("user", {})
     for index, (suffix, filename) in enumerate((("theme", "theme.conf"), ("panel", "panel.svg"), ("highlight", "highlight.svg"))):
         name = f"{FCITX_THEME}_{suffix}"
-        if name in registered:
-            if suffix == "highlight":
-                content = _set_template_post_hook(content, name, FCITX_CLASSICUI_RELOAD_HOOK)
-            continue
         base = f"{home}/.local/share/fcitx5/themes/{FCITX_THEME}"
-        content = content.rstrip() + f'\n\n[theme.templates.user.{name}]\nindex = {index}\ninput_path = "{base}/templates/{filename}"\noutput_path = "{base}/{filename}"\n'
+        fields = {
+            "index": str(index),
+            "input_path": f'"{base}/templates/{filename}"',
+            "output_path": f'"{base}/{filename}"',
+        }
         if suffix == "highlight":
-            content += f'post_hook = "{FCITX_CLASSICUI_RELOAD_HOOK}"\n'
+            fields["post_hook"] = f'"{FCITX_CLASSICUI_RELOAD_HOOK}"'
+        if name in registered:
+            content = _set_template_fields(content, name, fields)
+            continue
+        content = content.rstrip() + f"\n\n[theme.templates.user.{name}]\n"
+        content += "".join(f"{key} = {value}\n" for key, value in fields.items())
     if content != original:
         tomllib.loads(content)
         _write_config(noctalia_conf, content)

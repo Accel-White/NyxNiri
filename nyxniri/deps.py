@@ -143,7 +143,7 @@ def install_selected_deps(selected_deps: List[str]) -> bool:
         else:
             print(msg("aur_skip", ", ".join(aur_pkgs)))
             ok = False
-    if "mpvpaper" in selected_deps:
+    if "mpvpaper" in selected_deps or shutil.which("mpvpaper"):
         check_mpvpaper_leak()
     return ok
 

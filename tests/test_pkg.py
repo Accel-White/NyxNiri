@@ -92,7 +92,8 @@ class TestPackageAdapter(unittest.TestCase):
     def test_installer_reports_failed_dependency_batch(self):
         from nyxniri.deps import install_selected_deps
         with patch("nyxniri.pkg.preferred_manager", return_value="pacman"), \
-             patch("nyxniri.pkg.subprocess.run", return_value=subprocess.CompletedProcess([], 7)) as run:
+             patch("nyxniri.pkg.subprocess.run", return_value=subprocess.CompletedProcess([], 7)) as run, \
+             patch("nyxniri.deps.check_mpvpaper_leak"):
             self.assertFalse(install_selected_deps(["fish"]))
         self.assertEqual(run.call_args.args[0], ["sudo", "pacman", "-S", "--needed", "--noconfirm", "fish"])
 
