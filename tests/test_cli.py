@@ -418,7 +418,7 @@ class TestCheckNewDepsPostUpdate(unittest.TestCase):
 
         with patch("nyxniri.workflows.get_missing_deps", return_value=[]):
             with patch("nyxniri.workflows.install_selected_deps") as mock_install:
-                check_new_deps_post_update()
+                self.assertTrue(check_new_deps_post_update())
 
         mock_install.assert_not_called()
 
@@ -427,11 +427,20 @@ class TestCheckNewDepsPostUpdate(unittest.TestCase):
 
         with patch("nyxniri.workflows.get_missing_deps", return_value=["some-pkg"]):
             with patch("sys.stdin.isatty", return_value=False):
-                with patch("nyxniri.workflows.install_selected_deps") as mock_install:
+                with patch("nyxniri.workflows.install_selected_deps", return_value=True) as mock_install:
                     with patch("builtins.print"):
-                        check_new_deps_post_update()
+                        self.assertTrue(check_new_deps_post_update())
 
         mock_install.assert_called_once_with(["some-pkg"])
+
+    def test_missing_deps_failure_propagates(self):
+        from nyxniri.workflows import check_new_deps_post_update
+
+        with patch("nyxniri.workflows.get_missing_deps", return_value=["some-pkg"]), \
+             patch("sys.stdin.isatty", return_value=False), \
+             patch("nyxniri.workflows.install_selected_deps", return_value=False), \
+             patch("builtins.print"):
+            self.assertFalse(check_new_deps_post_update())
 
 
 class TestPendingUpgradeBranch(unittest.TestCase):
@@ -448,7 +457,7 @@ class TestPendingUpgradeBranch(unittest.TestCase):
         os.environ.pop(PENDING_UPGRADE_MENU_ENV, None)
         self._ctx.__exit__()
 
-    def _main_pending(self, env_extra, tty=False, offer_result=True):
+    def _main_pending(self, env_extra, tty=False, offer_result=True, deps_result=True):
         from nyxniri.cli import main
 
         fake_stdin = MagicMock()
@@ -461,7 +470,7 @@ class TestPendingUpgradeBranch(unittest.TestCase):
              patch("nyxniri.cli.init_logger"), \
              patch("nyxniri.cli.ensure_nyxniri_symlink"), \
              patch("nyxniri.cli.offer_overwrite_upgrade", return_value=offer_result) as mock_offer, \
-             patch("nyxniri.cli.check_new_deps_post_update") as mock_check, \
+             patch("nyxniri.cli.check_new_deps_post_update", return_value=deps_result) as mock_check, \
              patch("nyxniri.cli.press_any_key"), \
              patch("nyxniri.cli.select_language"), \
              patch("nyxniri.cli.main_menu_loop") as mock_menu, \
@@ -487,6 +496,13 @@ class TestPendingUpgradeBranch(unittest.TestCase):
 
     def test_pending_deploy_failure_exits_1(self):
         _, _, _, ctx = self._main_pending({PENDING_UPGRADE_ENV: ""}, offer_result=False)
+        self.assertEqual(ctx.exception.code, 1)
+
+    def test_pending_dependency_failure_exits_1(self):
+        _, mock_check, _, ctx = self._main_pending(
+            {PENDING_UPGRADE_ENV: "--force"}, deps_result=False
+        )
+        mock_check.assert_called_once()
         self.assertEqual(ctx.exception.code, 1)
 
     def test_pending_cli_source_exits_even_interactive(self):

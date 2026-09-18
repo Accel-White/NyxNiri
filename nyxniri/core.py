@@ -87,11 +87,13 @@ class Environment:
         if raw_state:
             state_path = Path(raw_state)
             try:
-                if state_path.is_relative_to(self.home):
+                resolved_home = self.home.resolve(strict=False)
+                resolved_state = state_path.resolve(strict=False)
+                if resolved_state.is_relative_to(resolved_home):
                     self.state_dir = state_path / PROJECT_NAME
                 else:
                     self.state_dir = self.home / ".local/state" / PROJECT_NAME
-            except (ValueError, AttributeError):
+            except (OSError, RuntimeError, ValueError, AttributeError):
                 self.state_dir = self.home / ".local/state" / PROJECT_NAME
         else:
             self.state_dir = self.home / ".local/state" / PROJECT_NAME

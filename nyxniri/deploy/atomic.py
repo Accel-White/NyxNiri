@@ -16,7 +16,13 @@ from nyxniri.core import get_env, log_msg, register_temp_path, remove_path
 from nyxniri.i18n import msg
 
 
-def _matches_pattern(rel_str: str, is_dir: bool, patterns: List[str]) -> bool:
+def _matches_pattern(
+    rel_str: str,
+    is_dir: bool,
+    patterns: List[str],
+    *,
+    include_ancestors: bool = False,
+) -> bool:
     for pat in patterns:
         pat = pat.strip()
         if not pat:
@@ -30,7 +36,9 @@ def _matches_pattern(rel_str: str, is_dir: bool, patterns: List[str]) -> bool:
                 return True
             if is_dir:
                 base_pat = pat.rstrip("/*")
-                if base_pat == rel_str or pat.startswith(rel_str + "/"):
+                if base_pat == rel_str or (
+                    include_ancestors and pat.startswith(rel_str + "/")
+                ):
                     return True
     return False
 
@@ -62,7 +70,9 @@ def _base_deploy_ignore_factory(
             is_dir = item_path.is_dir() and not item_path.is_symlink()
 
             # 1. Whitelist (include)
-            if inc and not _matches_pattern(rel_str, is_dir, inc):
+            if inc and not _matches_pattern(
+                rel_str, is_dir, inc, include_ancestors=True
+            ):
                 skip.add(name)
                 continue
 

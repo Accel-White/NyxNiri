@@ -350,13 +350,15 @@ def main() -> None:
 
     if pending_flag is not None:
         deploy_ok = offer_overwrite_upgrade(pending_flag)
-        check_new_deps_post_update()
-        print(msg("updating_done"))
+        deps_ok = check_new_deps_post_update()
+        update_ok = deploy_ok and deps_ok
+        if update_ok:
+            print(msg("updating_done"))
         if not sys.stdin.isatty():
-            sys.exit(0 if deploy_ok else 1)
+            sys.exit(0 if update_ok else 1)
         press_any_key()
         if not pending_from_menu:
-            sys.exit(0 if deploy_ok else 1)
+            sys.exit(0 if update_ok else 1)
 
     # Interactive flow
     if not sys.stdin.isatty():

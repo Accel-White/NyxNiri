@@ -1076,7 +1076,7 @@ exclude = ["scripts/debug.bak"]
             dest=self.dest,
             base_src=self.app_root,
             base_include=["scripts/**", "*.kdl"],
-            base_exclude=["*.bak"],
+            base_exclude=["scripts/debug.bak"],
         )
         self.assertTrue(ok)
         # 1. Overridden file from preset
@@ -1098,7 +1098,7 @@ preserve = ["monitor.kdl"]
 [presets]
 allow = ["glow"]
 include = ["scripts/**", "*.kdl"]
-exclude = ["*.bak"]
+exclude = ["scripts/debug.bak"]
 """)
         # Pre-seed destination with Dunder and Preserved files
         self.dest.mkdir(parents=True)

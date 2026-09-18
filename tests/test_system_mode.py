@@ -250,6 +250,33 @@ class TestCliLinkOwnership(unittest.TestCase):
                 "XDG_STATE_HOME outside home must not be used",
             )
 
+    def test_xdg_state_home_parent_escape_is_isolated(self):
+        from nyxniri.core import Environment
+
+        escaped = self.env.home / ".." / "host-state"
+        with patch.dict(os.environ, {"XDG_STATE_HOME": str(escaped)}):
+            env = Environment()
+
+        self.assertEqual(
+            env.state_dir,
+            env.home / ".local/state" / "NyxNiri",
+            "XDG_STATE_HOME with .. must not escape the temporary HOME",
+        )
+
+    def test_xdg_state_home_symlink_escape_is_isolated(self):
+        from nyxniri.core import Environment
+
+        state_link = self.env.home / "state-link"
+        state_link.symlink_to(self.env.home.parent, target_is_directory=True)
+        with patch.dict(os.environ, {"XDG_STATE_HOME": str(state_link)}):
+            env = Environment()
+
+        self.assertEqual(
+            env.state_dir,
+            env.home / ".local/state" / "NyxNiri",
+            "XDG_STATE_HOME symlinks must resolve inside the temporary HOME",
+        )
+
 
 class TestSafeGitPullSystemBranch(unittest.TestCase):
     """§5.6: system mode refuses git pull, hints pacman."""

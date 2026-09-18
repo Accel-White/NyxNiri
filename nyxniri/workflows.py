@@ -256,17 +256,16 @@ def offer_overwrite_upgrade(flag: str = "") -> bool:
     return True
 
 
-def check_new_deps_post_update() -> None:
-    """Check for newly introduced core dependencies after a repository update."""
+def check_new_deps_post_update() -> bool:
+    """Install newly introduced core dependencies and report the outcome."""
     missing = get_missing_deps()
     if not missing:
-        return
+        return True
     print(msg("new_deps_detected", " ".join(missing)))
     if not sys.stdin.isatty():
         log_msg("INFO", f"Auto-installing new deps non-interactively: {' '.join(missing)}")
-        install_selected_deps(missing)
-        return
+        return install_selected_deps(missing)
     if prompt_confirm("prompt_install_missing_deps", "y"):
-        install_selected_deps(missing)
-    else:
-        print(msg("deps_install_skipped"))
+        return install_selected_deps(missing)
+    print(msg("deps_install_skipped"))
+    return False
