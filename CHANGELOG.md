@@ -7,6 +7,42 @@
 
 ## [Unreleased]
 
+### Added
+- 常用浏览器支持按需开启可变刷新率(VRR)，消除滚动与视频播放画面撕裂
+
+### Changed
+- 默认不再指定 NVIDIA 驱动，并移除旧 Electron 显示设置；部分旧应用可能改用 XWayland。
+- 安装器和 Fish 使用同一套包管理规则，支持 Shelly，安装失败或超时会如实反馈。
+- 缓存清理统一为 `nyxniri clean`，原来的 Fish 和 Orbit 入口仍可用。
+- 安装输入法不再顺带启用皮肤；皮肤切换不改快捷键、不重启输入法，卸载保留个人改动。
+
+### Fixed
+- 命令链接迁移只认可当前仓库或缓存的精确安装器路径，不再误接管名称相似的其他 fork 或 wrapper。
+- 外接显示器亮度调节增加 DDC 硬超时，I2C 卡住时不再累积后台进程。
+- 用户部署 hook 超时会终止整个进程组，后台子进程不再残留。
+- glow 预设切换后立即按当前明暗模式选择布局。
+- 沙箱部署会拦截通过父目录或软链接逃出临时 HOME 的 XDG 配置路径。
+- glow-material-you 模板渲染失败时会回退重载 Niri。
+- 视频壁纸处理失败时会保留错误报告所需的诊断日志。
+
+## [v3.0.5] - 2026-09-12
+
+### Added
+- Niri 新增 glow(包括跟随Material You配色版本) 预设
+- 游戏与模拟器支持按需开启可变刷新率(VRR)，避免锁屏与桌面静止时频闪
+- 部署完成后支持运行用户自己的收尾脚本
+- 主页文档新增自定义配置与模块化引入的实用速查
+
+### Fixed
+- 适配 Fcitx 5.1.22 皮肤切片规范，修复候选词框背景中空与边角异常
+- 修复 Orbit Launcher 运行缓存清理工具时因解释器错误闪退的问题
+- 自动修复指向旧安装路径或已清理缓存的无效 nyxniri 命令软链接
+- 核显 + NVIDIA 独显的笔记本不再强制所有程序使用 NVIDIA 环境变量，避免浏览器播放部分视频时画面错乱
+- 已配置全局免密 sudo 的安装不再索要从未设置的密码
+- 笔记本亮度键调节内屏背光，外接显示器仍用原来的 DDC 方式
+- 壁纸选择器支持生成带透明通道图片的缩略图
+- 补齐顶栏字体粗细、媒体组件与时钟格式调整
+
 ## [v3.0.4] - 2026-08-29
 
 ### Added
@@ -432,7 +468,8 @@
 ### Added
 - 首次发布基于 Niri 与 Noctalia V5 的 NyxNiri 桌面配置。
 
-[Unreleased]: https://github.com/ech678/NyxNiri/compare/v3.0.4...HEAD
+[Unreleased]: https://github.com/ech678/NyxNiri/compare/v3.0.5...HEAD
+[v3.0.5]: https://github.com/ech678/NyxNiri/compare/v3.0.4...v3.0.5
 [v3.0.4]: https://github.com/ech678/NyxNiri/compare/v3.0.3...v3.0.4
 [v3.0.3]: https://github.com/ech678/NyxNiri/compare/v3.0.2...v3.0.3
 [v3.0.2]: https://github.com/ech678/NyxNiri/compare/v3.0.1...v3.0.2

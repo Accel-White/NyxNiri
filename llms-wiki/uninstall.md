@@ -22,7 +22,7 @@ fisher.fish 存在），旁边显示实际路径（§8.4"每项旁边显示实�
 
 - `nyxniri uninstall`（无参）→ 交互勾选清单（默认 standard 范围）
 - `nyxniri purge` / `uninstall --all` → 跳过勾选、全选 + 确认（等价旧 purge 但补全 5 处遗漏）
-- 非交互式（管道，非 TTY）→ 默认全选 + 归档配置
+- 非交互式（管道，非 TTY）→ 使用 standard 默认项 + 归档配置，不删除快照、状态、缓存、旧归档或壁纸
 - 检测到 system 模式 → 清单末尾提示"源码包归 pacman 管，完全卸载请再跑 `sudo pacman -R nyxniri-git`"
 
 ## 5 处历史 [gap]（全修）
@@ -33,7 +33,7 @@ fisher.fish 存在），旁边显示实际路径（§8.4"每项旁边显示实�
 | `/var/lib/noctalia-greeter/` 残留 | `[✓] Noctalia Greeter` 模块项 | `greeter_uninstall` 加 `sudo rm -rf /var/lib/...`（`GREETER_STATE_DIR` 常量） |
 | fisher + fish 插件谁都不清 | `[✓] fisher` 模块项 | 新增 `fisher_uninstall`（modules/fisher.py）：fish 在→`fisher remove --all`；不在→直接 rm conf.d/（降级，§8.6） |
 | standard 漏调 greeter_uninstall | `[✓] Greeter` 默认勾 | standard 范围默认含 greeter 模块项 |
-| quickphrase.conf 改了不恢复 | `[✓] fcitx` 模块项 | `fcitx_uninstall` 加 quickphrase 备份+恢复（同 classicui 机制） |
+| 旧 quickphrase.conf 修改的清退 | `[✓] fcitx` 模块项 | 恢复旧版备份中仍由项目占用的热键；新版皮肤安装不再修改热键 |
 
 `fisher_uninstall` 在 `nyxniri/modules/fisher.py`——fisher 现是一等模块（与 fcitx/greeter/gtk
 同款 install|status|uninstall），由 deploy 流水线自动安装（同 gtk 被自动渲染）。卸载元组四项

@@ -5,6 +5,7 @@ pinned here because the project has no bash test framework.
 """
 
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -16,8 +17,50 @@ from tests.utils import TempEnv
 
 _REPO = Path(__file__).resolve().parent.parent
 _TOGGLE = _REPO / "configs" / "niri" / "scripts" / "niri-scratch-toggle.sh"
-_CLEAN_CACHE = _REPO / "configs" / "fish" / "clean-cache.py"
+_CLEAN_CACHE = _REPO / "nyxniri" / "clean.py"
 _START_NOCTALIA = _REPO / "configs" / "niri" / "scripts" / "start-noctalia.sh"
+_BRIGHTNESS = _REPO / "configs" / "niri" / "scripts" / "niri-brightness.sh"
+_WALLPAPER_HOOK = _REPO / "configs" / "noctalia" / "wallpaper-hook.sh"
+
+
+class TestWallpaperHook(unittest.TestCase):
+
+    def test_thumbnail_failure_is_preserved_for_bug_reports(self):
+        with TempEnv() as env:
+            bindir = env.home / "bin"
+            bindir.mkdir()
+            video = env.home / "broken video.mp4"
+            video.touch()
+            noctalia = bindir / "noctalia"
+            noctalia.write_text(
+                f'#!/bin/sh\n[ "$1 $2" = "msg wallpaper-get" ] && printf "%s\\n" {shlex.quote(str(video))}\n',
+                encoding="utf-8",
+            )
+            noctalia.chmod(0o755)
+            ffmpeg = bindir / "ffmpeg"
+            ffmpeg.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+            ffmpeg.chmod(0o755)
+
+            result = subprocess.run(
+                ["/bin/bash", str(_WALLPAPER_HOOK)],
+                capture_output=True,
+                text=True,
+                check=False,
+                env={
+                    **os.environ,
+                    "HOME": str(env.home),
+                    "XDG_STATE_HOME": str(env.home / ".local/state"),
+                    "XDG_RUNTIME_DIR": str(env.home / "runtime"),
+                    "PATH": f"{bindir}:/usr/bin:/bin",
+                },
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            hook_log = env.home / ".local/state/noctalia/hook.log"
+            self.assertIn(
+                f"Error: ffmpeg failed to extract thumbnail from {video}",
+                hook_log.read_text(encoding="utf-8"),
+            )
 
 
 class TestNoctaliaStartup(unittest.TestCase):
@@ -77,6 +120,42 @@ class TestNoctaliaStartup(unittest.TestCase):
 
 
 class TestScratchToggle(unittest.TestCase):
+
+    def test_clean_and_preserved_legacy_paths_use_engine_command(self):
+        with TempEnv() as env:
+            bindir = env.home / "bin"
+            bindir.mkdir()
+            calls = env.home / "calls"
+            niri = bindir / "niri"
+            niri.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$CALLS"\n')
+            niri.chmod(0o755)
+            managed_cli = env.home / ".local" / "bin" / "nyxniri"
+            managed_cli.parent.mkdir(parents=True, exist_ok=True)
+            managed_cli.touch(mode=0o755)
+            for target in ("clean", "clean-cache.py", "~/.config/fish/clean-cache.py", str(env.home / ".config/fish/clean-cache.py")):
+                result = subprocess.run(["bash", str(_TOGGLE), target], capture_output=True, text=True,
+                                        env={**os.environ, "PATH": f"{bindir}:/usr/bin:/bin", "CALLS": str(calls), "XDG_RUNTIME_DIR": str(env.home)})
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(calls.read_text().splitlines(), ["msg", "action", "spawn", "--", "kitty", "--app-id", "scratchpad", "-e", str(managed_cli), "clean"])
+
+    def test_clean_falls_back_to_system_engine_path(self):
+        with TempEnv() as env:
+            bindir = env.home / "bin"
+            bindir.mkdir()
+            calls = env.home / "calls"
+            niri = bindir / "niri"
+            niri.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$CALLS"\n')
+            niri.chmod(0o755)
+
+            result = subprocess.run(
+                ["bash", str(_TOGGLE), "clean"],
+                capture_output=True,
+                text=True,
+                env={**os.environ, "PATH": f"{bindir}:/usr/bin:/bin", "CALLS": str(calls), "XDG_RUNTIME_DIR": str(env.home)},
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(calls.read_text().splitlines(), ["msg", "action", "spawn", "--", "kitty", "--app-id", "scratchpad", "-e", "/usr/bin/nyxniri", "clean"])
 
     def test_no_shell_string_execution_fallback(self):
         """Menu cmds are data, not shell input: no `bash -c` fallback may exist."""
@@ -159,9 +238,9 @@ class TestCleanCache(unittest.TestCase):
 
     def _run(self, *args):
         return subprocess.run(
-            [sys.executable, str(_CLEAN_CACHE), *args],
+            [sys.executable, "-m", "nyxniri.clean", *args],
             capture_output=True, text=True, timeout=120,
-            env=self._env(), stdin=subprocess.DEVNULL,
+            env=self._env(), stdin=subprocess.DEVNULL, cwd=_REPO,
         )
 
     def _calls_text(self):
@@ -305,6 +384,117 @@ class TestCleanCache(unittest.TestCase):
         self.assertTrue((self.home / ".cache").is_symlink(), "symlink was removed")
         self.assertFalse((self.home / ".npm/marker").exists(), "other fences still work")
         self.assertIn("symlink", proc.stderr)
+
+
+class TestBrightnessKeys(unittest.TestCase):
+    """niri-brightness.sh: internal backlight vs external DDC fallback."""
+
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory()
+        self.home = Path(self._td.name)
+        self.bin = self.home / "bin"
+        self.bin.mkdir()
+        self.calls = self.home / "calls"
+        self.backlight = self.home / "backlight"
+        self.backlight.mkdir()
+        self.conf = self.home / ".config" / "noctalia"
+        self.conf.mkdir(parents=True)
+        (self.conf / "noctalia-config.toml").write_text(
+            "[brightness]\nenable_ddcutil = false\n", encoding="utf-8"
+        )
+        self._stub("noctalia", 'printf "noctalia:%s\\n" "$*" >>"$CALLS"\n')
+        self._stub("ddcutil", 'printf "ddcutil:%s\\n" "$*" >>"$CALLS"\n')
+        self._stub(
+            "timeout",
+            'printf "timeout:%s\\n" "$*" >>"$CALLS"\nshift 2\nexec "$@"\n',
+        )
+        self._stub(
+            "niri",
+            'if [ "$1" = "msg" ] && [ "$2" = "focused-output" ]; then '
+            'printf "%s\\n" "$FOCUSED_OUTPUT"; fi\n',
+        )
+
+    def tearDown(self):
+        self._td.cleanup()
+
+    def _stub(self, name, body="exit 0"):
+        script = self.bin / name
+        script.write_text(f"#!/bin/sh\n{body}\n", encoding="utf-8")
+        script.chmod(0o755)
+
+    def _run(self, *args, focused="", backlight=True):
+        if backlight:
+            (self.backlight / "amdgpu_bl2").mkdir(exist_ok=True)
+        elif self.backlight.exists():
+            shutil.rmtree(self.backlight)
+            self.backlight.mkdir()
+        env = {
+            "PATH": f"{self.bin}:/usr/bin:/bin",
+            "HOME": str(self.home),
+            "CALLS": str(self.calls),
+            "FOCUSED_OUTPUT": focused,
+            "NYXNIRI_BACKLIGHT_DIR": str(self.backlight),
+        }
+        return subprocess.run(
+            ["/bin/bash", str(_BRIGHTNESS), *args],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            env=env,
+        )
+
+    def _calls(self):
+        if not self.calls.exists():
+            return []
+        return self.calls.read_text(encoding="utf-8").splitlines()
+
+    def test_internal_panel_uses_noctalia_not_ddcutil(self):
+        proc = self._run("up", focused='Output "BOE" (eDP-1)')
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(self._calls(), ["noctalia:msg brightness-up"])
+
+    def test_external_panel_keeps_ddcutil_fallback(self):
+        proc = self._run("down", focused='Output "DELL" (HDMI-A-1)')
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(
+            self._calls(),
+            [
+                "noctalia:msg brightness-down",
+                "timeout:--kill-after=1s 3s ddcutil setvcp 10 - 10",
+                "ddcutil:setvcp 10 - 10",
+            ],
+        )
+
+    def test_unknown_connector_with_backlight_skips_ddcutil(self):
+        proc = self._run("up", focused="")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(self._calls(), ["noctalia:msg brightness-up"])
+
+    def test_desktop_without_backlight_uses_ddcutil(self):
+        proc = self._run("up", focused="", backlight=False)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(
+            self._calls(),
+            [
+                "noctalia:msg brightness-up",
+                "timeout:--kill-after=1s 3s ddcutil setvcp 10 + 10",
+                "ddcutil:setvcp 10 + 10",
+            ],
+        )
+
+    def test_noctalia_ddc_enabled_does_not_double_step(self):
+        (self.conf / "noctalia-config.toml").write_text(
+            "[brightness]\nenable_ddcutil = true\n", encoding="utf-8"
+        )
+        proc = self._run("up", focused='Output "DELL" (DP-1)')
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(self._calls(), ["noctalia:msg brightness-up"])
+
+    def test_bad_args_are_refused(self):
+        proc = self._run("sideways", focused='Output "BOE" (eDP-1)')
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn("usage", proc.stderr)
+        self.assertEqual(self._calls(), [])
 
 
 if __name__ == "__main__":

@@ -6,7 +6,6 @@ import fcntl
 import os
 import re
 import shutil
-import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -84,7 +83,20 @@ def _detect_run_mode(root_dir: Path, cache_dir: Path):
 class Environment:
     def __init__(self):
         self.home = Path(os.environ.get("HOME", str(Path.home())))
-        self.state_dir = Path(os.environ.get("XDG_STATE_HOME", str(self.home / ".local/state"))) / PROJECT_NAME
+        raw_state = os.environ.get("XDG_STATE_HOME")
+        if raw_state:
+            state_path = Path(raw_state)
+            try:
+                resolved_home = self.home.resolve(strict=False)
+                resolved_state = state_path.resolve(strict=False)
+                if resolved_state.is_relative_to(resolved_home):
+                    self.state_dir = state_path / PROJECT_NAME
+                else:
+                    self.state_dir = self.home / ".local/state" / PROJECT_NAME
+            except (OSError, RuntimeError, ValueError, AttributeError):
+                self.state_dir = self.home / ".local/state" / PROJECT_NAME
+        else:
+            self.state_dir = self.home / ".local/state" / PROJECT_NAME
         self.cache_dir = self.home / ".cache" / PROJECT_NAME
         self.config_dir = self.home / ".config"
 
@@ -124,6 +136,7 @@ def get_pics_dir() -> Path:
         res = subprocess.run(
             ["xdg-user-dir", "PICTURES"],
             capture_output=True, text=True, check=False,
+            timeout=5,
             env={**os.environ, "LC_ALL": "C"}
         )
         d = res.stdout.strip()
@@ -157,6 +170,7 @@ def get_version(target_dir: Path) -> str:
             res = subprocess.run(
                 ["git", "describe", "--tags", "--abbrev=0"],
                 cwd=target_dir, capture_output=True, text=True, check=False,
+                timeout=5,
                 env={**os.environ, "LC_ALL": "C"}
             )
             v = res.stdout.strip()
@@ -170,6 +184,7 @@ def get_version(target_dir: Path) -> str:
             res = subprocess.run(
                 ["git", "rev-parse", "--short", "HEAD"],
                 cwd=target_dir, capture_output=True, text=True, check=False,
+                timeout=5,
                 env={**os.environ, "LC_ALL": "C"}
             )
             v = res.stdout.strip()
@@ -333,15 +348,28 @@ def _record_nyxniri_cli_symlink(path: Path) -> bool:
 
 
 def is_nyxniri_cli_symlink(path: Path) -> bool:
-    """Whether path matches NyxNiri's recorded CLI symlink exactly."""
+    """Whether path matches NyxNiri's record or an exact managed installer."""
+    if not path.is_symlink():
+        return False
     record = _cli_link_record(path)
     marker = _cli_link_marker()
-    if record is None or marker.is_symlink() or not marker.is_file():
-        return False
+    if record is not None and not marker.is_symlink() and marker.is_file():
+        try:
+            if marker.read_text(encoding="utf-8") == record:
+                return True
+        except OSError:
+            pass
     try:
-        return marker.read_text(encoding="utf-8") == record
-    except OSError:
-        return False
+        resolved_target = path.resolve(strict=False)
+        env = get_env()
+        managed_targets = {
+            (env.repo_dir / "install.sh").resolve(strict=False),
+            (env.cache_dir / "install.sh").resolve(strict=False),
+        }
+        return resolved_target in managed_targets
+    except (OSError, RuntimeError):
+        pass
+    return False
 
 
 def clear_nyxniri_cli_symlink_marker() -> None:
@@ -382,6 +410,7 @@ def ensure_nyxniri_symlink() -> None:
             if not is_nyxniri_cli_symlink(target_bin):
                 return
             if target_bin.resolve(strict=False) == root_installer.resolve(strict=False):
+                _record_nyxniri_cli_symlink(target_bin)
                 root_installer.chmod(0o755)
                 return
             target_bin.unlink(missing_ok=True)

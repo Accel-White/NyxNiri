@@ -62,7 +62,8 @@ if run_mode == "system":
 pull 成功后**当前进程不做任何部署**：菜单路径与 `nyxniri update` 都立即 `os.execve` 重启，
 用 `PENDING_UPGRADE_ENV`（constants.py）把 deploy flag 带给新进程；`main()` 开头消费该
 标记，在**新代码**上跑 `offer_overwrite_upgrade` + 依赖检查。菜单来源额外带
-`PENDING_UPGRADE_MENU_ENV`，部署完回主菜单；CLI 来源部署完退出。
+`PENDING_UPGRADE_MENU_ENV`，部署完回主菜单；CLI 来源部署完退出。部署或新增依赖安装
+任一步失败都不会报告完成，非交互调用返回非零。
 
 为什么必须先换代码：pull 会改写磁盘上的引擎文件，旧进程内存里还是旧模块，任何懒加载
 导入（如 `_phase_post_install_services` 的 gtktheme）都会 ModuleNotFoundError——拆子包
