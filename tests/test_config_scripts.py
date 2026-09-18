@@ -5,6 +5,7 @@ pinned here because the project has no bash test framework.
 """
 
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -19,6 +20,47 @@ _TOGGLE = _REPO / "configs" / "niri" / "scripts" / "niri-scratch-toggle.sh"
 _CLEAN_CACHE = _REPO / "nyxniri" / "clean.py"
 _START_NOCTALIA = _REPO / "configs" / "niri" / "scripts" / "start-noctalia.sh"
 _BRIGHTNESS = _REPO / "configs" / "niri" / "scripts" / "niri-brightness.sh"
+_WALLPAPER_HOOK = _REPO / "configs" / "noctalia" / "wallpaper-hook.sh"
+
+
+class TestWallpaperHook(unittest.TestCase):
+
+    def test_thumbnail_failure_is_preserved_for_bug_reports(self):
+        with TempEnv() as env:
+            bindir = env.home / "bin"
+            bindir.mkdir()
+            video = env.home / "broken video.mp4"
+            video.touch()
+            noctalia = bindir / "noctalia"
+            noctalia.write_text(
+                f'#!/bin/sh\n[ "$1 $2" = "msg wallpaper-get" ] && printf "%s\\n" {shlex.quote(str(video))}\n',
+                encoding="utf-8",
+            )
+            noctalia.chmod(0o755)
+            ffmpeg = bindir / "ffmpeg"
+            ffmpeg.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+            ffmpeg.chmod(0o755)
+
+            result = subprocess.run(
+                ["/bin/bash", str(_WALLPAPER_HOOK)],
+                capture_output=True,
+                text=True,
+                check=False,
+                env={
+                    **os.environ,
+                    "HOME": str(env.home),
+                    "XDG_STATE_HOME": str(env.home / ".local/state"),
+                    "XDG_RUNTIME_DIR": str(env.home / "runtime"),
+                    "PATH": f"{bindir}:/usr/bin:/bin",
+                },
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            hook_log = env.home / ".local/state/noctalia/hook.log"
+            self.assertIn(
+                f"Error: ffmpeg failed to extract thumbnail from {video}",
+                hook_log.read_text(encoding="utf-8"),
+            )
 
 
 class TestNoctaliaStartup(unittest.TestCase):

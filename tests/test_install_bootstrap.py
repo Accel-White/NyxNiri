@@ -36,6 +36,7 @@ class TestInstallBootstrap(unittest.TestCase):
                 if [ "$1" = "-I" ] && [ "$2" = "-S" ] && [ "$3" = "-c" ]; then
                     {{
                         printf 'cwd=%s\\0' "$PWD"
+                        printf 'xdg_config_home=%s\\0' "$XDG_CONFIG_HOME"
                         for arg do printf '%s\\0' "$arg"; done
                     }} > {log_path}
                     exec /usr/bin/python3 "$@"
@@ -91,7 +92,8 @@ class TestInstallBootstrap(unittest.TestCase):
         )
         launch = self._read_args(log)
         self.assertEqual(launch[0], f"cwd={target.resolve()}")
-        self.assertEqual(launch[1:], ["-I", "-S", "-c", PYTHON_LAUNCHER, str(target.resolve()), *user_args])
+        self.assertTrue(launch[1].startswith("xdg_config_home="))
+        self.assertEqual(launch[2:], ["-I", "-S", "-c", PYTHON_LAUNCHER, str(target.resolve()), *user_args])
         self.assertNotIn("forged", result.stdout)
 
     def _launch_env(self, env, bindir: Path, root: Path, userbase: Path) -> dict[str, str]:
@@ -149,6 +151,35 @@ class TestInstallBootstrap(unittest.TestCase):
             self.assertIn("NyxNiri", result.stdout)
             self.assertIn("(nyxniri)", result.stdout)
             self.assertFalse(marker.exists(), result.stdout)
+
+    def test_xdg_config_home_cannot_escape_sandbox_home(self):
+        with TempEnv() as env, tempfile.TemporaryDirectory(dir=env.home) as raw, \
+             tempfile.TemporaryDirectory() as outside_raw:
+            root = Path(raw)
+            log = root / "python.log"
+            bindir = self._fake_tools(root, log)
+            outside = Path(outside_raw)
+            link = env.home / "config-link"
+            link.symlink_to(outside, target_is_directory=True)
+
+            for escaping in (
+                env.home / ".config" / ".." / ".." / "host-config",
+                link / "noctalia",
+            ):
+                with self.subTest(escaping=escaping):
+                    launch_env = self._launch_env(env, bindir, root, root / "userbase")
+                    launch_env["XDG_CONFIG_HOME"] = str(escaping)
+                    result = subprocess.run(
+                        [str(REPO_ROOT / "install.sh"), "help"],
+                        cwd=root,
+                        env=launch_env,
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    launch = self._read_args(log)
+                    self.assertEqual(launch[1], f"xdg_config_home={env.home / '.config'}")
 
     def _prepare_cache(self, env, root: Path) -> Path:
         cache = env.home / ".cache" / "NyxNiri"

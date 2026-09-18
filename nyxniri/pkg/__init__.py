@@ -1,27 +1,71 @@
 """Shared package commands for the installer and interactive shell."""
 
 import os
+import signal
 import shutil
 import subprocess
 import sys
 
 QUERY_TIMEOUT = 30
 INSTALL_TIMEOUT = 1800
+TERMINATE_GRACE = 5
 FLATHUB_REMOTE_URL = "https://dl.flathub.org/repo/flathub.remote"
+
+
+def _signal_process_group(process: subprocess.Popen, sig: signal.Signals) -> None:
+    """Signal a package command and every descendant in its process group."""
+    try:
+        os.killpg(process.pid, sig)
+    except ProcessLookupError:
+        pass
+    except OSError:
+        try:
+            process.send_signal(sig)
+        except ProcessLookupError:
+            pass
 
 
 def run(argv: list[str], *, capture: bool = False, timeout: int = INSTALL_TIMEOUT):
     """Keep external failures and timeouts visible as ordinary exit codes."""
     try:
-        options = {"env": {**os.environ, "LC_ALL": "C"}} if capture else {}
-        result = subprocess.run(argv, check=False, capture_output=capture, text=True, timeout=timeout, **options)
+        options = {
+            "stdout": subprocess.PIPE if capture else None,
+            "stderr": subprocess.PIPE if capture else None,
+            "text": True,
+            "start_new_session": True,
+        }
+        if capture:
+            options["env"] = {**os.environ, "LC_ALL": "C"}
+        process = subprocess.Popen(argv, **options)
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            _signal_process_group(process, signal.SIGTERM)
+            try:
+                stdout, stderr = process.communicate(timeout=TERMINATE_GRACE)
+            except subprocess.TimeoutExpired:
+                stdout = stderr = None
+            # The direct helper may exit before descendants that ignored TERM.
+            # Always target the original group once more before returning.
+            _signal_process_group(process, signal.SIGKILL)
+            if process.poll() is None:
+                stdout, stderr = process.communicate()
+            result = subprocess.CompletedProcess(
+                argv,
+                124,
+                stdout or "",
+                f"Timed out after {timeout}s: {argv[0]}",
+            )
+            if not capture:
+                print(result.stderr, file=sys.stderr)
+            return result
+        else:
+            result = subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
         if result.returncode >= 0:
             return result
         return subprocess.CompletedProcess(
             result.args, 128 - result.returncode, result.stdout, result.stderr,
         )
-    except subprocess.TimeoutExpired:
-        result = subprocess.CompletedProcess(argv, 124, "", f"Timed out after {timeout}s: {argv[0]}")
     except OSError as error:
         result = subprocess.CompletedProcess(argv, 127, "", str(error))
     if not capture:

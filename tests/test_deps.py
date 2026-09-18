@@ -27,7 +27,7 @@ class TestOptionalAppPackageMapping(unittest.TestCase):
             captured_cmds.append(cmd)
             return MagicMock(returncode=0)
 
-        with patch("subprocess.run", side_effect=fake_run):
+        with patch("nyxniri.pkg.run", side_effect=fake_run):
             with patch("nyxniri.pkg.preferred_manager", return_value="pacman"):
                 with patch("nyxniri.deps.aur_helper_usable", return_value=None):
                     with patch("nyxniri.deps.ensure_aur_helper", return_value=None):
@@ -52,7 +52,7 @@ class TestOptionalAppPackageMapping(unittest.TestCase):
             captured_cmds.append(cmd)
             return MagicMock(returncode=0)
 
-        with patch("subprocess.run", side_effect=fake_run):
+        with patch("nyxniri.pkg.run", side_effect=fake_run):
             with patch("nyxniri.pkg.preferred_manager", return_value="paru"):
                 with patch("nyxniri.deps.aur_helper_usable", return_value="paru"):
                     with patch("shutil.which", return_value="/usr/bin/fcitx5"):
@@ -73,7 +73,7 @@ class TestOptionalAppPackageMapping(unittest.TestCase):
         """Installing packages does not select a skin or change input settings."""
         from nyxniri.deps import install_optional_apps
 
-        with patch("subprocess.run", return_value=MagicMock(returncode=0)):
+        with patch("nyxniri.pkg.run", return_value=MagicMock(returncode=0)):
             with patch("nyxniri.pkg.preferred_manager", return_value="paru"):
                 with patch("nyxniri.deps.aur_helper_usable", return_value="paru"):
                     with patch("shutil.which", return_value="/usr/bin/fcitx5"):
@@ -124,7 +124,7 @@ class TestMpvpaperDetection(unittest.TestCase):
             return mock
 
         with patch("shutil.which", side_effect=lambda x: f"/usr/bin/{x}" if x in ("pacman", "mpvpaper") else None):
-            with patch("subprocess.run", side_effect=fake_run):
+            with patch("nyxniri.pkg.run", side_effect=fake_run):
                 with patch("nyxniri.deps.prompt_confirm", return_value=False):
                     with patch("builtins.print"):
                         check_mpvpaper_leak()
@@ -156,7 +156,7 @@ class TestMpvpaperDetection(unittest.TestCase):
             return mock
 
         with patch("shutil.which", side_effect=lambda x: f"/usr/bin/{x}" if x in ("pacman",) else None):
-            with patch("subprocess.run", side_effect=fake_run):
+            with patch("nyxniri.pkg.run", side_effect=fake_run):
                 with patch("builtins.print") as mock_print:
                     check_mpvpaper_leak()
 
@@ -187,7 +187,7 @@ class TestFlatpakApps(unittest.TestCase):
             captured_cmds.append(list(cmd))
             return MagicMock(returncode=0)
 
-        with patch("subprocess.run", side_effect=fake_run):
+        with patch("nyxniri.pkg.run", side_effect=fake_run):
             with patch("nyxniri.pkg.preferred_manager", return_value="pacman"):
                 with patch("nyxniri.deps.aur_helper_usable", return_value=None):
                     with patch("nyxniri.deps.ensure_aur_helper", return_value=None):
@@ -226,7 +226,7 @@ class TestFlatpakApps(unittest.TestCase):
             captured_cmds.append(list(cmd))
             return MagicMock(returncode=0)
 
-        with patch("subprocess.run", side_effect=fake_run):
+        with patch("nyxniri.pkg.run", side_effect=fake_run):
             with patch("nyxniri.pkg.preferred_manager", return_value="pacman"):
                 with patch("nyxniri.deps.aur_helper_usable", return_value=None):
                     with patch("nyxniri.deps.ensure_aur_helper", return_value=None):
@@ -287,7 +287,7 @@ class TestAurBootstrapFailsClosed(unittest.TestCase):
                 result.returncode = 1
             return result
 
-        with patch("subprocess.run", side_effect=fake_run), \
+        with patch("nyxniri.pkg.run", side_effect=fake_run), \
              patch("nyxniri.deps.aur_helper_usable", return_value=None), \
              patch("nyxniri.deps.prompt_confirm", return_value=True), \
              patch("shutil.which", side_effect=lambda name: "/usr/bin/pacman" if name == "pacman" else None), \
@@ -340,7 +340,7 @@ class TestAurHelperCacheInvalidation(unittest.TestCase):
             return result
 
         with patch("shutil.which", side_effect=fake_which), \
-             patch("nyxniri.pkg.subprocess.run", side_effect=fake_run), \
+             patch("nyxniri.pkg.run", side_effect=fake_run), \
              patch("nyxniri.deps.prompt_confirm", return_value=True), \
              patch("builtins.print"):
             self.assertEqual(ensure_aur_helper(), "paru")

@@ -19,16 +19,23 @@ say() { if _lang_is_zh; then printf '%s' "$1"; else printf '%s' "${2:-$1}"; fi; 
 CACHE_DIR="$HOME/.cache/NyxNiri"
 BOOTSTRAP_URL="https://raw.githubusercontent.com/ech678/NyxNiri/main/install.sh"
 
-# Normalize XDG variables to prevent sandboxes (e.g. HOME=$(mktemp -d)) from leaking into the host
-if [ -n "${XDG_STATE_HOME:-}" ] && [[ "$XDG_STATE_HOME" != "$HOME/"* ]]; then
-    export XDG_STATE_HOME="$HOME/.local/state"
-fi
-if [ -n "${XDG_CONFIG_HOME:-}" ] && [[ "$XDG_CONFIG_HOME" != "$HOME/"* ]]; then
-    export XDG_CONFIG_HOME="$HOME/.config"
-fi
-if [ -n "${XDG_CACHE_HOME:-}" ] && [[ "$XDG_CACHE_HOME" != "$HOME/"* ]]; then
-    export XDG_CACHE_HOME="$HOME/.cache"
-fi
+# Normalize XDG variables to prevent sandboxes (e.g. HOME=$(mktemp -d)) from leaking into the host.
+# Canonical paths are required here: lexical prefixes can escape through .. or
+# through a symlink placed below HOME.
+normalize_xdg_under_home() {
+    local name="$1" fallback="$2" value="${!1:-}" resolved_home resolved_value
+    [ -n "$value" ] || return 0
+    resolved_home="$(readlink -m -- "$HOME" 2>/dev/null)" || resolved_home=""
+    resolved_value="$(readlink -m -- "$value" 2>/dev/null)" || resolved_value=""
+    if [ -z "$resolved_home" ] || [ -z "$resolved_value" ] || [[ "$resolved_value" != "$resolved_home/"* ]]; then
+        printf -v "$name" '%s' "$HOME/$fallback"
+        export "${name?}"
+    fi
+}
+
+normalize_xdg_under_home XDG_STATE_HOME ".local/state"
+normalize_xdg_under_home XDG_CONFIG_HOME ".config"
+normalize_xdg_under_home XDG_CACHE_HOME ".cache"
 
 GIT_MIRROR_REGISTRY=(
     "Official|https://github.com/ech678/NyxNiri.git"

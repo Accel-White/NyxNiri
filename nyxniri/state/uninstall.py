@@ -46,7 +46,7 @@ def uninstall_nyxniri(mode: str = "") -> bool:
 
     # --- Legacy mode aliases ---
     if mode in ("1", "safe", "--safe", "standard"):
-        mode = ""  # interactive checkbox (or all+archive when non-TTY)
+        mode = ""  # interactive checkbox (or standard defaults + archive when non-TTY)
     elif mode in ("2", "--restore", "restore"):
         # Restore folded into `nyxniri rollback`; kept as a legacy alias.
         backups = get_all_backups()

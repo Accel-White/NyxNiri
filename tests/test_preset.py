@@ -272,6 +272,7 @@ class TestPresetOperations(unittest.TestCase):
 
     @unittest.mock.patch("nyxniri.deploy.preset.timed_run")
     def test_apply_niri_glow_material_you_uses_template_hook_for_reload(self, mock_timed_run):
+        mock_timed_run.return_value = subprocess.CompletedProcess([], 0)
         with patch("shutil.which", side_effect=lambda command: f"/usr/bin/{command}"):
             self.assertTrue(preset.apply_preset("niri", "glow-material-you"))
 
@@ -282,6 +283,32 @@ class TestPresetOperations(unittest.TestCase):
             stderr=subprocess.DEVNULL,
             check=False,
         )
+
+    @unittest.mock.patch("nyxniri.deploy.preset.timed_run")
+    def test_apply_niri_glow_material_you_falls_back_to_niri_reload(self, mock_timed_run):
+        mock_timed_run.side_effect = [
+            subprocess.CompletedProcess([], 1),
+            subprocess.CompletedProcess([], 0),
+        ]
+        with patch("shutil.which", side_effect=lambda command: f"/usr/bin/{command}"):
+            self.assertTrue(preset.apply_preset("niri", "glow-material-you"))
+
+        self.assertEqual(mock_timed_run.call_args_list, [
+            unittest.mock.call(
+                ["noctalia", "msg", "templates-apply"],
+                30,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            ),
+            unittest.mock.call(
+                ["niri", "msg", "action", "load-config-file"],
+                2,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            ),
+        ])
 
     @unittest.mock.patch("nyxniri.deploy.preset.timed_run")
     @unittest.mock.patch("shutil.which", return_value="/usr/bin/niri")

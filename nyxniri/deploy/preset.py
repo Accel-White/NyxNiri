@@ -571,13 +571,21 @@ def apply_preset(app: str, name: str) -> bool:
         return False
     _render_preset_result(app, name, preserved_log)
     if app == "niri" and name == "glow-material-you" and shutil.which("noctalia"):
-        timed_run(
+        render_result = timed_run(
             ["noctalia", "msg", "templates-apply"],
             30,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=False,
         )
+        if (render_result is None or render_result.returncode != 0) and shutil.which("niri"):
+            timed_run(
+                ["niri", "msg", "action", "load-config-file"],
+                2,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
     elif app == "niri":
         if name == "glow":
             # The fixed glow preset ships both layout variants. Select the
