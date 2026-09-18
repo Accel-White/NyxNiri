@@ -112,7 +112,11 @@ case "$TARGET_APP" in
 
     clean|clean-cache.py|\~/.config/fish/clean-cache.py|"$HOME/.config/fish/clean-cache.py")
         # Older preserved Orbit menus still carry the former script path.
-        niri msg action spawn -- kitty --app-id "scratchpad" -e nyxniri clean
+        NYXNIRI_BIN="$HOME/.local/bin/nyxniri"
+        if [ ! -x "$NYXNIRI_BIN" ]; then
+            NYXNIRI_BIN="/usr/bin/nyxniri"
+        fi
+        niri msg action spawn -- kitty --app-id "scratchpad" -e "$NYXNIRI_BIN" clean
         ;;
 
     *)

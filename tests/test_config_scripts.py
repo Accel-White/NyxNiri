@@ -87,11 +87,33 @@ class TestScratchToggle(unittest.TestCase):
             niri = bindir / "niri"
             niri.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$CALLS"\n')
             niri.chmod(0o755)
+            managed_cli = env.home / ".local" / "bin" / "nyxniri"
+            managed_cli.parent.mkdir(parents=True, exist_ok=True)
+            managed_cli.touch(mode=0o755)
             for target in ("clean", "clean-cache.py", "~/.config/fish/clean-cache.py", str(env.home / ".config/fish/clean-cache.py")):
                 result = subprocess.run(["bash", str(_TOGGLE), target], capture_output=True, text=True,
                                         env={**os.environ, "PATH": f"{bindir}:/usr/bin:/bin", "CALLS": str(calls), "XDG_RUNTIME_DIR": str(env.home)})
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(calls.read_text().splitlines(), ["msg", "action", "spawn", "--", "kitty", "--app-id", "scratchpad", "-e", "nyxniri", "clean"])
+                self.assertEqual(calls.read_text().splitlines(), ["msg", "action", "spawn", "--", "kitty", "--app-id", "scratchpad", "-e", str(managed_cli), "clean"])
+
+    def test_clean_falls_back_to_system_engine_path(self):
+        with TempEnv() as env:
+            bindir = env.home / "bin"
+            bindir.mkdir()
+            calls = env.home / "calls"
+            niri = bindir / "niri"
+            niri.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$CALLS"\n')
+            niri.chmod(0o755)
+
+            result = subprocess.run(
+                ["bash", str(_TOGGLE), "clean"],
+                capture_output=True,
+                text=True,
+                env={**os.environ, "PATH": f"{bindir}:/usr/bin:/bin", "CALLS": str(calls), "XDG_RUNTIME_DIR": str(env.home)},
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(calls.read_text().splitlines(), ["msg", "action", "spawn", "--", "kitty", "--app-id", "scratchpad", "-e", "/usr/bin/nyxniri", "clean"])
 
     def test_no_shell_string_execution_fallback(self):
         """Menu cmds are data, not shell input: no `bash -c` fallback may exist."""

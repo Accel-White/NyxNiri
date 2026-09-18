@@ -6,7 +6,9 @@ assets (wallpapers), manifest (app discovery), preset
 (active variant). Modules/state/deps are lazy-imported to avoid cycles.
 """
 
+import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -34,6 +36,7 @@ from nyxniri.deploy.templates import _phase_render_templates
 
 _CONFIG_ITEMS_CACHE: List[str] = []
 USER_HOOK_TIMEOUT = 30
+USER_HOOK_TERMINATE_GRACE = 1
 
 def discover_config_items() -> List[str]:
     """Deployable config app names (manifest-only dirs like nautilus/ are excluded)."""
@@ -139,6 +142,43 @@ def _phase_atomic_deployment(
 
     return failed_items
 
+def _signal_hook_group(process: subprocess.Popen, sig: signal.Signals) -> None:
+    """Signal a hook and every child in its dedicated process group."""
+    try:
+        os.killpg(process.pid, sig)
+    except ProcessLookupError:
+        pass
+    except OSError:
+        # The group may have disappeared between lookup and signal delivery.
+        # Fall back to the direct process so a platform quirk cannot leak Bash.
+        try:
+            process.send_signal(sig)
+        except ProcessLookupError:
+            pass
+
+
+def _run_user_hook(hook: Path) -> Optional[int]:
+    """Run one hook with a hard timeout covering its whole process tree."""
+    process = subprocess.Popen(["bash", str(hook)], start_new_session=True)
+    try:
+        return process.wait(timeout=USER_HOOK_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        _signal_hook_group(process, signal.SIGTERM)
+        try:
+            process.wait(timeout=USER_HOOK_TERMINATE_GRACE)
+        except subprocess.TimeoutExpired:
+            pass
+        # Bash may exit before a child that ignored TERM. Always target the
+        # original process group once more so no descendant survives timeout.
+        _signal_hook_group(process, signal.SIGKILL)
+        try:
+            process.wait(timeout=USER_HOOK_TERMINATE_GRACE)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+        return None
+
+
 def run_user_hooks() -> List[str]:
     """Run user-owned scripts and return non-blocking diagnostics."""
     hooks_dir = get_env().nyx_dir / "hooks"
@@ -151,15 +191,15 @@ def run_user_hooks() -> List[str]:
         key=lambda path: path.name,
     )
     for hook in hooks:
-        result = timed_run(["bash", str(hook)], USER_HOOK_TIMEOUT, check=False)
-        if result is None:
+        returncode = _run_user_hook(hook)
+        if returncode is None:
             log_msg("WARN", f"User deploy hook {hook.name} timed out after {USER_HOOK_TIMEOUT}s")
             diagnostic = msg("user_hook_timeout", hook.name, USER_HOOK_TIMEOUT)
             print(diagnostic, file=sys.stderr)
             diagnostics.append(diagnostic)
-        elif result.returncode != 0:
-            log_msg("WARN", f"User deploy hook {hook.name} exited with {result.returncode}")
-            diagnostic = msg("user_hook_failed", hook.name, result.returncode)
+        elif returncode != 0:
+            log_msg("WARN", f"User deploy hook {hook.name} exited with {returncode}")
+            diagnostic = msg("user_hook_failed", hook.name, returncode)
             print(diagnostic, file=sys.stderr)
             diagnostics.append(diagnostic)
     return diagnostics

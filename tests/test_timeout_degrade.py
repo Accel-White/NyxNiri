@@ -8,6 +8,7 @@ load-bearing; a timeout must skip the step and move on.
 """
 
 import subprocess
+import signal
 import sys
 import unittest
 from contextlib import redirect_stdout
@@ -75,7 +76,7 @@ class TestUserPostDeployHooks(unittest.TestCase):
         self._ctx.__exit__()
 
     def test_runs_scripts_in_filename_order_with_bash_argv(self):
-        from nyxniri.deploy.deploy import USER_HOOK_TIMEOUT, run_user_hooks
+        from nyxniri.deploy.deploy import run_user_hooks
 
         self.hooks_dir.mkdir(parents=True)
         first = self.hooks_dir / "10-first.sh"
@@ -85,12 +86,35 @@ class TestUserPostDeployHooks(unittest.TestCase):
         (self.hooks_dir / "ignored.txt").touch()
         (self.hooks_dir / "directory.sh").mkdir()
 
-        with patch("nyxniri.deploy.deploy.timed_run", return_value=_cp(0)) as run:
+        with patch("nyxniri.deploy.deploy._run_user_hook", return_value=0) as run:
             self.assertEqual(run_user_hooks(), [])
 
         self.assertEqual(run.call_args_list, [
-            call(["bash", str(first)], USER_HOOK_TIMEOUT, check=False),
-            call(["bash", str(second)], USER_HOOK_TIMEOUT, check=False),
+            call(first),
+            call(second),
+        ])
+
+    def test_timeout_terminates_the_entire_hook_process_group(self):
+        from nyxniri.deploy.deploy import _run_user_hook
+
+        self.hooks_dir.mkdir(parents=True)
+        hook = self.hooks_dir / "10-background-child.sh"
+        hook.touch()
+        process = unittest.mock.Mock(pid=4321)
+        process.wait.side_effect = [
+            subprocess.TimeoutExpired(cmd=["bash", str(hook)], timeout=30),
+            0,
+            0,
+        ]
+
+        with patch("nyxniri.deploy.deploy.subprocess.Popen", return_value=process) as popen, \
+             patch("nyxniri.deploy.deploy.os.killpg") as killpg:
+            self.assertIsNone(_run_user_hook(hook))
+
+        popen.assert_called_once_with(["bash", str(hook)], start_new_session=True)
+        self.assertEqual(killpg.call_args_list, [
+            call(process.pid, signal.SIGTERM),
+            call(process.pid, signal.SIGKILL),
         ])
 
     def test_timeout_and_failure_do_not_stop_later_hooks(self):
@@ -101,16 +125,16 @@ class TestUserPostDeployHooks(unittest.TestCase):
         for hook in hooks:
             hook.touch()
 
-        with patch("nyxniri.deploy.deploy.timed_run", side_effect=[None, _cp(7), _cp(0)]) as run, \
+        with patch("nyxniri.deploy.deploy._run_user_hook", side_effect=[None, 7, 0]) as run, \
              patch("nyxniri.deploy.deploy.log_msg") as log, \
              patch("builtins.print") as output:
             diagnostics = run_user_hooks()
 
         self.assertEqual(len(diagnostics), 2)
         self.assertEqual(run.call_args_list, [
-            call(["bash", str(hooks[0])], 30, check=False),
-            call(["bash", str(hooks[1])], 30, check=False),
-            call(["bash", str(hooks[2])], 30, check=False),
+            call(hooks[0]),
+            call(hooks[1]),
+            call(hooks[2]),
         ])
         self.assertTrue(all(entry.kwargs == {"file": sys.stderr} for entry in output.call_args_list))
         log.assert_has_calls([

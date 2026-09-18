@@ -578,8 +578,23 @@ def apply_preset(app: str, name: str) -> bool:
             stderr=subprocess.DEVNULL,
             check=False,
         )
-    elif app == "niri" and shutil.which("niri"):
-        timed_run(["niri", "msg", "action", "load-config-file"], 2, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    elif app == "niri":
+        if name == "glow":
+            # The fixed glow preset ships both layout variants. Select the
+            # current desktop mode only after the active preset is recorded,
+            # otherwise theme-sync treats glow as inactive and leaves the
+            # freshly deployed dark layout in place.
+            sync_script = env.config_dir / "noctalia" / "theme-sync.sh"
+            if sync_script.is_file():
+                timed_run(
+                    ["bash", str(sync_script), "sync"],
+                    30,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                )
+        if shutil.which("niri"):
+            timed_run(["niri", "msg", "action", "load-config-file"], 2, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
     elif app == "kitty" and shutil.which("pkill"):
         timed_run(["pkill", "-SIGUSR1", "-x", "kitty"], 2, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
     return True

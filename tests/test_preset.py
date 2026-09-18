@@ -297,6 +297,34 @@ class TestPresetOperations(unittest.TestCase):
         )
 
     @unittest.mock.patch("nyxniri.deploy.preset.timed_run")
+    @unittest.mock.patch("shutil.which", return_value="/usr/bin/niri")
+    def test_apply_glow_syncs_current_mode_after_recording_active_preset(self, mock_which, mock_timed_run):
+        sync_script = self.env.config_dir / "noctalia" / "theme-sync.sh"
+        sync_script.parent.mkdir(parents=True, exist_ok=True)
+        sync_script.touch()
+
+        ok = preset.apply_preset("niri", "glow")
+
+        self.assertTrue(ok)
+        self.assertEqual(preset.read_active_preset("niri"), "glow")
+        self.assertEqual(mock_timed_run.call_args_list, [
+            unittest.mock.call(
+                ["bash", str(sync_script), "sync"],
+                30,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            ),
+            unittest.mock.call(
+                ["niri", "msg", "action", "load-config-file"],
+                2,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            ),
+        ])
+
+    @unittest.mock.patch("nyxniri.deploy.preset.timed_run")
     @unittest.mock.patch("shutil.which", return_value="/usr/bin/pkill")
     def test_apply_preset_kitty_reloads(self, mock_which, mock_timed_run):
         ok = preset.apply_preset("kitty", "transparent")
