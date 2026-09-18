@@ -141,6 +141,7 @@ nightlight = false
 
 [shell]
 font_family = "Noto Sans CJK SC"
+launch_apps_as_systemd_services = true
 polkit_agent = true
 settings_show_advanced = true
 
