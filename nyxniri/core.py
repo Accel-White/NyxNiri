@@ -346,7 +346,7 @@ def _record_nyxniri_cli_symlink(path: Path) -> bool:
 
 
 def is_nyxniri_cli_symlink(path: Path) -> bool:
-    """Whether path matches NyxNiri's recorded CLI symlink or points to a NyxNiri installer."""
+    """Whether path matches NyxNiri's record or an exact managed installer."""
     if not path.is_symlink():
         return False
     record = _cli_link_record(path)
@@ -358,24 +358,13 @@ def is_nyxniri_cli_symlink(path: Path) -> bool:
         except OSError:
             pass
     try:
-        raw_target = os.readlink(path)
-        target_path = Path(raw_target)
-        if target_path.name == "install.sh":
-            resolved_str = str(path.resolve(strict=False))
-            raw_str = str(target_path)
-            if (
-                "NyxNiri" in raw_str
-                or "nyxniri" in raw_str
-                or "NyxNiri" in resolved_str
-                or "nyxniri" in resolved_str
-            ):
-                return True
-            env = get_env()
-            if (
-                target_path == env.repo_dir / "install.sh"
-                or target_path == env.cache_dir / "install.sh"
-            ):
-                return True
+        resolved_target = path.resolve(strict=False)
+        env = get_env()
+        managed_targets = {
+            (env.repo_dir / "install.sh").resolve(strict=False),
+            (env.cache_dir / "install.sh").resolve(strict=False),
+        }
+        return resolved_target in managed_targets
     except (OSError, RuntimeError):
         pass
     return False

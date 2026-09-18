@@ -65,7 +65,7 @@ if ! command -v ddcutil >/dev/null 2>&1; then
 fi
 
 if [ "$dir" = up ]; then
-    ddcutil setvcp 10 + 10 >/dev/null 2>&1 || true
+    timeout --kill-after=1s 3s ddcutil setvcp 10 + 10 >/dev/null 2>&1 || true
 else
-    ddcutil setvcp 10 - 10 >/dev/null 2>&1 || true
+    timeout --kill-after=1s 3s ddcutil setvcp 10 - 10 >/dev/null 2>&1 || true
 fi

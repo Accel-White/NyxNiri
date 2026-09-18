@@ -372,6 +372,36 @@ class TestCliLinkOwnershipCallChains(unittest.TestCase):
         self.assertEqual(ctx.exception.code, 0)
         self.assertEqual(target.read_text(), "my launcher")
 
+    def test_markerless_named_foreign_installer_link_is_preserved(self):
+        from nyxniri.core import ensure_nyxniri_symlink
+
+        foreign_dir = self._ctx.env.home / "AnotherNyxNiriFork"
+        foreign_dir.mkdir()
+        foreign_installer = foreign_dir / "install.sh"
+        foreign_installer.write_text("#!/bin/sh\n", encoding="utf-8")
+        target = self._ctx.env.home / ".local/bin" / "nyxniri"
+        target.symlink_to(foreign_installer)
+
+        ensure_nyxniri_symlink()
+
+        self.assertTrue(target.is_symlink())
+        self.assertEqual(target.resolve(strict=False), foreign_installer.resolve(strict=False))
+
+    def test_markerless_managed_cache_link_migrates_to_repo(self):
+        from nyxniri.core import ensure_nyxniri_symlink
+
+        cache_installer = self._ctx.env.cache_dir / "install.sh"
+        cache_installer.parent.mkdir(parents=True, exist_ok=True)
+        cache_installer.write_text("#!/bin/sh\n", encoding="utf-8")
+        target = self._ctx.env.home / ".local/bin" / "nyxniri"
+        target.symlink_to(cache_installer)
+
+        ensure_nyxniri_symlink()
+
+        expected = (self._ctx.env.repo_dir / "install.sh").resolve(strict=False)
+        self.assertEqual(target.resolve(strict=False), expected)
+        self.assertTrue((self._ctx.env.state_dir / "nyxniri.link").is_file())
+
 
 class TestCheckNewDepsPostUpdate(unittest.TestCase):
     """check_new_deps_post_update should detect and offer to install missing deps."""

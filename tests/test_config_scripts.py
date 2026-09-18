@@ -341,6 +341,10 @@ class TestBrightnessKeys(unittest.TestCase):
         self._stub("noctalia", 'printf "noctalia:%s\\n" "$*" >>"$CALLS"\n')
         self._stub("ddcutil", 'printf "ddcutil:%s\\n" "$*" >>"$CALLS"\n')
         self._stub(
+            "timeout",
+            'printf "timeout:%s\\n" "$*" >>"$CALLS"\nshift 2\nexec "$@"\n',
+        )
+        self._stub(
             "niri",
             'if [ "$1" = "msg" ] && [ "$2" = "focused-output" ]; then '
             'printf "%s\\n" "$FOCUSED_OUTPUT"; fi\n',
@@ -390,7 +394,11 @@ class TestBrightnessKeys(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(
             self._calls(),
-            ["noctalia:msg brightness-down", "ddcutil:setvcp 10 - 10"],
+            [
+                "noctalia:msg brightness-down",
+                "timeout:--kill-after=1s 3s ddcutil setvcp 10 - 10",
+                "ddcutil:setvcp 10 - 10",
+            ],
         )
 
     def test_unknown_connector_with_backlight_skips_ddcutil(self):
@@ -403,7 +411,11 @@ class TestBrightnessKeys(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(
             self._calls(),
-            ["noctalia:msg brightness-up", "ddcutil:setvcp 10 + 10"],
+            [
+                "noctalia:msg brightness-up",
+                "timeout:--kill-after=1s 3s ddcutil setvcp 10 + 10",
+                "ddcutil:setvcp 10 + 10",
+            ],
         )
 
     def test_noctalia_ddc_enabled_does_not_double_step(self):
