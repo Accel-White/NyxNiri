@@ -8,6 +8,7 @@
 ## [Unreleased]
 
 ### Added
+- `nyxniri doctor` 提醒 Noctalia v5.3.0 前的 Launcher 安全修复缺口；未知版本不阻断使用。
 - 常用浏览器支持按需开启可变刷新率(VRR)，消除滚动与视频播放画面撕裂
 
 ### Changed
