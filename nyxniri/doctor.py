@@ -39,6 +39,60 @@ def _check_wayland_session(env) -> None:
     else:
         print(msg("doctor_warn", text(f"会话: 缺少 {sess_file}", f"Session: {sess_file} is missing")))
 
+_NOCTALIA_MIN_SAFE_VERSION = (5, 3, 0)
+_NOCTALIA_VERSION_PATTERN = re.compile(r"\b[vV]?(\d+)\.(\d+)\.(\d+)(?![.\w+-])")
+
+
+def _parse_noctalia_version(output: str) -> Optional[tuple]:
+    """Read an upstream release version; do not trust dev/pre-release suffixes."""
+    match = _NOCTALIA_VERSION_PATTERN.search(output or "")
+    return tuple(map(int, match.groups())) if match else None
+
+
+def _check_noctalia_version() -> None:
+    """Warn on upstream releases older than the Launcher calculator safety fix.
+
+    This is informational only: distro backports and git builds need separate
+    verification, and probing must never prevent an existing desktop from running.
+    """
+    try:
+        result = timed_run(
+            [THEME_ENGINE, "--version"], 5,
+            capture_output=True, text=True, check=False,
+        )
+    except (OSError, ValueError, UnicodeError):
+        result = None
+
+    if result is None or result.returncode != 0:
+        print(msg("doctor_warn", text(
+            "Noctalia: 无法确认版本，请核对是否包含 v5.3.0 的 Launcher 安全修复",
+            "Noctalia: version unknown; verify the v5.3.0 Launcher security fix",
+        )))
+        return
+
+    version = _parse_noctalia_version(
+        (result.stdout or "") + "\n" + (result.stderr or "")
+    )
+    if version is None:
+        print(msg("doctor_warn", text(
+            "Noctalia: 版本格式无法识别（开发版或自定义构建需人工核对安全修复）",
+            "Noctalia: unrecognized version (verify fixes in development/custom builds)",
+        )))
+        return
+
+    actual = ".".join(map(str, version))
+    if version < _NOCTALIA_MIN_SAFE_VERSION:
+        print(msg("doctor_warn", text(
+            f"Noctalia {actual}: 低于含 Launcher 安全修复的上游 v5.3.0；如有发行版补丁请另行核对",
+            f"Noctalia {actual}: upstream v5.3.0 includes a Launcher security fix; check any distro backport",
+        )))
+    else:
+        print(msg("doctor_ok", text(
+            f"Noctalia {actual}: 达到上游 Launcher 安全修复版本基线",
+            f"Noctalia {actual}: meets upstream Launcher security-fix version baseline",
+        )))
+
+
 def _check_noctalia(env) -> None:
     if not shutil.which(THEME_ENGINE):
         print(msg("doctor_err", text(f"{THEME_ENGINE}: 未在 PATH 中找到", f"{THEME_ENGINE}: not found in PATH")))
@@ -51,6 +105,8 @@ def _check_noctalia(env) -> None:
                 print(msg("doctor_err", text(f"{THEME_ENGINE}: 守护进程未运行", f"{THEME_ENGINE}: daemon is not running")))
         except Exception:
             print(msg("doctor_err", text(f"{THEME_ENGINE}: 守护进程未运行", f"{THEME_ENGINE}: daemon is not running")))
+        _check_noctalia_version()
+
 
 def _check_wallpapers(env) -> None:
     wp_dir = get_pics_dir() / "Wallpapers"
